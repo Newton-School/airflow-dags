@@ -17,7 +17,7 @@ dag = DAG(
 
 create_table = PostgresOperator(
     task_id='create_table',
-    postgres_conn_id='postgres_default',
+    postgres_conn_id='postgres_read_replica',
     sql='''CREATE TABLE IF NOT EXISTS user_details_test (
             id SERIAL PRIMARY KEY,
             user_id int(15) not null,
@@ -34,7 +34,7 @@ create_table = PostgresOperator(
 
 transform_data = PostgresOperator(
     task_id='transform_data',
-    postgres_conn_id='postgres_default',
+    postgres_conn_id='postgres_read_replica',
     sql='''INSERT INTO user_details_test (user_id,date_joined,username,email,name,last_login,phone)
             SELECT user_id,date_joined,username,email,concat(first_name,' ',last_name) as name,last_login,users_userprofile.phone
             FROM auth_user
