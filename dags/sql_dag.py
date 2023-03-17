@@ -20,13 +20,13 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS user_details_test (
             id SERIAL PRIMARY KEY,
-            user_id int(15) not null,
+            user_id bigint not null,
             date_joined DATE NOT NULL,
             username varchar(100),
             email varchar(100),
             name varchar(100),
             last_login Date,
-            phone int(12)
+            phone bigint
         );
     ''',
     dag=dag
