@@ -35,7 +35,7 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
-    sql='''SELECT * FROM auth_user;
+    sql='''SELECT * FROM courses_course;
         ''',
     dag=dag
 )
