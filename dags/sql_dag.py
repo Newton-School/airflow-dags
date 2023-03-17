@@ -35,8 +35,7 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
-    sql='''SELECT id,date_joined,username,email,concat(first_name,' ',last_name) as name,last_login
-            FROM auth_user;
+    sql='''SELECT * FROM auth_user;
         ''',
     dag=dag
 )
