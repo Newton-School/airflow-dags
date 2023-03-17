@@ -1,4 +1,5 @@
 from airflow import DAG
+from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from datetime import datetime
 
@@ -7,6 +8,15 @@ default_args = {
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
+
+
+def extract_data_to_nested(**kwargs):
+    ti = kwargs['ti']
+    transform_data_output = ti.xcom_pull(task_ids='transform_data')
+    print(transform_data_output)
+    for single_row in transform_data_output:
+        print(single_row)
+
 
 dag = DAG(
     'postgres_transform',
@@ -42,6 +52,13 @@ transform_data = PostgresOperator(
     dag=dag
 )
 
+extract_python_data = PythonOperator(
+    task_id='extract_python_data',
+    python_callable=extract_data_to_nested,
+    provide_context=True,
+    dag=dag
+)
+
 extract_data = PostgresOperator(
     task_id='extract_data',
     postgres_conn_id='postgres_result_db',
@@ -49,4 +66,4 @@ extract_data = PostgresOperator(
     dag=dag
 )
 
-create_table >> transform_data >> extract_data
+create_table >> transform_data >> extract_python_data
