@@ -1,6 +1,7 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from datetime import datetime
 
 default_args = {
@@ -11,11 +12,12 @@ default_args = {
 
 
 def extract_data_to_nested(**kwargs):
+    pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
-    print(transform_data_output)
-    for single_row in transform_data_output:
-        print(single_row)
+    for transform_row in transform_data_output:
+        insert_query = f'Insert Into table values {transform_row.join(",")}'
+        print(insert_query)
 
 
 dag = DAG(
@@ -59,11 +61,11 @@ extract_python_data = PythonOperator(
     dag=dag
 )
 
-extract_data = PostgresOperator(
-    task_id='extract_data',
-    postgres_conn_id='postgres_result_db',
-    sql='''SELECT * FROM {{ task_instance.xcom_pull(task_ids='transform_data') }}''',
-    dag=dag
-)
+# extract_data = PostgresOperator(
+#     task_id='extract_data',
+#     postgres_conn_id='postgres_result_db',
+#     sql='''SELECT * FROM {{ task_instance.xcom_pull(task_ids='transform_data') }}''',
+#     dag=dag
+# )
 
 create_table >> transform_data >> extract_python_data
