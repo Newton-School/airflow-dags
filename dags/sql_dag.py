@@ -42,4 +42,11 @@ transform_data = PostgresOperator(
     dag=dag
 )
 
-create_table >> transform_data
+extract_data = PostgresOperator(
+    task_id='extract_data',
+    postgres_conn_id='postgres_result_db',
+    sql='''SELECT * FROM {{ task_instance.xcom_pull(task_ids='transform_data') }}''',
+    dag=dag
+)
+
+create_table >> transform_data >> extract_data
