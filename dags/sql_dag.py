@@ -16,7 +16,7 @@ def extract_data_to_nested(**kwargs):
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
-        insert_query = f'Insert Into table values {transform_row.join(",")}'
+        insert_query = f'Insert Into table values {",".join(transform_row)}'
         print(insert_query)
 
 
