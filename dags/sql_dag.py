@@ -16,7 +16,7 @@ def extract_data_to_nested(**kwargs):
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
-        insert_query = f'INSERT INTO user_details_test (user_id,username,email,name,phone) VALUES ({",".join([ str(col) for col in transform_row])}) ON CONFLICT (user_id) DO NOTHING;'
+        insert_query = f'INSERT INTO user_details_test (user_id,username,email,name,phone) VALUES ({transform_row[0]}, {transform_row[1]}, {transform_row[2]}, "{transform_row[3]}", {transform_row[4]}) ON CONFLICT (user_id) DO NOTHING;'
         pg_hook.run(insert_query)
 
 
