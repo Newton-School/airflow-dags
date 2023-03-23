@@ -25,7 +25,7 @@ def extract_data_to_nested(**kwargs):
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
-        insert_query = f'INSERT INTO user_details_test_5 (user_id,username,email,name,phone,last_login) VALUES ' \
+        insert_query = f'INSERT INTO user_details_test (user_id,username,email,name,phone,last_login) VALUES ' \
                        f'(' \
                        f'{clean_input("int",transform_row[0])},' \
                        f'{clean_input("string",transform_row[1])},' \
@@ -34,7 +34,6 @@ def extract_data_to_nested(**kwargs):
                        f'{clean_input("string",transform_row[4])},' \
                        f'{clean_input("datetime",transform_row[5])}' \
                        f');'
-        print(insert_query)
         pg_hook.run(insert_query)
 
 
@@ -48,7 +47,7 @@ dag = DAG(
 create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE IF NOT EXISTS user_details_test_5 (
+    sql='''CREATE TABLE IF NOT EXISTS user_details_test (
             id SERIAL PRIMARY KEY,
             user_id bigint not null,
             username varchar(100),
