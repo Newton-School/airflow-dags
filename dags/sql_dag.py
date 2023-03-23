@@ -16,7 +16,7 @@ def extract_data_to_nested(**kwargs):
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
-        insert_query = f'INSERT INTO user_details_test_3 (user_id,username,email,name,phone,last_login) VALUES ({transform_row[0]},\'{transform_row[1]}\',\'{transform_row[2]}\',\'{transform_row[3]}\', \'{transform_row[4]}\',CAST(\'{transform_row[5]}\' As TIMESTAMP));'
+        insert_query = f'INSERT INTO user_details_test_4 (user_id,username,email,name,phone,last_login) VALUES ({transform_row[0]},\'{transform_row[1]}\',\'{transform_row[2]}\',\'{transform_row[3]}\', \'{transform_row[4]}\',CAST(\'{transform_row[5]}\' As TIMESTAMP));'
         print(insert_query)
         pg_hook.run(insert_query)
 
