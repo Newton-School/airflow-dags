@@ -14,7 +14,7 @@ default_args = {
 def extract_data_to_nested(**kwargs):
 
     def clean_input(data_type, data_value):
-        print(f'data_type={data_type} and data_value={data_value}\n')
+        print(f'data_type={data_type} and data_value={data_value} and typeof data_value={type(data_value)}\n')
         if data_type == 'string':
             return 'None' if data_value == 'None' else f'\'{data_value}\''
         elif data_type == 'datetime':
@@ -67,7 +67,8 @@ transform_data = PostgresOperator(
     postgres_conn_id='postgres_read_replica',
     sql='''SELECT auth_user.id,username,email,concat(first_name,' ',last_name) as name,users_userprofile.phone,CAST(last_login as VARCHAR) as last_login
             FROM auth_user
-            left join users_userprofile on users_userprofile.user_id = auth_user.id;
+            left join users_userprofile on users_userprofile.user_id = auth_user.id
+            WHERE last_login is null Limit 10;
         ''',
     dag=dag
 )
