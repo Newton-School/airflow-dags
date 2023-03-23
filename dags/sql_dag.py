@@ -15,7 +15,7 @@ def extract_data_to_nested(**kwargs):
 
     def clean_input(data_type, data_value):
         if data_type == 'string':
-            return 'null' if not data_value else f'\'{data_value}\''
+            return 'null' if not data_value else f'\"{data_value}\"'
         elif data_type == 'datetime':
             return 'null' if not data_value else f'CAST(\'{data_value}\' As TIMESTAMP)'
         else:
