@@ -46,19 +46,19 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
-    sql='''SELECT auth_user.id,username,email,concat(first_name,' ',last_name) as name,users_userprofile.phone
+    sql='''SELECT CONVERT(VARCHAR, last_login) asm,auth_user.id,username,email,concat(first_name,' ',last_name) as name,users_userprofile.phone
             FROM auth_user
             left join users_userprofile on users_userprofile.user_id = auth_user.id;
         ''',
     dag=dag
 )
 
-extract_python_data = PythonOperator(
-    task_id='extract_python_data',
-    python_callable=extract_data_to_nested,
-    provide_context=True,
-    dag=dag
-)
+# extract_python_data = PythonOperator(
+#     task_id='extract_python_data',
+#     python_callable=extract_data_to_nested,
+#     provide_context=True,
+#     dag=dag
+# )
 
 # extract_data = PostgresOperator(
 #     task_id='extract_data',
@@ -67,4 +67,4 @@ extract_python_data = PythonOperator(
 #     dag=dag
 # )
 
-create_table >> transform_data >> extract_python_data
+create_table >> transform_data
