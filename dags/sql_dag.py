@@ -11,12 +11,29 @@ default_args = {
 }
 
 
+def clean_input(data_type, data_value):
+    if data_type == 'string':
+        return 'None' if data_value == 'None' else f'\'{data_value}\''
+    if data_type == 'datatime':
+        return 'None' if data_value == 'None' else f'CAST(\'{data_value}\' As TIMESTAMP)'
+    else:
+        return data_value
+
+
 def extract_data_to_nested(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
-        insert_query = f'INSERT INTO user_details_test_4 (user_id,username,email,name,phone,last_login) VALUES ({transform_row[0]},\'{transform_row[1]}\',\'{transform_row[2]}\',\'{transform_row[3]}\', \'{transform_row[4]}\',CAST(\'{transform_row[5]}\' As TIMESTAMP));'
+        insert_query = f'INSERT INTO user_details_test_5 (user_id,username,email,name,phone,last_login) VALUES ' \
+                       f'(' \
+                       f'{clean_input("int",transform_row[0])},' \
+                       f'{clean_input("string",transform_row[1])},' \
+                       f'{clean_input("string",transform_row[2])},' \
+                       f'{clean_input("string",transform_row[3])},' \
+                       f'{clean_input("string",transform_row[4])}' \
+                       f'{clean_input("datetime",transform_row[5])}' \
+                       f');'
         print(insert_query)
         pg_hook.run(insert_query)
 
@@ -31,7 +48,7 @@ dag = DAG(
 create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE IF NOT EXISTS user_details_test_4 (
+    sql='''CREATE TABLE IF NOT EXISTS user_details_test_5 (
             id SERIAL PRIMARY KEY,
             user_id bigint not null,
             username varchar(100),
