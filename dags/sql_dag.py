@@ -68,4 +68,4 @@ extract_python_data = PythonOperator(
 #     dag=dag
 # )
 
-create_table >> transform_data
+create_table >> transform_data >> extract_python_data
