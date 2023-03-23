@@ -14,11 +14,10 @@ default_args = {
 def extract_data_to_nested(**kwargs):
 
     def clean_input(data_type, data_value):
-        print(f'data_type={data_type} and data_value={data_value} and typeof data_value={type(data_value)}\n')
         if data_type == 'string':
-            return 'None' if data_value == 'None' else f'\'{data_value}\''
+            return 'None' if not data_value else f'\'{data_value}\''
         elif data_type == 'datetime':
-            return 'None' if data_value == 'None' else f'CAST(\'{data_value}\' As TIMESTAMP)'
+            return 'None' if not data_value else f'CAST(\'{data_value}\' As TIMESTAMP)'
         else:
             return data_value
 
