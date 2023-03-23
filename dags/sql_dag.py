@@ -14,7 +14,7 @@ default_args = {
 def clean_input(data_type, data_value):
     if data_type == 'string':
         return 'None' if data_value == 'None' else f'\'{data_value}\''
-    if data_type == 'datatime':
+    if data_type == 'datetime':
         return 'None' if data_value == 'None' else f'CAST(\'{data_value}\' As TIMESTAMP)'
     else:
         return data_value
