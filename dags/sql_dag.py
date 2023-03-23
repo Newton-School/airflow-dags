@@ -11,16 +11,17 @@ default_args = {
 }
 
 
-def clean_input(data_type, data_value):
-    if data_type == 'string':
-        return 'None' if data_value == 'None' else f'\'{data_value}\''
-    if data_type == 'datetime':
-        return 'None' if data_value == 'None' else f'CAST(\'{data_value}\' As TIMESTAMP)'
-    else:
-        return data_value
-
-
 def extract_data_to_nested(**kwargs):
+
+    def clean_input(data_type, data_value):
+        print(f'data_type={data_type} and data_value={data_value}\n')
+        if data_type == 'string':
+            return 'None' if data_value == 'None' else f'\'{data_value}\''
+        elif data_type == 'datetime':
+            return 'None' if data_value == 'None' else f'CAST(\'{data_value}\' As TIMESTAMP)'
+        else:
+            return data_value
+
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
