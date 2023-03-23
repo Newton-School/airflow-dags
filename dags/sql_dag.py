@@ -31,7 +31,7 @@ def extract_data_to_nested(**kwargs):
                        f'{clean_input("string",transform_row[1])},' \
                        f'{clean_input("string",transform_row[2])},' \
                        f'{clean_input("string",transform_row[3])},' \
-                       f'{clean_input("string",transform_row[4])}' \
+                       f'{clean_input("string",transform_row[4])},' \
                        f'{clean_input("datetime",transform_row[5])}' \
                        f');'
         print(insert_query)
