@@ -22,19 +22,30 @@ def extract_data_to_nested(**kwargs):
             return data_value
 
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
+    pg_conn = pg_hook.conn
+    pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
-        insert_query = f'INSERT INTO user_details_test (user_id,username,email,name,phone,last_login) VALUES ' \
-                       f'(' \
-                       f'{clean_input("int",transform_row[0])},' \
-                       f'{clean_input("string",transform_row[1])},' \
-                       f'{clean_input("string",transform_row[2])},' \
-                       f'{clean_input("string",transform_row[3])},' \
-                       f'{clean_input("string",transform_row[4])},' \
-                       f'{clean_input("datetime",transform_row[5])}' \
-                       f');'
-        pg_hook.run(insert_query)
+        pg_cursor.execute(
+                'INSERT INTO user_details_test (user_id,username,email,name,phone,last_login) VALUES (%s,%s,%s,%s,%s,%s);',
+                transform_row[0],
+                transform_row[1],
+                transform_row[2],
+                transform_row[3],
+                transform_row[4],
+                datetime.strptime(transform_row[5], "%Y-%d-%m %H:%M:%S"),
+        )
+        # insert_query = f'INSERT INTO user_details_test (user_id,username,email,name,phone,last_login) VALUES ' \
+        #                f'(' \
+        #                f'{clean_input("int",transform_row[0])},' \
+        #                f'{clean_input("string",transform_row[1])},' \
+        #                f'{clean_input("string",transform_row[2])},' \
+        #                f'{clean_input("string",transform_row[3])},' \
+        #                f'{clean_input("string",transform_row[4])},' \
+        #                f'{clean_input("datetime",transform_row[5])}' \
+        #                f');'
+        # pg_hook.run(insert_query)
 
 
 dag = DAG(
