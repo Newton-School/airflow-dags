@@ -34,7 +34,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[2],
                 transform_row[3],
                 transform_row[4],
-                datetime.strptime(transform_row[5], '%Y-%m-%d %H:%M:%S.%f%z'),
+                datetime.strptime(transform_row[5][:-3], '%Y-%m-%d %H:%M:%S.%f'),
         )
         # insert_query = f'INSERT INTO user_details_test (user_id,username,email,name,phone,last_login) VALUES ' \
         #                f'(' \
