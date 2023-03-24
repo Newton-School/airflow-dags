@@ -67,7 +67,7 @@ create_table = PostgresOperator(
             username varchar(100),
             email varchar(100),
             name varchar(100),
-            phone varchar(15),
+            phone varchar(16),
             last_login timestamp
         );
     ''',
