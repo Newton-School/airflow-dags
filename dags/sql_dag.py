@@ -29,12 +29,14 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
                 'INSERT INTO user_details_test (user_id,username,email,name,phone,last_login) VALUES (%s,%s,%s,%s,%s,%s);',
-                transform_row[0],
-                transform_row[1],
-                transform_row[2],
-                transform_row[3],
-                transform_row[4],
-                transform_row[5],
+                (
+                    transform_row[0],
+                    transform_row[1],
+                    transform_row[2],
+                    transform_row[3],
+                    transform_row[4],
+                    transform_row[5],
+                 )
         )
         # insert_query = f'INSERT INTO user_details_test (user_id,username,email,name,phone,last_login) VALUES ' \
         #                f'(' \
