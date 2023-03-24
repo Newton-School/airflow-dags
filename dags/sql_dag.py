@@ -22,7 +22,7 @@ def extract_data_to_nested(**kwargs):
             return data_value
 
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
-    pg_conn = pg_hook.conn
+    pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
