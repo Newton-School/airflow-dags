@@ -27,7 +27,6 @@ def extract_data_to_nested(**kwargs):
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
-        print(transform_row)
         pg_cursor.execute(
                 'INSERT INTO user_details_test (user_id,username,email,name,phone,last_login) VALUES (%s,%s,%s,%s,%s,%s);',
                 (
@@ -39,6 +38,7 @@ def extract_data_to_nested(**kwargs):
                     transform_row[5],
                  )
         )
+        print(pg_cursor.query)
         # insert_query = f'INSERT INTO user_details_test (user_id,username,email,name,phone,last_login) VALUES ' \
         #                f'(' \
         #                f'{clean_input("int",transform_row[0])},' \
