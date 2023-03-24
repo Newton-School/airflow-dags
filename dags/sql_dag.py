@@ -80,8 +80,7 @@ transform_data = PostgresOperator(
     postgres_conn_id='postgres_read_replica',
     sql='''SELECT auth_user.id,username,email,concat(first_name,' ',last_name) as name,users_userprofile.phone,CAST(last_login as VARCHAR) as last_login
             FROM auth_user
-            left join users_userprofile on users_userprofile.user_id = auth_user.id
-            LIMIT 10;
+            left join users_userprofile on users_userprofile.user_id = auth_user.id;
         ''',
     dag=dag
 )
