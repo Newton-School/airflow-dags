@@ -73,7 +73,7 @@ masters_marks,masters_grad_year,masters_degree,masters_field_of_study) VALUES (%
 
 
 dag = DAG(
-    'postgres_transform',
+    'users_table_transformation_DAG',
     default_args=default_args,
     description='A DAG for users table transformation',
     schedule_interval=None
