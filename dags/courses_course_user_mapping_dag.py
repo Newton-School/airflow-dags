@@ -26,7 +26,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO weekly_user_details (course_user_mapping_id,user_id,course_id,course_name,unit_type,admin_course_user_mapping_id,admin_unit_name,admin_course_id,created_at,status,label_id,utm_campaign,utm_source,utm_medium,hash) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
+                'INSERT INTO course_user_mapping (course_user_mapping_id,user_id,course_id,course_name,unit_type,admin_course_user_mapping_id,admin_unit_name,admin_course_id,created_at,status,label_id,utm_campaign,utm_source,utm_medium,hash) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -59,7 +59,7 @@ dag = DAG(
 create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE IF NOT EXISTS courses (
+    sql='''CREATE TABLE IF NOT EXISTS course_user_mapping (
             course_user_mapping_id bigint not null PRIMARY KEY,
             user_id bigint,
             course_id bigint,
