@@ -141,7 +141,7 @@ transform_data = PostgresOperator(
     left join education_fieldofstudy F on C.field_of_study_id = F.id 
     left join education_degree M on D.degree_id = M.id  
     left join education_fieldofstudy MF on D.field_of_study_id = MF.id
-    limit 100000;
+    limit 1000000;
         ''',
     dag=dag
 )
