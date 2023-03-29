@@ -78,7 +78,9 @@ transform_data = PostgresOperator(
     sql='''select
     courses_course.id as course_id,
     courses_course.title as course_name,
-    courses_course.unit_type,
+    case when courses_course.unit_type = 'ADMIN' then 'ADMIN'
+    when courses_course.unit_type = 'LEARNING' then 'LEARNING'
+    else null end as unit_type,
     courses_course.course_structure_id,
     courses_coursestructure.title as course_structure_name,
     case 
