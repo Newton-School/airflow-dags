@@ -61,7 +61,7 @@ create_table = PostgresOperator(
             unit_type varchar(16),
             course_structure_id int,
             course_structure_name varchar(100),
-            course_structure_class varchar(16),
+            course_structure_class varchar(30),
             course_start_timestamp timestamp,
             course_end_timestamp timestamp,
             course_type int,
@@ -78,9 +78,7 @@ transform_data = PostgresOperator(
     sql='''select
     courses_course.id as course_id,
     courses_course.title as course_name,
-    case when courses_course.unit_type = 'ADMIN' then 'ADMIN'
-    when courses_course.unit_type = 'LEARNING' then 'LEARNING'
-    else null end as unit_type,
+    courses_course.unit_type,
     courses_course.course_structure_id,
     courses_coursestructure.title as course_structure_name,
     case 
