@@ -121,7 +121,7 @@ transform_data = PostgresOperator(
     cast(auth_user.date_joined as varchar) as date_joined,cast(auth_user.last_login as varchar) as last_login,
     auth_user.username,
     auth_user.email,users_userprofile.phone,internationalization_city.name as current_location,
-    case when users_userprofile.gender = 1 then "Male" when users_userprofile.gender = 2 then 'Female' 
+    case when users_userprofile.gender = 1 then 'Male' when users_userprofile.gender = 2 then 'Female' 
     when users_userprofile.gender = 3 then 'Other' end as gender,
     cast(users_userprofile.date_of_birth as varchar) as date_of_birth,
     (users_userprofile.utm_param_json->'utm_source'::text) #>> '{}' as utm_source,
