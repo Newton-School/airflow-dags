@@ -65,7 +65,7 @@ create_table = PostgresOperator(
             course_start_timestamp timestamp,
             course_end_timestamp timestamp,
             course_type int,
-            hash as varchar(100),
+            hash varchar(100),
             created_at timestamp
         );
     ''',
