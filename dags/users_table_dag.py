@@ -99,13 +99,13 @@ create_table = PostgresOperator(
             utm_source varchar(100),
             utm_medium varchar(100),
             utm_campaign varchar(100),
-            tenth_marks numeric(3,2),
-            twelfth_marks numeric(3,2),
-            bachelors_marks numeric(3,2),
+            tenth_marks double precision,
+            twelfth_marks double precision,
+            bachelors_marks double precision,
             bachelors_grad_year date,
             bachelors_degree varchar(100),
             bachelors_field_of_study varchar(100),
-            masters_marks numeric(3,2),
+            masters_marks double precision,
             masters_grad_year date,
             masters_degree varchar(100),
             masters_field_of_study varchar(100)
@@ -141,7 +141,7 @@ transform_data = PostgresOperator(
     left join education_fieldofstudy F on C.field_of_study_id = F.id 
     left join education_degree M on D.degree_id = M.id  
     left join education_fieldofstudy MF on D.field_of_study_id = MF.id
-    limit 1000000;
+    limit 100000;
         ''',
     dag=dag
 )
