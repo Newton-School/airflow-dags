@@ -117,7 +117,7 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
-    sql='''select auth_user.id as user_id,auth_user.first_name,auth_user.last_name,
+    sql='''select distinct auth_user.id as user_id,auth_user.first_name,auth_user.last_name,
     cast(auth_user.date_joined as varchar) as date_joined,cast(auth_user.last_login as varchar) as last_login,
     auth_user.username,
     auth_user.email,users_userprofile.phone,internationalization_city.name as current_location,
