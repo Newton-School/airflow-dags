@@ -118,15 +118,17 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
     sql='''select auth_user.id as user_id,auth_user.first_name,auth_user.last_name,
-    cast(auth_user.date_joined as varchar) as date_joined,cast(auth_user.last_login as varchar) as last_login,auth_user.username,
+    cast(auth_user.date_joined as varchar) as date_joined,cast(auth_user.last_login as varchar) as last_login,
+    auth_user.username,
     auth_user.email,users_userprofile.phone,internationalization_city.name as current_location,
-    case when users_userprofile.gender = 1 then 'Male' when users_userprofile.gender = 2 then 'Female' 
+    case when users_userprofile.gender = 1 then "Male" when users_userprofile.gender = 2 then 'Female' 
     when users_userprofile.gender = 3 then 'Other' end as gender,
     cast(users_userprofile.date_of_birth as varchar) as date_of_birth,
     (users_userprofile.utm_param_json->'utm_source'::text) #>> '{}' as utm_source,
     (users_userprofile.utm_param_json->'utm_medium'::text) #>> '{}' as utm_medium,
     (users_userprofile.utm_param_json->'utm_campaign'::text) #>> '{}' as utm_campaign,
-    A.grade as tenth_marks,B.grade as twelfth_marks,C.grade as bachelors_marks,cast(C.end_date as varchar) as bachelors_grad_year,
+    A.grade as tenth_marks,B.grade as twelfth_marks,C.grade as bachelors_marks,
+    cast(C.end_date as varchar) as bachelors_grad_year,
     E.name as bachelors_degree,F.name as bachelors_field_of_study,D.grade as masters_marks,
     cast(D.end_date as varchar) as masters_grad_year,M.name as masters_degree,MF.name as masters_field_of_study 
     from auth_user left join users_userprofile on users_userprofile.user_id = auth_user.id 
@@ -138,7 +140,8 @@ transform_data = PostgresOperator(
     left join education_degree E on C.degree_id = E.id  
     left join education_fieldofstudy F on C.field_of_study_id = F.id 
     left join education_degree M on D.degree_id = M.id  
-    left join education_fieldofstudy MF on D.field_of_study_id = MF.id;
+    left join education_fieldofstudy MF on D.field_of_study_id = MF.id
+    limit 10000;
         ''',
     dag=dag
 )
