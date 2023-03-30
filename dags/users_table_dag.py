@@ -117,7 +117,8 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
-    sql='''select distinct auth_user.id as user_id,auth_user.first_name,auth_user.last_name,
+    sql='''with t1 as(
+select distinct auth_user.id as user_id,auth_user.first_name,auth_user.last_name,
     cast(auth_user.date_joined as varchar) as date_joined,cast(auth_user.last_login as varchar) as last_login,
     auth_user.username,
     auth_user.email,users_userprofile.phone,internationalization_city.name as current_location,
@@ -130,7 +131,9 @@ transform_data = PostgresOperator(
     A.grade as tenth_marks,B.grade as twelfth_marks,C.grade as bachelors_marks,
     cast(C.end_date as varchar) as bachelors_grad_year,
     E.name as bachelors_degree,F.name as bachelors_field_of_study,D.grade as masters_marks,
-    cast(D.end_date as varchar) as masters_grad_year,M.name as masters_degree,MF.name as masters_field_of_study 
+    cast(D.end_date as varchar) as masters_grad_year,M.name as masters_degree,MF.name as masters_field_of_study,
+    row_number() over(partition by auth_user.id order by date_joined) as rank
+    
     from auth_user left join users_userprofile on users_userprofile.user_id = auth_user.id 
     left join internationalization_city on users_userprofile.city_id = internationalization_city.id 
     FULL JOIN users_education A ON (A.user_id = auth_user.id AND A.education_type = 1) 
@@ -141,6 +144,12 @@ transform_data = PostgresOperator(
     left join education_fieldofstudy F on C.field_of_study_id = F.id 
     left join education_degree M on D.degree_id = M.id  
     left join education_fieldofstudy MF on D.field_of_study_id = MF.id
+    )
+    select 
+        distinct user_id,first_name,last_name,date_joined,last_login,username,email,phone,current_location,gender,date_of_birth,utm_source,utm_medium,utm_campaign,
+        tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study
+    from t1
+        where rank =1
     limit 100000;
         ''',
     dag=dag
