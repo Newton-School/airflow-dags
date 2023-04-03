@@ -26,7 +26,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO weekly_user_details (course_user_mapping_id,user_id,admin_course_user_mapping_id,week_view,course_id,unit_type,status) VALUES (%s,%s,%s,%s,%s,%s,%s);',
+                'INSERT INTO weekly_user_details (course_user_mapping_id,user_id,admin_course_user_mapping_id,week_view,course_id,unit_type,status,label_mapping_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s);',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -35,6 +35,7 @@ def extract_data_to_nested(**kwargs):
                     transform_row[4],
                     transform_row[5],
                     transform_row[6],
+                    transform_row[7],
                  )
         )
         print(pg_cursor.query)
@@ -52,13 +53,15 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS weekly_user_details (
-            course_user_mapping_id bigint not null PRIMARY KEY,
+            id serial not null PRIMARY KEY,
+            course_user_mapping_id bigint not null,
             user_id bigint,
             admin_course_user_mapping_id bigint,
             week_view timestamp,
             course_id bigint,
             unit_type varchar(16),
-            status int
+            status int,
+            label_mapping_id bigint
         );
     ''',
     dag=dag
@@ -74,11 +77,13 @@ transform_data = PostgresOperator(
     cast(date_trunc('week', cast(now() as date)) as varchar) as week_view,
     courses_course.id as course_id,
     courses_course.unit_type,
-    courses_courseusermapping.status
+    courses_courseusermapping.status,
+    courses_courseuserlabelmapping.id as label_mapping_id
 from
     courses_courseusermapping
 left join courses_course 
-    on courses_course.id = courses_courseusermapping.course_id;
+    on courses_course.id = courses_courseusermapping.course_id
+left join courses_courseuserlabelmapping on courses_courseuserlabelmapping.course_user_mapping_id = courses_courseusermapping.id and label_id =677;
         ''',
     dag=dag
 )
