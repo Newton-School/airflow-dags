@@ -26,7 +26,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO courses (course_id,course_name,unit_type,course_structure_id,course_structure_name,course_structure_class,course_start_timestamp,course_end_timestamp,course_type,hash,created_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
+                'INSERT INTO courses (course_id,course_name,unit_type,course_structure_id,course_structure_name,course_structure_class,course_start_timestamp,course_end_timestamp,course_type,hash,created_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) on conflict (course_id) do update  ;',
                 (
                     transform_row[0],
                     transform_row[1],
