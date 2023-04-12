@@ -48,7 +48,9 @@ dag = DAG(
     'weekly_user_details_dag',
     default_args=default_args,
     description='A DAG for maintaining WoW user data (user_id + course_id)',
-    schedule_interval=None
+    schedule_interval='0 20 * * SUN',
+    start_date=datetime(2023, 4, 12),
+    catchup=False
 )
 
 create_table = PostgresOperator(
