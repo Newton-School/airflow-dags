@@ -78,7 +78,7 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
     sql='''select
-    courses_course.id as course_id,
+    distinct courses_course.id as course_id,
     courses_course.title as course_name,
     courses_course.unit_type,
     courses_course.course_structure_id,
