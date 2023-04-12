@@ -43,7 +43,7 @@ def extract_data_to_nested(**kwargs):
                     transform_row[11],
                     transform_row[12],
                     transform_row[13],
-                    transform_row[14]
+                    transform_row[14],
                  )
         )
         print(pg_cursor.query)
