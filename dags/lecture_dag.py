@@ -31,10 +31,10 @@ def extract_data_to_nested(**kwargs):
                 'lecture_slot_is_deleted,lecture_slot_created_at,lecture_slot_created_by_id,'
                 'lecture_slot_deleted_by_id,lecture_slot_modified_at,automated_content_release_triggered) '
                 'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                'on conflict (lecture_id) do update set mandatory = EXCLUDE.mandatory, lecture_slot_status=EXCLUDE.lecture_slot_status,'
-                'lecture_slot_is_deleted=EXCLUDE.lecture_slot_is_deleted,lecture_slot_created_by_id= EXCLUDE.lecture_slot_created_by_id,'
-                'lecture_slot_deleted_by_id= EXCLUDE.lecture_slot_deleted_by_id,lecture_slot_modified_at=EXCLUDE.lecture_slot_modified_at,'
-                'automated_content_release_triggered=EXCLUDE.automated_content_release_triggered ;',
+                'on conflict (lecture_id) do update set mandatory =EXCLUDED.mandatory,lecture_slot_status=EXCLUDED.lecture_slot_status,'
+                'lecture_slot_is_deleted=EXCLUDED.lecture_slot_is_deleted,lecture_slot_created_by_id= EXCLUDED.lecture_slot_created_by_id,'
+                'lecture_slot_deleted_by_id= EXCLUDED.lecture_slot_deleted_by_id,lecture_slot_modified_at=EXCLUDED.lecture_slot_modified_at,'
+                'automated_content_release_triggered=EXCLUDED.automated_content_release_triggered ;',
                 (
                     transform_row[0],
                     transform_row[1],
