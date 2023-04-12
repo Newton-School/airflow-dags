@@ -33,7 +33,7 @@ def extract_data_to_nested(**kwargs):
                 'tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,'
                 'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study) '
                 'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                'ON CONFLICT (user_id) DO UPDATE SET last_login = %s;',
+                'ON CONFLICT (user_id) DO UPDATE SET last_login = %s where user_id = %s;',
                 (
                     transform_row[0],
                     transform_row[1],
