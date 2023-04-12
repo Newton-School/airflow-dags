@@ -26,7 +26,8 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO course_user_mapping (course_user_mapping_id,user_id,course_id,course_name,unit_type,admin_course_user_mapping_id,admin_unit_name,admin_course_id,created_at,status,label_id,utm_campaign,utm_source,utm_medium,hash) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
+                'INSERT INTO course_user_mapping (course_user_mapping_id,user_id,course_id,course_name,unit_type,admin_course_user_mapping_id,admin_unit_name,admin_course_id,created_at,status,label_id,utm_campaign,utm_source,utm_medium,hash) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'on conflict (course_user_mapping_id) do update set status = EXCLUDED.status,label_id = EXCLUDED.label_id,admin_course_user_mapping_id = EXCLUDED.admin_course_user_mapping_id;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -53,7 +54,9 @@ dag = DAG(
     'courses_cum_dag',
     default_args=default_args,
     description='Course user mapping detailed version',
-    schedule_interval=None
+    schedule_interval='0 20 * * *',
+    start_date=datetime(2023, 4, 12),
+    catchup=False
 )
 
 create_table = PostgresOperator(
