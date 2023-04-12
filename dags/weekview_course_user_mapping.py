@@ -26,7 +26,9 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO weekly_user_details (course_user_mapping_id,user_id,admin_course_user_mapping_id,week_view,course_id,unit_type,status,label_mapping_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s);',
+                'INSERT INTO weekly_user_details (course_user_mapping_id,user_id,'
+                'admin_course_user_mapping_id,week_view,course_id,unit_type,'
+                'status,label_mapping_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s);',
                 (
                     transform_row[0],
                     transform_row[1],
