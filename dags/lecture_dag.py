@@ -26,7 +26,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO lectures (lecture_id,lecture_title,course_id,child_video_session,created_by_id,created_at,start_timestamp,end_timestamp'
+                'INSERT INTO lectures (lecture_id,lecture_title,course_id,child_video_session,created_by_id,created_at,start_timestamp,end_timestamp,'
                 'hash,mandatory,video_session_using,instructor_user_id,lecture_slot_id,is_topic_tree_independent,lecture_slot_status,'
                 'lecture_slot_is_deleted,lecture_slot_created_at,lecture_slot_created_by_id,'
                 'lecture_slot_deleted_by_id,lecture_slot_modified_at,automated_content_release_triggered) '
