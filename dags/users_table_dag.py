@@ -32,7 +32,8 @@ def extract_data_to_nested(**kwargs):
                 'current_location,gender,date_of_birth,utm_source,utm_medium,utm_campaign,'
                 'tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,'
                 'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study) '
-                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ;',
+                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
+                'on conflict (user_id) do update set last_login = EXCLUDED.last_login ;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -78,7 +79,9 @@ dag = DAG(
     'users_table_transformation_DAG',
     default_args=default_args,
     description='A DAG for users table transformation',
-    schedule_interval=None
+    schedule_interval='0 20 * * *',
+    start_date=datetime(2023, 4, 12),
+    catchup=False
 )
 
 create_table = PostgresOperator(
@@ -93,22 +96,22 @@ create_table = PostgresOperator(
             username varchar(100),
             email varchar(100),
             phone varchar(16),
-            current_location varchar(50),
+            current_location varchar(100),
             gender varchar(10),
             date_of_birth date,
-            utm_source varchar(100),
-            utm_medium varchar(100),
-            utm_campaign varchar(100),
+            utm_source varchar(256),
+            utm_medium varchar(256),
+            utm_campaign varchar(256),
             tenth_marks double precision,
             twelfth_marks double precision,
             bachelors_marks double precision,
             bachelors_grad_year date,
-            bachelors_degree varchar(100),
-            bachelors_field_of_study varchar(100),
+            bachelors_degree varchar(128),
+            bachelors_field_of_study varchar(128),
             masters_marks double precision,
             masters_grad_year date,
-            masters_degree varchar(100),
-            masters_field_of_study varchar(100)
+            masters_degree varchar(128),
+            masters_field_of_study varchar(128)
         );
     ''',
     dag=dag
