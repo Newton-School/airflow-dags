@@ -19,7 +19,7 @@ def extract_data_to_nested(**kwargs):
         pg_cursor.execute(
                 'INSERT INTO assignments (assignment_id,parent_assignment_id,assignment_sub_type,assignment_type,course_id,created_at,created_by_id,duration,start_timestamp,end_timestamp,hash,hidden,is_group,title,was_competitive,random_assignment_questions,is_proctored_exam,whole_course_access,lecture_slot_id,lecture_id,original_assignment_type,send_breach_parameter,plagiarism_check_analysis,parent_module_assignment_id)'
                 ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                'on conflict () do update set start_timestamp = EXCLUDED.start_timestamp,'
+                'on conflict (assignment_id) do update set start_timestamp = EXCLUDED.start_timestamp,'
                 'plagiarism_check_analysis = EXCLUDED.plagiarism_check_analysis,'
                 'end_timestamp = EXCLUDED.end_timestamp ;',
                 (
