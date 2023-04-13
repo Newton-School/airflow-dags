@@ -21,6 +21,7 @@ def extract_data_to_nested(**kwargs):
                 ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (assignment_id) do update set start_timestamp = EXCLUDED.start_timestamp,'
                 'plagiarism_check_analysis = EXCLUDED.plagiarism_check_analysis,'
+                'title = EXCLUDED.title,'
                 'end_timestamp = EXCLUDED.end_timestamp ;',
                 (
                     transform_row[0],
