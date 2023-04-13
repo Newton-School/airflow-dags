@@ -166,13 +166,6 @@ extract_python_data = PythonOperator(
     dag=dag
 )
 
-extract_exception_logs_subtask = PythonOperator(
-    task_id='extract_exception_logs',
-    python_callable=extract_exception_logs,
-    provide_context=True,
-    dag=dag
-)
-
 # extract_data = PostgresOperator(
 #     task_id='extract_data',
 #     postgres_conn_id='postgres_result_db',
