@@ -11,57 +11,57 @@ default_args = {
 }
 
 
+def extract_exception_logs(**kwargs):
+    transform_data_output = kwargs['ti'].xcom_pull(task_ids=extract_python_data)
+    for logs in transform_data_output:
+        print(logs)
+
+
 def extract_data_to_nested(**kwargs):
-
-    def clean_input(data_type, data_value):
-        if data_type == 'string':
-            return 'null' if not data_value else f'\"{data_value}\"'
-        elif data_type == 'datetime':
-            return 'null' if not data_value else f'CAST(\'{data_value}\' As TIMESTAMP)'
-        else:
-            return data_value
-
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
+    sql_execution_errors = []
     for transform_row in transform_data_output:
-        pg_cursor.execute(
-                'INSERT INTO users_info (user_id,first_name,last_name,date_joined,last_login,username,email,phone,'
-                'current_location,gender,date_of_birth,utm_source,utm_medium,utm_campaign,'
-                'tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,'
-                'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study) '
-                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
-                'on conflict (user_id) do update set last_login = EXCLUDED.last_login ;',
-                (
-                    transform_row[0],
-                    transform_row[1],
-                    transform_row[2],
-                    transform_row[3],
-                    transform_row[4],
-                    transform_row[5],
-                    transform_row[6],
-                    transform_row[7],
-                    transform_row[8],
-                    transform_row[9],
-                    transform_row[10],
-                    transform_row[11],
-                    transform_row[12],
-                    transform_row[13],
-                    transform_row[14],
-                    transform_row[15],
-                    transform_row[16],
-                    transform_row[17],
-                    transform_row[18],
-                    transform_row[19],
-                    transform_row[20],
-                    transform_row[21],
-                    transform_row[22],
-                    transform_row[23],
-                 )
-        )
-        print(pg_cursor.query)
+        try:
+            pg_cursor.execute(
+                    'INSERT INTO users_info (user_id,first_name,last_name,date_joined,last_login,username,email,phone,'
+                    'current_location,gender,date_of_birth,utm_source,utm_medium,utm_campaign,'
+                    'tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,'
+                    'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study) '
+                    'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
+                    'on conflict (user_id) do update set last_login = EXCLUDED.last_login ;',
+                    (
+                        transform_row[0],
+                        transform_row[1],
+                        transform_row[2],
+                        transform_row[3],
+                        transform_row[4],
+                        transform_row[5],
+                        transform_row[6],
+                        transform_row[7],
+                        transform_row[8],
+                        transform_row[9],
+                        transform_row[10],
+                        transform_row[11],
+                        transform_row[12],
+                        transform_row[13],
+                        transform_row[14],
+                        transform_row[15],
+                        transform_row[16],
+                        transform_row[17],
+                        transform_row[18],
+                        transform_row[19],
+                        transform_row[20],
+                        transform_row[21],
+                        transform_row[22],
+                        transform_row[23],
+                     )
+            )
+        except Exception as err:
+            sql_execution_errors.append(str(err))
         # insert_query = f'INSERT INTO user_details_test (user_id,username,email,name,phone,last_login) VALUES ' \
         #                f'(' \
         #                f'{clean_input("int",transform_row[0])},' \
@@ -73,6 +73,7 @@ def extract_data_to_nested(**kwargs):
         #                f');'
         # pg_hook.run(insert_query)
     pg_conn.commit()
+    return sql_execution_errors
 
 
 dag = DAG(
@@ -165,6 +166,13 @@ extract_python_data = PythonOperator(
     dag=dag
 )
 
+extract_exception_logs_subtask = PythonOperator(
+    task_id='extract_exception_logs',
+    python_callable=extract_exception_logs,
+    provide_context=True,
+    dag=dag
+)
+
 # extract_data = PostgresOperator(
 #     task_id='extract_data',
 #     postgres_conn_id='postgres_result_db',
@@ -172,4 +180,4 @@ extract_python_data = PythonOperator(
 #     dag=dag
 # )
 
-create_table >> transform_data >> extract_python_data
+create_table >> transform_data >> extract_python_data >> extract_exception_logs_subtask
