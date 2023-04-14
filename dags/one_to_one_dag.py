@@ -93,7 +93,7 @@ create_table = PostgresOperator(
             one_to_one_status int,
             one_to_one_type int,
             final_call int,
-            cancel_reason varchar(256),
+            cancel_reason varchar(2048),
             rating int,
             reports_pulled boolean,
             title varchar(256),
