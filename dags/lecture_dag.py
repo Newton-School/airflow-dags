@@ -68,7 +68,6 @@ dag = DAG(
     default_args=default_args,
     description='Lectures Info Table DAG',
     schedule_interval='0 20 * * *',
-    start_date=datetime(2023, 4, 13),
     catchup=False
 )
 

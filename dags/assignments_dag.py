@@ -58,7 +58,6 @@ dag = DAG(
     default_args=default_args,
     description='Assignments Details, a version of assignments_assignment',
     schedule_interval='0 20 * * *',
-    start_date=datetime(2023, 4, 13),
     catchup=False
 )
 
