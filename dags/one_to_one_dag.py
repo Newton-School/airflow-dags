@@ -119,7 +119,7 @@ transform_data = PostgresOperator(
             video_sessions_onetoonecourseuserreport.one_to_one_id,
             min(join_time) as expert_min_join_time,
             max(leave_time) as expert_max_leave_time,
-            sum(video_sessions_onetoonecourseuserreport.duration) as expert_duration
+            sum(video_sessions_onetoonecourseuserreport.duration) filter (where video_sessions_onetoonecourseuserreport.report_type =4) as expert_duration
             from video_sessions_onetoone
             left join courses_courseusermapping
                 on courses_courseusermapping.user_id = video_sessions_onetoone.booked_with_id and video_sessions_onetoone.course_id = courses_courseusermapping.course_id
@@ -132,8 +132,8 @@ transform_data = PostgresOperator(
             video_sessions_onetoonecourseuserreport.one_to_one_id,
             min(join_time) as student_min_join_time,
             max(leave_time) as student_max_leave_time,
-            sum(video_sessions_onetoonecourseuserreport.duration) as student_duration,
-            sum(video_sessions_onetoonecourseuserreport.duration) filter (where video_sessions_onetoonecourseuserreport.join_time >= expert_min_join_time and video_sessions_onetoonecourseuserreport.leave_time <= expert_max_leave_time ) as overlapping_time
+            sum(video_sessions_onetoonecourseuserreport.duration) filter (where video_sessions_onetoonecourseuserreport.report_type =4) as student_duration,
+            sum(video_sessions_onetoonecourseuserreport.duration) filter (where video_sessions_onetoonecourseuserreport.report_type =4 and video_sessions_onetoonecourseuserreport.join_time >= expert_min_join_time and video_sessions_onetoonecourseuserreport.leave_time <= expert_max_leave_time ) as overlapping_time
             from video_sessions_onetoone
             left join courses_courseusermapping
                 on courses_courseusermapping.user_id = video_sessions_onetoone.booked_by_id and video_sessions_onetoone.course_id = courses_courseusermapping.course_id
