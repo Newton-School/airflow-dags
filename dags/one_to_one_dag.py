@@ -139,7 +139,7 @@ transform_data = PostgresOperator(
                 on courses_courseusermapping.user_id = video_sessions_onetoone.booked_by_id and video_sessions_onetoone.course_id = courses_courseusermapping.course_id
             left join video_sessions_onetoonecourseuserreport
                 on video_sessions_onetoonecourseuserreport.one_to_one_id = video_sessions_onetoone.id and video_sessions_onetoonecourseuserreport.course_user_mapping_id = courses_courseusermapping.id
-            left join expert_report on expert_report.one_to_one_id = video_sessions_onetoonecourseuserreport.one_to_one_id
+            left join expert_report on expert_report.one_to_one_id = video_sessions_onetoone.id
             group by 1
             )
             select
