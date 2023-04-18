@@ -26,8 +26,8 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO one_to_one (one_to_one_id,student_user_id,course_id,expert_user_id,one_to_one_start_timestamp,one_to_one_end_timestamp,hash,one_to_one_created_at,one_to_one_confirmed_at,one_to_one_cancel_timestamp,one_to_one_status,one_to_one_type,final_call,cancel_reason,rating,reports_pulled,title,video_session_using,one_to_one_token_id,expert_min_join_time,expert_max_leave_time,student_min_join_time,student_max_leave_time,student_duration,expert_duration,overlapping_time) '
-                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'INSERT INTO one_to_one (one_to_one_id,student_user_id,course_id,expert_user_id,one_to_one_start_timestamp,one_to_one_end_timestamp,hash,one_to_one_created_at,one_to_one_confirmed_at,one_to_one_cancel_timestamp,one_to_one_status,one_to_one_type,final_call,cancel_reason,rating,reports_pulled,title,video_session_using,one_to_one_token_id,expert_min_join_time,expert_max_leave_time,student_min_join_time,student_max_leave_time,student_duration,expert_duration,overlapping_time,difficulty_level) '
+                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (one_to_one_id) do update set expert_user_id=EXCLUDED.expert_user_id,'
                 'one_to_one_start_timestamp = EXCLUDED.one_to_one_start_timestamp,one_to_one_end_timestamp=EXCLUDED.one_to_one_end_timestamp,'
                 'one_to_one_confirmed_at= EXCLUDED.one_to_one_confirmed_at,one_to_one_cancel_timestamp=EXCLUDED.one_to_one_cancel_timestamp,'
@@ -35,7 +35,8 @@ def extract_data_to_nested(**kwargs):
                 'cancel_reason=EXCLUDED.cancel_reason,rating=EXCLUDED.rating,reports_pulled=EXCLUDED.reports_pulled,'
                 'expert_min_join_time=EXCLUDED.expert_min_join_time,expert_max_leave_time=EXCLUDED.expert_max_leave_time,'
                 'student_min_join_time=EXCLUDED.student_min_join_time,student_max_leave_time=EXCLUDED.student_max_leave_time,'
-                'student_duration=EXCLUDED.student_duration,expert_duration=EXCLUDED.expert_duration,overlapping_time=EXCLUDED.overlapping_time ;',
+                'student_duration=EXCLUDED.student_duration,expert_duration=EXCLUDED.expert_duration,overlapping_time=EXCLUDED.overlapping_time,'
+                'difficulty_level=EXCLUDED.difficulty_level ;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -63,6 +64,7 @@ def extract_data_to_nested(**kwargs):
                     transform_row[23],
                     transform_row[24],
                     transform_row[25],
+                    transform_row[26],
                  )
         )
     pg_conn.commit()
@@ -105,7 +107,8 @@ create_table = PostgresOperator(
             student_max_leave_time timestamp,
             student_duration bigint,
             expert_duration bigint,
-            overlapping_time bigint
+            overlapping_time bigint,
+            difficulty_level int
         );
     ''',
     dag=dag
@@ -168,8 +171,10 @@ transform_data = PostgresOperator(
             student_max_leave_time,
             student_duration,
             expert_duration,
-            overlapping_time
+            overlapping_time,
+            video_sessions_onetoonetoken.difficulty_level
             from video_sessions_onetoone
+            left join video_sessions_onetoonetoken on video_sessions_onetoonetoken.id = video_sessions_onetoone.one_to_one_token_id
             left join expert_report on expert_report.one_to_one_id = video_sessions_onetoone.id
             left join student_report on student_report.one_to_one_id = video_sessions_onetoone.id
     ;
