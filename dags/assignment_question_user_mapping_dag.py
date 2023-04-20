@@ -25,7 +25,8 @@ def extract_data_to_nested(**kwargs):
     pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
-    transform_data_output = ti.xcom_pull(task_ids='transform_data')
+    current_task_index = kwargs['current_task_index']
+    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_task_index}.transform_data')
     for transform_row in transform_data_output:
         print(transform_row)
         pg_cursor.execute(
@@ -251,6 +252,7 @@ for i in range(int(total_number_of_sub_dags)):
             task_id='extract_python_data',
             python_callable=extract_data_to_nested,
             provide_context=True,
+            op_kwargs={'current_task_index': i},
             dag=dag,
         )
 
