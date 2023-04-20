@@ -238,9 +238,9 @@ create_table = PostgresOperator(
         dag=dag
 )
 
-for i in range(total_number_of_sub_dags):
+for i in range(int(total_number_of_sub_dags)):
     with TaskGroup(group_id=f"transforming_data_{i}", dag=dag) as sub_dag_task_group:
-        transform_data = transform_data_per_query(i * assignment_per_dags + 1, (i + 1) * assignment_per_dags)
+        transform_data = transform_data_per_query(i * int(assignment_per_dags) + 1, (i + 1) * int(assignment_per_dags))
 
         extract_python_data = PythonOperator(
             task_id='extract_python_data',
