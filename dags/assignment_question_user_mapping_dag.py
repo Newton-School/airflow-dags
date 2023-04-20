@@ -62,7 +62,6 @@ def extract_data_to_nested(**kwargs):
                     transform_row[19],
                     transform_row[20],
                     transform_row[21],
-                    transform_row[22],
                  )
         )
     pg_conn.commit()
