@@ -79,7 +79,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS assignment_question_user_mapping (
-            id serial not null PRIMARY KEY,
+            id serial not null,
             user_id bigint,
             assignment_id bigint,
             question_id bigint,
@@ -102,7 +102,7 @@ create_table = PostgresOperator(
             solution_length bigint,
             number_of_submissions int,
             error_faced_count int,
-            CONSTRAINT unique_user_id_assignment_id_question_id UNIQUE (user_id,assignment_id,question_id)
+            CONSTRAINT unique_user_id_assignment_id_question_id PRIMARY KEY (id) UNIQUE (user_id,assignment_id,question_id)
         );
     ''',
     dag=dag
