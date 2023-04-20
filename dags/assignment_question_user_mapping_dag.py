@@ -28,7 +28,6 @@ def extract_data_to_nested(**kwargs):
     current_task_index = kwargs['current_task_index']
     transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_task_index}.transform_data')
     for transform_row in transform_data_output:
-        print(transform_row)
         pg_cursor.execute(
                 'INSERT INTO assignment_question_user_mapping (uaq_id,user_id,assignment_id,question_id,question_started_at,'
                 'question_completed_at,completed,all_test_case_passed,playground_type,playground_id,hash,'
