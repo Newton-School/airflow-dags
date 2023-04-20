@@ -72,7 +72,7 @@ dag = DAG(
     'Assignment_question_user_mapping_DAG',
     default_args=default_args,
     description='Assignment Question User Mapping Table DAG',
-    schedule_interval='0 22 * * *',
+    schedule_interval='0 23 * * *',
     catchup=False
 )
 
