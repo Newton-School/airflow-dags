@@ -102,7 +102,7 @@ create_table = PostgresOperator(
             solution_length bigint,
             number_of_submissions int,
             error_faced_count int,
-            CONSTRAINT unique_user_id_assignment_id_question_id PRIMARY KEY (id) UNIQUE (user_id,assignment_id,question_id)
+            CONSTRAINT unique_user_id_assignment_id_question_id PRIMARY KEY (id), UNIQUE (user_id,assignment_id,question_id)
         );
     ''',
     dag=dag
