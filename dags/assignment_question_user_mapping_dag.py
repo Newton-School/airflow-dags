@@ -101,7 +101,8 @@ create_table = PostgresOperator(
             plagiarism_score double precision,
             solution_length bigint,
             number_of_submissions int,
-            error_faced_count int
+            error_faced_count int,
+            CONSTRAINT unique_user_id_assignment_id_question_id UNIQUE (user_id,assignment_id,question_id)
         );
     ''',
     dag=dag
