@@ -128,7 +128,7 @@ transform_data = PostgresOperator(
                             on aaqm.assignment_id = assignments_assignment.id
                         join assignments_assignmentquestion aaq
                             on aaq.id = aaqm.assignment_question_id
-                        where assignments_assignment.id > 10000
+                        where assignments_assignment.id > 13000
                         order by 1,2)
                         
                         union 
@@ -149,7 +149,7 @@ transform_data = PostgresOperator(
                                 on assignments_assignmentcourseuserrandomassignedquestionmapping.course_user_mapping_id = courses_courseusermapping.id
                                 and assignments_assignmentcourseuserrandomassignedquestionmapping.assignment_id = assignments_assignment.id
                             
-                            where assignments_assignment.id > 10000 and assignments_assignment.original_assignment_type in (3,4))
+                            where assignments_assignment.id > 13000 and assignments_assignment.original_assignment_type in (3,4))
                 )
                 select
                 distinct questions_released.user_id,
@@ -226,7 +226,7 @@ transform_data = PostgresOperator(
                     
                     left join playgrounds_gameplaygroundsubmission pgps on pgps.game_playground_id = assignments_assignmentcourseuserquestionmapping.game_playground_id
                     left join playgrounds_playgroundplagiarismreport as plag_game on plag_game.object_id = pgps.id and plag_game.content_type_id = 179
-                    where questions_released.assignment_id > 10000
+                    where questions_released.assignment_id > 13000
                     group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,assignments_assignmentcourseuserquestionmapping.coding_playground_id,assignments_assignmentcourseuserquestionmapping.front_end_playground_id,assignments_assignmentcourseuserquestionmapping.game_playground_id,assignments_assignmentcourseuserquestionmapping.project_playground_id
     ;
         ''',
