@@ -125,7 +125,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
                                     on assignments_assignmentcourseuserrandomassignedquestionmapping.course_user_mapping_id = courses_courseusermapping.id
                                     and assignments_assignmentcourseuserrandomassignedquestionmapping.assignment_id = assignments_assignment.id
                                 
-                    )
+                    ))
                     select
                     distinct questions_released.user_id,
                     questions_released.assignment_id,
