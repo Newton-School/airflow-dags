@@ -96,7 +96,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
                             from 
                                 assignments_assignment
                             join courses_course
-                                on courses_course.id = assignments_assignment.course_id and assignments_assignment.id between %d and %d
+                                on courses_course.id = assignments_assignment.course_id and (assignments_assignment.id between %d and %d)
                             left join courses_courseusermapping on courses_courseusermapping.course_id = courses_course.id
                             left join courses_coursestructure
                                 on courses_coursestructure.id = courses_course.course_structure_id
@@ -117,7 +117,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
                                     assignments_assignment
                                 left join courses_course 
                                     on courses_course.id = assignments_assignment.course_id 
-                                        and assignments_assignment.id between %d and %d) and assignments_assignment.original_assignment_type in (3,4)
+                                        and (assignments_assignment.id between %d and %d) and (assignments_assignment.original_assignment_type in (3,4))
                                 left join courses_courseusermapping on courses_courseusermapping.course_id = courses_course.id
                                 left join courses_coursestructure
                                     on courses_coursestructure.id = courses_course.course_structure_id
@@ -183,7 +183,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
                     
                     from questions_released
                         left join courses_courseusermapping 
-                            on courses_courseusermapping.user_id = questions_released.user_id and questions_released.assignment_id between %d and %d 
+                            on courses_courseusermapping.user_id = questions_released.user_id and (questions_released.assignment_id between %d and %d)
                                 and courses_courseusermapping.course_id = questions_released.course_id
                         left join assignments_assignmentcourseusermapping
                             on assignments_assignmentcourseusermapping.course_user_mapping_id = courses_courseusermapping.id 
