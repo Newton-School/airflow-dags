@@ -40,7 +40,7 @@ def extract_data_to_nested(**kwargs):
 
 
 dag = DAG(
-    'Topics and Template mapping',
+    'Topics_and_Template_mapping',
     default_args=default_args,
     description='Topics and template mapping',
     schedule_interval='0 18 * * *',
