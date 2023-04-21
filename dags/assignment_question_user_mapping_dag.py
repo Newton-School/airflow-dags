@@ -96,7 +96,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
                             from 
                                 assignments_assignment
                             join courses_course
-                                on courses_course.id = assignments_assignment.course_id
+                                on courses_course.id = assignments_assignment.course_id and assignments_assignment.id between %d and %d
                             left join courses_courseusermapping on courses_courseusermapping.course_id = courses_course.id
                             left join courses_coursestructure
                                 on courses_coursestructure.id = courses_course.course_structure_id
@@ -104,7 +104,6 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
                                 on aaqm.assignment_id = assignments_assignment.id
                             join assignments_assignmentquestion aaq
                                 on aaq.id = aaqm.assignment_question_id
-                            where assignments_assignment.id between %d and %d
                             order by 1,2)
                             
                             union 
@@ -117,7 +116,8 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
                                 from
                                     assignments_assignment
                                 left join courses_course 
-                                    on courses_course.id = assignments_assignment.course_id
+                                    on courses_course.id = assignments_assignment.course_id 
+                                        and assignments_assignment.id between %d and %d) and assignments_assignment.original_assignment_type in (3,4)
                                 left join courses_courseusermapping on courses_courseusermapping.course_id = courses_course.id
                                 left join courses_coursestructure
                                     on courses_coursestructure.id = courses_course.course_structure_id
@@ -125,7 +125,6 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
                                     on assignments_assignmentcourseuserrandomassignedquestionmapping.course_user_mapping_id = courses_courseusermapping.id
                                     and assignments_assignmentcourseuserrandomassignedquestionmapping.assignment_id = assignments_assignment.id
                                 
-                                where (assignments_assignment.id between %d and %d) and assignments_assignment.original_assignment_type in (3,4))
                     )
                     select
                     distinct questions_released.user_id,
@@ -184,9 +183,9 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
                     
                     from questions_released
                         left join courses_courseusermapping 
-                            on courses_courseusermapping.user_id = questions_released.user_id 
+                            on courses_courseusermapping.user_id = questions_released.user_id and questions_released.assignment_id between %d and %d 
                                 and courses_courseusermapping.course_id = questions_released.course_id
-                        left join assignments_assignmentcourseusermapping 
+                        left join assignments_assignmentcourseusermapping
                             on assignments_assignmentcourseusermapping.course_user_mapping_id = courses_courseusermapping.id 
                                 and questions_released.assignment_id = assignments_assignmentcourseusermapping.assignment_id
                         left join assignments_assignmentcourseuserquestionmapping 
@@ -203,9 +202,9 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
                         
                         left join playgrounds_gameplaygroundsubmission pgps on pgps.game_playground_id = assignments_assignmentcourseuserquestionmapping.game_playground_id
                         left join playgrounds_playgroundplagiarismreport as plag_game on plag_game.object_id = pgps.id and plag_game.content_type_id = 179
-                        where (questions_released.assignment_id between %d and %d) and 
-                        questions_released.user_id is not null and
-                        questions_released.assignment_id is not null and questions_released.question_id is not null
+                        where questions_released.user_id is not null 
+                        and questions_released.assignment_id is not null 
+                        and questions_released.question_id is not null
                         group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,assignments_assignmentcourseuserquestionmapping.coding_playground_id,assignments_assignmentcourseuserquestionmapping.front_end_playground_id,assignments_assignmentcourseuserquestionmapping.game_playground_id,assignments_assignmentcourseuserquestionmapping.project_playground_id
         ;
             ''' % (start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id),
