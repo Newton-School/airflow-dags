@@ -77,7 +77,7 @@ create_table = PostgresOperator(
             max_marks int,
             peer_reviewed boolean,
             peer_reviewed_by_id bigint,
-            question_for_assignment_type array,
+            question_for_assignment_type integer[],
             question_title varchar(256),
             question_type int,
             test_case_count int,
