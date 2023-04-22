@@ -28,7 +28,7 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO assignment_question (assignment_question_id,created_at,created_by_id,hash,is_deleted,max_points,max_marks,peer_reviewed,peer_reviewed_by_id,question_for_assignment_type,question_title,question_type,test_case_count,verified,feedback_evaluable,rating,difficulty_type,mandatory,topic_id,question_utility_type,relevance) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (assignment_question_id) do update set peer_reviewed = EXCLUDED.peer_reviewed, peer_reviewed_by_id = EXCLUDED.peer_reviewed_by_id, question_for_assignment_type = EXCLUDED.question_for_assignment_type, question_title = EXCLUDED.question_title, test_case_count = EXCLUDED.test_case_count, verified = EXCLUDED.verified, rating = EXCLUDED.rating, difficulty_type = EXCLUDED.difficulty_type, mandatory = EXCLUDED.mandatory, topic_id = EXLCUDED.topic_id, question_utility_type = EXCLUDED.question_utility_type, relevance = EXCLUDED.relevance;',
+            'on conflict (assignment_question_id) do update set peer_reviewed = EXCLUDED.peer_reviewed, peer_reviewed_by_id = EXCLUDED.peer_reviewed_by_id, question_for_assignment_type = EXCLUDED.question_for_assignment_type, question_title = EXCLUDED.question_title, test_case_count = EXCLUDED.test_case_count, verified = EXCLUDED.verified, rating = EXCLUDED.rating, difficulty_type = EXCLUDED.difficulty_type, mandatory = EXCLUDED.mandatory, topic_id = EXCLUDED.topic_id, question_utility_type = EXCLUDED.question_utility_type, relevance = EXCLUDED.relevance;',
             (
                 transform_row[0],
                 transform_row[1],
