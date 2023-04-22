@@ -27,7 +27,9 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO topics (topic_node_id,topic_id,topic_name,topic_template_id,template_name) VALUES (%s,%s,%s,%s,%s);',
+            'INSERT INTO topics (topic_node_id,topic_id,topic_name,'
+            'topic_template_id,template_name) '
+            'VALUES (%s,%s,%s,%s,%s);',
             (
                 transform_row[0],
                 transform_row[1],
@@ -76,7 +78,8 @@ left join technologies_topicnode
     on technologies_topicnode.topic_id = technologies_topic.id
 join technologies_topictemplate
     on technologies_topictemplate.id = technologies_topicnode.topic_template_id and technologies_topictemplate.course_template = false 
-        and technologies_topictemplate.master_template = false and technologies_topictemplate.is_deleted = false;
+        and technologies_topictemplate.master_template = false and technologies_topictemplate.is_deleted = false
+group by 1,2,3,4,5;
         ''',
     dag=dag
 )
