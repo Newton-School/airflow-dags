@@ -27,8 +27,8 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO course_user_mapping (course_user_mapping_id,user_id,course_id,course_name,unit_type,admin_course_user_mapping_id,admin_unit_name,admin_course_id,created_at,status,label_id,utm_campaign,utm_source,utm_medium,hash) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (course_user_mapping_id) do update set status = EXCLUDED.status,label_id = EXCLUDED.label_id,admin_course_user_mapping_id = EXCLUDED.admin_course_user_mapping_id;',
+            'INSERT INTO assignment_question (assignment_question_id,created_at,created_by_id,hash,is_deleted,max_points,max_marks,peer_reviewed,peer_reviewed_by_id,question_for_assignment_type,question_title,question_type,test_case_count,verified,feedback_evaluable,rating,difficulty_type,mandatory,topic_id,question_utility_type,relevance) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (assignment_question_id) do update set peer_reviewed = EXCLUDED.peer_reviewed, peer_reviewed_by_id = EXCLUDED.peer_reviewed_by_id, question_for_assignment_type = EXCLUDED.question_for_assignment_type, question_title = EXCLUDED.question_title, test_case_count = EXCLUDED.test_case_count, verified = EXCLUDED.verified, rating = EXCLUDED.rating, difficulty_type = EXCLUDED.difficulty_type, mandatory = EXCLUDE.mandatory, topic_id = EXLCUDE.topic_id, question_utility_type = EXCLUDE.question_utility_type, relevance = EXCLUDE.relevance;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -57,10 +57,10 @@ def extract_data_to_nested(**kwargs):
 
 
 dag = DAG(
-    'courses_cum_dag',
+    'assignment_question_dag',
     default_args=default_args,
-    description='Course user mapping detailed version',
-    schedule_interval='0 20 * * *',
+    description='Assignment Questions raw',
+    schedule_interval='0 21 * * *',
     catchup=False
 )
 
@@ -105,20 +105,20 @@ transform_data = PostgresOperator(
     assignments_assignmentquestion.is_deleted,
     assignments_assignmentquestion.max_points,
     assignments_assignmentquestion.max_marks,
-    assignments_assignmentquestion.peer_reviewed, --
-    assignments_assignmentquestion.peer_reviewed_by_id, --
-    assignments_assignmentquestion.question_for_assignment_type, --
-    assignments_assignmentquestion.question_title, --
+    assignments_assignmentquestion.peer_reviewed,
+    assignments_assignmentquestion.peer_reviewed_by_id,
+    assignments_assignmentquestion.question_for_assignment_type,
+    assignments_assignmentquestion.question_title,
     assignments_assignmentquestion.question_type, 
-    assignments_assignmentquestion.test_cases_count, --
-    assignments_assignmentquestion.verified, -- 
+    assignments_assignmentquestion.test_cases_count,
+    assignments_assignmentquestion.verified,
     assignments_assignmentquestion.feedback_evaluable,
-    assignments_assignmentquestion.rating, -- 
-    assignments_assignmentquestion.difficulty_type, -- 
-    assignments_assignmentquestiontopicmapping.mandatory, -- 
-    assignments_assignmentquestiontopicmapping.topic_id, --
-    assignments_assignmentquestiontopicmapping.question_utility_type, --
-    assignments_assignmentquestiontopicmapping.relevance -- 
+    assignments_assignmentquestion.rating, 
+    assignments_assignmentquestion.difficulty_type, 
+    assignments_assignmentquestiontopicmapping.mandatory, 
+    assignments_assignmentquestiontopicmapping.topic_id,
+    assignments_assignmentquestiontopicmapping.question_utility_type,
+    assignments_assignmentquestiontopicmapping.relevance
 from
     assignments_assignmentquestion
 left join assignments_assignmentquestiontopicmapping
