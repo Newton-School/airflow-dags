@@ -34,7 +34,7 @@ def extract_data_to_nested(**kwargs):
             'on conflict (lecture_id, course_user_mapping_id, report_type) do update set min_created_at = EXCLUDED.min_created_at,'
             'min_join_time = EXCLUDED.min_join_time, max_leave_time = EXCLUDED.max_leave_time, total_time_spent_in_mins = EXCLUDED.total_time_spent_in_mins,'
             'overlapping_time_in_mins = EXCLUDED.overlapping_time_in_mins, lecture_understood_response = EXCLUDED.lecture_understood_response,'
-            'lecture_understood_rating = EXCLUDED.lecture_understood_rating, lecture_understood_rating = EXCLUDED.lecture_understood_rating,'
+            'lecture_understood_rating = EXCLUDED.lecture_understood_rating, feedback_answer = EXCLUDED.feedback_answer,'
             'answer_rating = EXCLUDED.answer_rating;',
             (
                 transform_row[0],
