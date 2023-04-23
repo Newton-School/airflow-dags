@@ -29,7 +29,7 @@ def extract_data_to_nested(**kwargs):
         pg_cursor.execute(
             'INSERT INTO live_lectures_course_user_reports (lecture_id,course_user_mapping_id,course_user_mapping_status,'
             'report_type,min_created_at,min_join_time,max_leave_time,total_time_spent_in_mins,overlapping_time_in_mins,'
-            'lecture_understood_response,lecture_understood_rating,lecture_understood_rating,answer_rating)'
+            'lecture_understood_response,lecture_understood_rating,feedback_answer,answer_rating)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (lecture_id, course_user_mapping_id, report_type) do update set min_created_at = EXCLUDED.min_created_at,'
             'min_join_time = EXCLUDED.min_join_time, max_leave_time = EXCLUDED.max_leave_time, total_time_spent_in_mins = EXCLUDED.total_time_spent_in_mins'
