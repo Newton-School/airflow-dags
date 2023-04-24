@@ -27,13 +27,11 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO live_lectures_course_user_reports'
-            '(table_unique_key,lecture_id,course_user_mapping_id,course_user_mapping_status,report_type,'
+            'INSERT INTO live_lectures_course_user_reports (table_unique_key,lecture_id,course_user_mapping_id,course_user_mapping_status,report_type,'
             'min_created_at,min_join_time,max_leave_time,total_time_spent_in_mins,overlapping_time_in_mins,'
             'lecture_understood_response,lecture_understood_rating,feedback_answer,answer_rating)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key)'
-            'do update set min_created_at = EXCLUDED.min_created_at,'
+            'on conflict (table_unique_key) do update set min_created_at = EXCLUDED.min_created_at,'
             'min_join_time = EXCLUDED.min_join_time,'
             'max_leave_time = EXCLUDED.max_leave_time,'
             'total_time_spent_in_mins = EXCLUDED.total_time_spent_in_mins,'
