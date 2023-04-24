@@ -105,7 +105,7 @@ transform_data = PostgresOperator(
         duration_time_in_secs/60 as duration_time_in_mins
     from
             (with raw_mapping as
-            
+
                     (select 
                         trainers_courseinstructormapping.course_id,
                         trainers_instructor.user_id,
@@ -120,10 +120,10 @@ transform_data = PostgresOperator(
                     left join auth_user
                         on auth_user.id = trainers_instructor.user_id
                     group by 1,2,3,4),
-                
-                
+
+
             lectures as 
-            
+
             (select 
                 video_sessions_lecture.id as lecture_id,
                 date(video_sessions_lecture.start_timestamp) as lecture_date,
@@ -138,8 +138,8 @@ transform_data = PostgresOperator(
             join raw_mapping
                 on raw_mapping.cum_id = video_sessions_lecturecourseuserreport.course_user_mapping_id and video_sessions_lecture.course_id = raw_mapping.course_id
             group by 1,2,3)
-            
-            
+
+
             select
                 lectures.*,
                 dense_rank() over (partition by lecture_id order by duration_time_in_secs desc) as d_rank
@@ -172,7 +172,7 @@ raw_details as
         where report_type in (1,2,4)
         group by 1,2,3,4
         order by 1 desc),
-        
+
 understanding_lecture_form_detail as 
     (select 
         video_sessions_lecture.id as lecture_id,
@@ -198,7 +198,7 @@ understanding_lecture_form_detail as
         on feedback_feedbackanswer.id = feedback_feedbackformuserquestionanswerm2m.feedback_answer_id
     group by 1,2,3,4,5
     order by 1 desc),
-    
+
 csat_rating_details as
         (select
             feedback_feedbackformusermapping.filled_by_id as user_id,
@@ -213,7 +213,7 @@ csat_rating_details as
                 when feedback_feedbackanswer.text = 'Poor' then 2
                 when feedback_feedbackanswer.text = 'Very Poor' then 1
             end as answer_rating
-        
+
         from
             feedback_feedbackformusermapping
         left join courses_courseusermapping
@@ -226,7 +226,7 @@ csat_rating_details as
         left join feedback_feedbackanswer 
             on feedback_feedbackformuserquestionanswerm2m.feedback_answer_id = feedback_feedbackanswer.id)
 
-select 
+select
     cast(concat(raw_details.lecture_id, row_number() over(order by raw_details.lecture_id)) as double precision) as table_unique_key,
     raw_details.*,
     understanding_lecture_form_detail.text as lecture_understood_response,
