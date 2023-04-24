@@ -27,7 +27,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO topics (table_unique_key,topic_node_id,topic_id,topic_name,'
+            'INSERT INTO topics (topic_node_id,topic_id,topic_name,'
             'topic_template_id,template_name) '
             'VALUES (%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do nothing;',
