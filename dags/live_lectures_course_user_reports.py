@@ -27,14 +27,21 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO live_lectures_course_user_reports (lecture_id,course_user_mapping_id,course_user_mapping_status,'
-            'report_type,min_created_at,min_join_time,max_leave_time,total_time_spent_in_mins,overlapping_time_in_mins,'
+            'INSERT INTO live_lectures_course_user_reports'
+            '(table_unique_key,lecture_id,course_user_mapping_id,course_user_mapping_status,report_type,'
+            'min_created_at,min_join_time,max_leave_time,total_time_spent_in_mins,overlapping_time_in_mins,'
             'lecture_understood_response,lecture_understood_rating,feedback_answer,answer_rating)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (lecture_id, course_user_mapping_id, report_type) do update set min_created_at = EXCLUDED.min_created_at,'
-            'min_join_time = EXCLUDED.min_join_time, max_leave_time = EXCLUDED.max_leave_time, total_time_spent_in_mins = EXCLUDED.total_time_spent_in_mins,'
-            'overlapping_time_in_mins = EXCLUDED.overlapping_time_in_mins, lecture_understood_response = EXCLUDED.lecture_understood_response,'
-            'lecture_understood_rating = EXCLUDED.lecture_understood_rating, feedback_answer = EXCLUDED.feedback_answer,'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (table_unique_key)'
+            'do update set'
+            'min_created_at = EXCLUDED.min_created_at,'
+            'min_join_time = EXCLUDED.min_join_time,'
+            'max_leave_time = EXCLUDED.max_leave_time,'
+            'total_time_spent_in_mins = EXCLUDED.total_time_spent_in_mins,'
+            'overlapping_time_in_mins = EXCLUDED.overlapping_time_in_mins,'
+            'lecture_understood_response = EXCLUDED.lecture_understood_response,'
+            'lecture_understood_rating = EXCLUDED.lecture_understood_rating,'
+            'feedback_answer = EXCLUDED.feedback_answer,'
             'answer_rating = EXCLUDED.answer_rating;',
             (
                 transform_row[0],
@@ -49,7 +56,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[9],
                 transform_row[10],
                 transform_row[11],
-                transform_row[12]
+                transform_row[12],
+                transform_row[13]
             )
         )
     pg_conn.commit()
@@ -67,7 +75,8 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS live_lectures_course_user_reports (
-            id serial not null PRIMARY KEY,
+            id serial not null,
+            table_unique_key double precision not null PRIMARY KEY,
             lecture_id bigint,
             course_user_mapping_id bigint,
             course_user_mapping_status int,
@@ -95,6 +104,7 @@ transform_data = PostgresOperator(
         lecture_id,
         course_user_mapping_id,
         inst_min_join_time,
+        inst_max_leave_time,
         duration_time_in_secs/60 as duration_time_in_mins
     from
             (with raw_mapping as
@@ -122,6 +132,7 @@ transform_data = PostgresOperator(
                 date(video_sessions_lecture.start_timestamp) as lecture_date,
                 video_sessions_lecturecourseuserreport.course_user_mapping_id,
                 min(video_sessions_lecturecourseuserreport.join_time) as inst_min_join_time,
+                max(video_sessions_lecturecourseuserreport.leave_time) as inst_max_leave_time,
                 sum(duration) filter (where report_type = 4) as duration_time_in_secs
             from
                 video_sessions_lecture
@@ -152,7 +163,7 @@ raw_details as
             min(video_sessions_lecturecourseuserreport.join_time) as min_join_time,
             max(video_sessions_lecturecourseuserreport.leave_time) as max_leave_time,
             sum(duration)/60.0  as total_time_spent_in_mins,
-            sum(duration) filter (where video_sessions_lecturecourseuserreport.join_time >= inst_time.inst_min_join_time)/60.0 as overlapping_time_in_mins
+            sum(duration) filter (where video_sessions_lecturecourseuserreport.join_time >= inst_time.inst_min_join_time and video_sessions_lecturecourseuserreport.leave_time <= inst_time.inst_max_leave_time)/60.0 as overlapping_time_in_mins
         from
             video_sessions_lecture
         left join inst_time
@@ -219,6 +230,7 @@ csat_rating_details as
             on feedback_feedbackformuserquestionanswerm2m.feedback_answer_id = feedback_feedbackanswer.id)
 
 select 
+    cast(concat(raw_details.lecture_id, row_number() over(order by raw_details.lecture_id)) as double precision) as table_unique_key,
     raw_details.*,
     understanding_lecture_form_detail.text as lecture_understood_response,
     understanding_lecture_form_detail.lecture_understood_rating,
