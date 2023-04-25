@@ -30,7 +30,7 @@ def extract_data_to_nested(**kwargs):
             'INSERT INTO one_to_one_topic_mapping (table_unique_key,meeting_id,mentor_user_id,'
             'mentor_report_type,course_id,mentee_user_id,mentee_report_type,mentor_min_join_time,'
             'mentor_max_leave_time,mentor_total_time_in_mins,mentee_min_join_time,'
-            'mentee_max_leave_time,mentee_total_time_in_mins,mentee_overlapping_time_in_mins'
+            'mentee_max_leave_time,mentee_total_time_in_mins,mentee_overlapping_time_in_mins)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set mentor_report_type = EXCLUDED.mentor_report_type,'
             'mentee_report_type = EXCLUDED.mentee_report_type,'
