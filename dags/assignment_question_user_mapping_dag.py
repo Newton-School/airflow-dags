@@ -119,7 +119,7 @@ def extract_data_to_nested(**kwargs):
     pg_conn.close()
 
 
-def number_of_rows_per_assignment_sub_dag(start_assignment_id, end_assignment_id):
+def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignment_id):
     return PostgresOperator(
             task_id='number_of_rows_per_assignment_sub_dag',
             postgres_conn_id='postgres_read_replica',
@@ -404,7 +404,7 @@ for assignment_sub_dag_id in range(int(total_number_of_sub_dags)):
     with TaskGroup(group_id=f"transforming_data_{assignment_sub_dag_id}", dag=dag) as assignment_sub_dag_task_group:
         assignment_start_id = assignment_sub_dag_id * int(assignment_per_dags) + 1
         assignment_end_id = (assignment_sub_dag_id + 1) * int(assignment_per_dags)
-        number_of_rows_per_assignment_sub_dag = number_of_rows_per_assignment_sub_dag(assignment_start_id, assignment_end_id)
+        number_of_rows_per_assignment_sub_dag = number_of_rows_per_assignment_sub_dag_func(assignment_start_id, assignment_end_id)
 
         for cps_sub_dag_id in range(int(total_number_of_extraction_cps_dags)):
             with TaskGroup(group_id=f"extract_and_transform_individual_assignment_sub_dag_{assignment_sub_dag_id}_cps_sub_dag_{cps_sub_dag_id}", dag=dag) as cps_sub_dag:
