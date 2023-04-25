@@ -253,7 +253,7 @@ def number_of_rows_per_assignment_sub_dag(start_assignment_id, end_assignment_id
 
 
 # Python Limit Offset generator
-def limit_offset_generator(**kwargs):
+def limit_offset_generator_func(**kwargs):
     ti = kwargs['ti']
     current_assignment_sub_dag_id = kwargs['current_assignment_sub_dag_id']
     current_cps_sub_dag_id = kwargs['current_cps_sub_dag_id']
@@ -410,7 +410,7 @@ for assignment_sub_dag_id in range(int(total_number_of_sub_dags)):
             with TaskGroup(group_id=f"extract_and_transform_individual_assignment_sub_dag_{assignment_sub_dag_id}_cps_sub_dag_{cps_sub_dag_id}", dag=dag) as cps_sub_dag:
                 limit_offset_generator = PythonOperator(
                     task_id='limit_offset_generator',
-                    python_callable=limit_offset_generator,
+                    python_callable=limit_offset_generator_func,
                     provide_context=True,
                     op_kwargs={
                         'current_assignment_sub_dag_id': assignment_sub_dag_id,
