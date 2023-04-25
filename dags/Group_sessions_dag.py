@@ -103,9 +103,9 @@ transform_data = PostgresOperator(
         video_sessions_meeting.booked_by_id as mentor_user_id,
         video_sessions_meetingcourseuserreport.report_type,
         video_sessions_meeting.course_id,
-        min(video_sessions_meetingcourseuserreport.created_at) as min_created_at,
-        min(video_sessions_meetingcourseuserreport.join_time) as min_join_time,
-        max(video_sessions_meetingcourseuserreport.leave_time) as max_leave_time,
+        cast(min(video_sessions_meetingcourseuserreport.created_at) as varchar) as min_created_at,
+        cast(min(video_sessions_meetingcourseuserreport.join_time) as varchar) as min_join_time,
+        cast(max(video_sessions_meetingcourseuserreport.leave_time) as varchar) as max_leave_time,
         sum(duration) as total_time
     from
         video_sessions_meeting
@@ -128,9 +128,9 @@ mentee_data as
         video_sessions_meeting_booked_with.user_id as mentee_user_id,
         video_sessions_meetingcourseuserreport.report_type,
         video_sessions_meeting.course_id,
-        min(video_sessions_meetingcourseuserreport.created_at) as min_created_at,
-        min(video_sessions_meetingcourseuserreport.join_time) as min_join_time,
-        max(video_sessions_meetingcourseuserreport.leave_time) as max_leave_time,
+        cast(min(video_sessions_meetingcourseuserreport.created_at) as varchar) as min_created_at,
+        cast(min(video_sessions_meetingcourseuserreport.join_time) as varchar) as min_join_time,
+        cast(max(video_sessions_meetingcourseuserreport.leave_time) as varchar) as max_leave_time,
         sum(duration) as total_time,
         
         sum(duration) 
