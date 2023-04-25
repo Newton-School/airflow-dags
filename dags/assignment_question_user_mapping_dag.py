@@ -274,7 +274,9 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
         dag=dag,
         params={
             'current_cps_sub_dag_id': cps_sub_dag_id,
-            'current_assignment_sub_dag_id': current_assignment_sub_dag_id},
+            'current_assignment_sub_dag_id': current_assignment_sub_dag_id,
+            'task_key': f'transforming_data_{current_assignment_sub_dag_id}.extract_and_transform_individual_assignment_sub_dag_{current_assignment_sub_dag_id}_cps_sub_dag_{cps_sub_dag_id}.limit_offset_generator'
+        },
         sql=''' select * from
         (with questions_released as(
                     (select
@@ -396,8 +398,8 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                         and questions_released.question_id is not null
                         group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,assignments_assignmentcourseuserquestionmapping.coding_playground_id,assignments_assignmentcourseuserquestionmapping.front_end_playground_id,assignments_assignmentcourseuserquestionmapping.game_playground_id,assignments_assignmentcourseuserquestionmapping.project_playground_id
         ) final_query
-        limit {{ ti.xcom_pull(key='transforming_data_{}.extract_and_transform_individual_assignment_sub_dag_{}_cps_sub_dag_{}.limit_offset_generator'.format(params.current_assignment_sub_dag_id, params.current_assignment_sub_dag_id, params.current_cps_sub_dag_id )).limit }}, 
-        {{ ti.xcom_pull(key='transforming_data_{}.extract_and_transform_individual_assignment_sub_dag_{}_cps_sub_dag_{}.limit_offset_generator'.format(params.current_assignment_sub_dag_id, params.current_assignment_sub_dag_id, params.current_cps_sub_dag_id )).offset }}
+        limit {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').limit }}, 
+        {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').offset }}
         ;
             ''' % (start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id),
     )
