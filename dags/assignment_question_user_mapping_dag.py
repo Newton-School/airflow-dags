@@ -19,13 +19,59 @@ assignment_per_dags = Variable.get("assignment_per_dag", 4000)
 
 total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 5)
 
+total_number_of_extraction_cps_dags = Variable.get("total_number_of_extraction_cps_dags", 1000)
 
+dag = DAG(
+    'Assignment_question_user_mapping_DAG',
+    default_args=default_args,
+    description='Assignment Question User Mapping Table DAG',
+    schedule_interval='0 23 * * *',
+    catchup=False
+)
+
+# Root Level Create Table
+create_table = PostgresOperator(
+        task_id='create_table',
+        postgres_conn_id='postgres_result_db',
+        sql='''CREATE TABLE IF NOT EXISTS assignment_question_user_mapping (
+            id serial not null,
+            uaq_id double precision not null PRIMARY KEY,
+            user_id bigint,
+            assignment_id bigint,
+            question_id bigint,
+            question_started_at timestamp,
+            question_completed_at timestamp,
+            completed boolean,
+            all_test_case_passed boolean,
+            playground_type varchar(20),
+            playground_id bigint,
+            hash varchar(30),
+            latest_assignment_question_hint_mapping_id bigint,
+            late_submission boolean,
+            max_test_case_passed int,
+            assignment_started_at timestamp,
+            assignment_completed_at timestamp,
+            assignment_cheated_marked_at timestamp,
+            cheated boolean,
+            plagiarism_submission_id bigint,
+            plagiarism_score double precision,
+            solution_length bigint,
+            number_of_submissions int,
+            error_faced_count int
+        );
+    ''',
+        dag=dag
+)
+
+
+# Leaf Level Abstraction
 def extract_data_to_nested(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     pg_conn = pg_hook.get_conn()
     ti = kwargs['ti']
-    current_task_index = kwargs['current_task_index']
-    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_task_index}.transform_data')
+    current_assignment_sub_dag_id = kwargs['current_assignment_sub_dag_id']
+    current_cps_sub_dag_id = kwargs['current_cps_sub_dag_id']
+    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_assignment_sub_dag_id}.extract_and_transform_individual_assignment_sub_dag_{current_assignment_sub_dag_id}_cps_sub_dag_{current_cps_sub_dag_id}.transform_data')
     for transform_row in transform_data_output:
         pg_cursor = pg_conn.cursor()
         pg_cursor.execute(
@@ -73,21 +119,162 @@ def extract_data_to_nested(**kwargs):
     pg_conn.close()
 
 
-dag = DAG(
-    'Assignment_question_user_mapping_DAG',
-    default_args=default_args,
-    description='Assignment Question User Mapping Table DAG',
-    schedule_interval='0 23 * * *',
-    catchup=False
-)
+def number_of_rows_per_assignment_sub_dag(start_assignment_id, end_assignment_id):
+    return PostgresOperator(
+            task_id='number_of_rows_per_assignment_sub_dag',
+            postgres_conn_id='postgres_read_replica',
+            dag=dag,
+            sql=''' select count(user_id) from
+        (with questions_released as(
+                    (select
+                                distinct courses_courseusermapping.user_id,
+                                courses_course.id as course_id,
+                                assignments_assignment.id as assignment_id,
+                                aaq.id as question_id
+                            from 
+                                assignments_assignment
+                            join courses_course
+                                on courses_course.id = assignments_assignment.course_id and (assignments_assignment.id between %d and %d)
+                            left join courses_courseusermapping on courses_courseusermapping.course_id = courses_course.id
+                            left join courses_coursestructure
+                                on courses_coursestructure.id = courses_course.course_structure_id
+                            join assignments_assignmentquestionmapping aaqm
+                                on aaqm.assignment_id = assignments_assignment.id
+                            join assignments_assignmentquestion aaq
+                                on aaq.id = aaqm.assignment_question_id
+                            order by 1,2)
+
+                            union 
+
+                            (select
+                                    courses_courseusermapping.user_id,
+                                    courses_course.id as course_id,
+                                    assignments_assignment.id  as assignment_id,
+                                    assignments_assignmentcourseuserrandomassignedquestionmapping.assignment_question_id as question_id
+                                from
+                                    assignments_assignment
+                                left join courses_course 
+                                    on courses_course.id = assignments_assignment.course_id 
+                                        and (assignments_assignment.id between %d and %d) and (assignments_assignment.original_assignment_type in (3,4))
+                                left join courses_courseusermapping on courses_courseusermapping.course_id = courses_course.id
+                                left join courses_coursestructure
+                                    on courses_coursestructure.id = courses_course.course_structure_id
+                                left join assignments_assignmentcourseuserrandomassignedquestionmapping 
+                                    on assignments_assignmentcourseuserrandomassignedquestionmapping.course_user_mapping_id = courses_courseusermapping.id
+                                    and assignments_assignmentcourseuserrandomassignedquestionmapping.assignment_id = assignments_assignment.id
+
+                    ))
+                    select
+                    distinct questions_released.user_id,
+                    questions_released.assignment_id,
+                    questions_released.question_id,
+                    cast(concat(questions_released.user_id,questions_released.assignment_id,questions_released.question_id) as double precision) as uaq_id,
+                    cast(assignments_assignmentcourseuserquestionmapping.started_at as varchar) as question_started_at,
+                    cast(assignments_assignmentcourseuserquestionmapping.completed_at as varchar) as question_completed_at,
+                    assignments_assignmentcourseuserquestionmapping.completed,
+                    assignments_assignmentcourseuserquestionmapping.all_test_case_passed,
+                    case
+                    when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then 'coding'
+                    when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then 'frontend'
+                    when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then 'game'
+                    when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then 'project'
+                    when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then 'subjective' else 'other' end as playground_type,
+                    case
+                    when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then assignments_assignmentcourseuserquestionmapping.coding_playground_id
+                    when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then assignments_assignmentcourseuserquestionmapping.front_end_playground_id
+                    when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then assignments_assignmentcourseuserquestionmapping.game_playground_id
+                    when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then assignments_assignmentcourseuserquestionmapping.project_playground_id
+                    when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then assignments_assignmentcourseuserquestionmapping.subjective_id else null end as playground_id,
+
+                    assignments_assignmentcourseuserquestionmapping.hash,
+                    assignments_assignmentcourseuserquestionmapping.latest_assignment_question_hint_mapping_id,
+                    assignments_assignmentcourseuserquestionmapping.late_submission,
+                    assignments_assignmentcourseuserquestionmapping.max_test_case_passed,
+                    cast(assignments_assignmentcourseusermapping.started_at as varchar) as assignment_started_at,
+                    cast(assignments_assignmentcourseusermapping.completed_at as varchar) as assignment_completed_at,
+                    cast(assignments_assignmentcourseusermapping.cheated_marked_at as varchar) as assignment_cheated_marked_at,
+                    assignments_assignmentcourseusermapping.cheated,
+                    case
+                    when pcps.id is not null then (plag_coding.plagiarism_report #>> '{plagiarism_submission_id}')::float
+                    when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{plagiarism_submission_id}')::float
+                    when ppps.id is not null then (plag_project.plagiarism_report #>> '{plagiarism_submission_id}')::float
+                    when pgps.id is not null then (plag_game.plagiarism_report #>> '{plagiarism_submission_id}')::float end as plagiarism_submission_id,
+                    case
+                    when pcps.id is not null then (plag_coding.plagiarism_report #>> '{plagiarism_score}')::float
+                    when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{plagiarism_score}')::float
+                    when ppps.id is not null then (plag_project.plagiarism_report #>> '{plagiarism_score}')::float
+                    when pgps.id is not null then (plag_game.plagiarism_report #>> '{plagiarism_score}')::float end as plagiarism_score,
+                    case
+                    when pcps.id is not null then (plag_coding.plagiarism_report #>> '{solution_length}')::float
+                    when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{solution_length}')::float
+                    when ppps.id is not null then (plag_project.plagiarism_report #>> '{solution_length}')::float
+                    when pgps.id is not null then (plag_game.plagiarism_report #>> '{solution_length}')::float end as solution_length,
+                    case
+                    when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then count(distinct pcps.id)
+                    when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then count(distinct pfps.id)
+                    when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then count(distinct pgps.id)
+                    when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then count(distinct ppps.id) else null end as number_of_submissions,
+                    case
+                    when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then count(distinct pcps.id) filter (where pcps.current_status not in (3))
+                    when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then count(distinct pfps.id) filter (where pfps.build_status not in (3))
+                    when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then count(distinct ppps.id) filter (where pfps.build_status not in (3)) else null end as error_faced_count
+
+                    from questions_released
+                        left join courses_courseusermapping 
+                            on courses_courseusermapping.user_id = questions_released.user_id and (questions_released.assignment_id between %d and %d)
+                                and courses_courseusermapping.course_id = questions_released.course_id
+                        left join assignments_assignmentcourseusermapping
+                            on assignments_assignmentcourseusermapping.course_user_mapping_id = courses_courseusermapping.id 
+                                and questions_released.assignment_id = assignments_assignmentcourseusermapping.assignment_id
+                        left join assignments_assignmentcourseuserquestionmapping 
+                            on assignments_assignmentcourseuserquestionmapping.assignment_course_user_mapping_id = assignments_assignmentcourseusermapping.id 
+                                and assignments_assignmentcourseuserquestionmapping.assignment_question_id = questions_released.question_id
+                        left join playgrounds_codingplaygroundsubmission pcps on pcps.coding_playground_id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
+                        left join playgrounds_playgroundplagiarismreport as plag_coding on plag_coding.object_id = pcps.id and plag_coding.content_type_id = 70
+
+                        left join playgrounds_frontendplaygroundsubmission pfps on pfps.front_end_playground_id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id
+                        left join playgrounds_playgroundplagiarismreport as plag_frontend on plag_frontend.object_id = pfps.id and plag_frontend.content_type_id = 160
+
+                        left join playgrounds_projectplaygroundsubmission ppps on ppps.project_playground_id = assignments_assignmentcourseuserquestionmapping.project_playground_id
+                        left join playgrounds_playgroundplagiarismreport as plag_project on plag_project.object_id = ppps.id and plag_project.content_type_id = 165
+
+                        left join playgrounds_gameplaygroundsubmission pgps on pgps.game_playground_id = assignments_assignmentcourseuserquestionmapping.game_playground_id
+                        left join playgrounds_playgroundplagiarismreport as plag_game on plag_game.object_id = pgps.id and plag_game.content_type_id = 179
+                        where questions_released.user_id is not null 
+                        and questions_released.assignment_id is not null 
+                        and questions_released.question_id is not null
+                        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,
+                        assignments_assignmentcourseuserquestionmapping.coding_playground_id,assignments_assignmentcourseuserquestionmapping.front_end_playground_id,
+                        assignments_assignmentcourseuserquestionmapping.game_playground_id,assignments_assignmentcourseuserquestionmapping.project_playground_id
+        ;) query_rows;
+            ''' % (start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id, start_assignment_id,
+                   end_assignment_id),
+    )
 
 
-def transform_data_per_query(start_assignment_id, end_assignment_id):
+# Python Limit Offset generator
+def limit_offset_generator(**kwargs):
+    ti = kwargs['ti']
+    current_assignment_sub_dag_id = kwargs['current_assignment_sub_dag_id']
+    current_cps_sub_dag_id = kwargs['current_cps_sub_dag_id']
+    count_cps_rows = ti.xcom_pull(task_ids=f'transforming_data_{current_assignment_sub_dag_id}.number_of_rows_per_assignment_sub_dag')
+    print(count_cps_rows)
+    return {
+        "limit": count_cps_rows // total_number_of_extraction_cps_dags,
+        "offset": current_cps_sub_dag_id * (count_cps_rows // total_number_of_extraction_cps_dags) + 1,
+    }
+
+
+# TODO: Add Count Logic
+def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag_id, current_assignment_sub_dag_id):
     return PostgresOperator(
         task_id='transform_data',
         postgres_conn_id='postgres_read_replica',
         dag=dag,
-        sql='''with questions_released as(
+        params={'current_cps_sub_dag_id': cps_sub_dag_id, 'current_assignment_sub_dag_id': current_assignment_sub_dag_id},
+        provide_context=True,
+        sql=''' select * from
+        (with questions_released as(
                     (select
                                 distinct courses_courseusermapping.user_id,
                                 courses_course.id as course_id,
@@ -206,57 +393,49 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
                         and questions_released.assignment_id is not null 
                         and questions_released.question_id is not null
                         group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,assignments_assignmentcourseuserquestionmapping.coding_playground_id,assignments_assignmentcourseuserquestionmapping.front_end_playground_id,assignments_assignmentcourseuserquestionmapping.game_playground_id,assignments_assignmentcourseuserquestionmapping.project_playground_id
+        ) final_query
+        limit {{ ti.xcom_pull(key=format('transforming_data_{}.extract_and_transform_individual_assignment_sub_dag_{}_cps_sub_dag_{}.limit_offset_generator.limit', params.current_assignment_sub_dag_id, params.current_assignment_sub_dag_id, params.current_cps_sub_dag_id )) }}, 
+        {{ ti.xcom_pull(key=format('transforming_data_{}.extract_and_transform_individual_assignment_sub_dag_{}_cps_sub_dag_{}.limit_offset_generator.limit', params.current_assignment_sub_dag_id, params.current_assignment_sub_dag_id, params.current_cps_sub_dag_id )) }}
         ;
             ''' % (start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id),
-)
+    )
 
 
-create_table = PostgresOperator(
-        task_id='create_table',
-        postgres_conn_id='postgres_result_db',
-        sql='''CREATE TABLE IF NOT EXISTS assignment_question_user_mapping (
-            id serial not null,
-            uaq_id double precision not null PRIMARY KEY,
-            user_id bigint,
-            assignment_id bigint,
-            question_id bigint,
-            question_started_at timestamp,
-            question_completed_at timestamp,
-            completed boolean,
-            all_test_case_passed boolean,
-            playground_type varchar(20),
-            playground_id bigint,
-            hash varchar(30),
-            latest_assignment_question_hint_mapping_id bigint,
-            late_submission boolean,
-            max_test_case_passed int,
-            assignment_started_at timestamp,
-            assignment_completed_at timestamp,
-            assignment_cheated_marked_at timestamp,
-            cheated boolean,
-            plagiarism_submission_id bigint,
-            plagiarism_score double precision,
-            solution_length bigint,
-            number_of_submissions int,
-            error_faced_count int
-        );
-    ''',
-        dag=dag
-)
+for assignment_sub_dag_id in range(int(total_number_of_sub_dags)):
+    with TaskGroup(group_id=f"transforming_data_{assignment_sub_dag_id}", dag=dag) as assignment_sub_dag_task_group:
+        assignment_start_id = assignment_sub_dag_id * int(assignment_per_dags) + 1
+        assignment_end_id = (assignment_sub_dag_id + 1) * int(assignment_per_dags)
+        number_of_rows_per_assignment_sub_dag = number_of_rows_per_assignment_sub_dag(assignment_start_id, assignment_end_id)
 
-for i in range(int(total_number_of_sub_dags)):
-    with TaskGroup(group_id=f"transforming_data_{i}", dag=dag) as sub_dag_task_group:
-        transform_data = transform_data_per_query(i * int(assignment_per_dags) + 1, (i + 1) * int(assignment_per_dags))
+        for cps_sub_dag_id in range(int(total_number_of_extraction_cps_dags)):
+            with TaskGroup(group_id=f"extract_and_transform_individual_assignment_sub_dag_{assignment_sub_dag_id}_cps_sub_dag_{cps_sub_dag_id}") as cps_sub_dag:
+                limit_offset_generator = PythonOperator(
+                    task_id='limit_offset_generator',
+                    python_callable=limit_offset_generator,
+                    provide_context=True,
+                    op_kwargs={
+                        'current_assignment_sub_dag_id': assignment_sub_dag_id,
+                        'current_cps_sub_dag_id': cps_sub_dag_id,
+                    },
+                    dag=dag,
+                )
 
-        extract_python_data = PythonOperator(
-            task_id='extract_python_data',
-            python_callable=extract_data_to_nested,
-            provide_context=True,
-            op_kwargs={'current_task_index': i},
-            dag=dag,
-        )
+                transform_data = transform_data_per_query(assignment_start_id, assignment_end_id, cps_sub_dag_id, assignment_sub_dag_id)
 
-        transform_data >> extract_python_data
+                extract_python_data = PythonOperator(
+                    task_id='extract_python_data',
+                    python_callable=extract_data_to_nested,
+                    provide_context=True,
+                    op_kwargs={
+                        'current_assignment_sub_dag_id': assignment_sub_dag_id,
+                        'current_cps_sub_dag_id': cps_sub_dag_id
+                    },
+                    dag=dag,
+                )
 
-    create_table >> sub_dag_task_group
+                limit_offset_generator >> transform_data >> extract_python_data
+
+            number_of_rows_per_assignment_sub_dag >> cps_sub_dag
+
+    create_table >> assignment_sub_dag_task_group
 
