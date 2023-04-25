@@ -246,7 +246,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                         group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,
                         assignments_assignmentcourseuserquestionmapping.coding_playground_id,assignments_assignmentcourseuserquestionmapping.front_end_playground_id,
                         assignments_assignmentcourseuserquestionmapping.game_playground_id,assignments_assignmentcourseuserquestionmapping.project_playground_id
-        ;) query_rows;
+        ) query_rows;
             ''' % (start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id, start_assignment_id,
                    end_assignment_id),
     )
