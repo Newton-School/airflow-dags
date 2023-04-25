@@ -272,7 +272,6 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
         postgres_conn_id='postgres_read_replica',
         dag=dag,
         params={'current_cps_sub_dag_id': cps_sub_dag_id, 'current_assignment_sub_dag_id': current_assignment_sub_dag_id},
-        provide_context=True,
         sql=''' select * from
         (with questions_released as(
                     (select
