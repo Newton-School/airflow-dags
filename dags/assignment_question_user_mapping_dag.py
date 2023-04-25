@@ -408,7 +408,7 @@ for assignment_sub_dag_id in range(int(total_number_of_sub_dags)):
         number_of_rows_per_assignment_sub_dag = number_of_rows_per_assignment_sub_dag(assignment_start_id, assignment_end_id)
 
         for cps_sub_dag_id in range(int(total_number_of_extraction_cps_dags)):
-            with TaskGroup(group_id=f"extract_and_transform_individual_assignment_sub_dag_{assignment_sub_dag_id}_cps_sub_dag_{cps_sub_dag_id}") as cps_sub_dag:
+            with TaskGroup(group_id=f"extract_and_transform_individual_assignment_sub_dag_{assignment_sub_dag_id}_cps_sub_dag_{cps_sub_dag_id}", dag=dag) as cps_sub_dag:
                 limit_offset_generator = PythonOperator(
                     task_id='limit_offset_generator',
                     python_callable=limit_offset_generator,
