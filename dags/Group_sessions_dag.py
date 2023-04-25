@@ -84,8 +84,8 @@ create_table = PostgresOperator(
             mentor_min_join_time timestamp,
             mentor_max_leave_time timestamp,
             mentor_total_time_in_mins bigint,
-            mentee_min_join_time bigint,
-            mentee_max_leave_time bigint,
+            mentee_min_join_time timestamp,
+            mentee_max_leave_time timestamp,
             mentee_total_time_in_mins bigint,
             mentee_overlapping_time_in_mins bigint
         );
