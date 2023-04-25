@@ -39,7 +39,7 @@ def extract_data_to_nested(**kwargs):
             'mentor_total_time_in_mins = EXCLUDED.mentor_total_time_in_mins,'
             'mentee_min_join_time = EXCLUDED.mentee_min_join_time,'
             'mentee_max_leave_time = EXCLUDED.mentee_max_leave_time,'
-            'mentee_total_time_in_mins = EXCLUDED.mentee_total_time_in_mins'
+            'mentee_total_time_in_mins = EXCLUDED.mentee_total_time_in_mins,'
             'mentee_overlapping_time_in_mins = EXCLUDED.mentee_overlapping_time_in_mins;',
             (
                 transform_row[0],
