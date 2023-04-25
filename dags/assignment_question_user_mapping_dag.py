@@ -19,7 +19,7 @@ assignment_per_dags = Variable.get("assignment_per_dag", 4000)
 
 total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 5)
 
-total_number_of_extraction_cps_dags = Variable.get("total_number_of_extraction_cps_dags", 100)
+total_number_of_extraction_cps_dags = Variable.get("total_number_of_extraction_cps_dags", 10)
 
 dag = DAG(
     'Assignment_question_user_mapping_DAG',
