@@ -103,9 +103,9 @@ transform_data = PostgresOperator(
         video_sessions_meeting.booked_by_id as mentor_user_id,
         video_sessions_meetingcourseuserreport.report_type,
         video_sessions_meeting.course_id,
-        cast(min(video_sessions_meetingcourseuserreport.created_at) as varchar) as min_created_at,
-        cast(min(video_sessions_meetingcourseuserreport.join_time) as varchar) as min_join_time,
-        cast(max(video_sessions_meetingcourseuserreport.leave_time) as varchar) as max_leave_time,
+        min(video_sessions_meetingcourseuserreport.created_at) as min_created_at,
+        min(video_sessions_meetingcourseuserreport.join_time) as min_join_time,
+        max(video_sessions_meetingcourseuserreport.leave_time) as max_leave_time,
         sum(duration) as total_time
     from
         video_sessions_meeting
@@ -128,9 +128,9 @@ mentee_data as
         video_sessions_meeting_booked_with.user_id as mentee_user_id,
         video_sessions_meetingcourseuserreport.report_type,
         video_sessions_meeting.course_id,
-        cast(min(video_sessions_meetingcourseuserreport.created_at) as varchar) as min_created_at,
-        cast(min(video_sessions_meetingcourseuserreport.join_time) as varchar) as min_join_time,
-        cast(max(video_sessions_meetingcourseuserreport.leave_time) as varchar) as max_leave_time,
+        min(video_sessions_meetingcourseuserreport.created_at) as min_created_at,
+        min(video_sessions_meetingcourseuserreport.join_time) as min_join_time,
+        max(video_sessions_meetingcourseuserreport.leave_time) as max_leave_time,
         sum(duration) as total_time,
         
         sum(duration) 
@@ -164,11 +164,11 @@ select
     mentor_data.course_id,
     mentee_data.mentee_user_id,
     mentee_data.report_type as mentee_report_type,
-    mentor_data.min_join_time as mentor_min_join_time,
-    mentor_data.max_leave_time as mentor_max_leave_time,
+    cast(mentor_data.min_join_time as varchar) as mentor_min_join_time,
+    cast(mentor_data.max_leave_time as varchar) as mentor_max_leave_time,
     mentor_data.total_time/60 as mentor_total_time_in_mins,
-    mentee_data.min_join_time as mentee_min_join_time,
-    mentee_data.max_leave_time as mentee_max_leave_time,
+    cast(mentee_data.min_join_time as varchar) as mentee_min_join_time,
+    cast(mentee_data.max_leave_time as varchar) as mentee_max_leave_time,
     mentee_data.total_time/60 as mentee_total_time_in_mins,
     mentee_data.overlapping_time/60 as mentee_overlapping_time_in_mins
     
