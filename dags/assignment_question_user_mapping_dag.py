@@ -259,9 +259,10 @@ def limit_offset_generator_func(**kwargs):
     current_cps_sub_dag_id = kwargs['current_cps_sub_dag_id']
     count_cps_rows = ti.xcom_pull(task_ids=f'transforming_data_{current_assignment_sub_dag_id}.number_of_rows_per_assignment_sub_dag')
     print(count_cps_rows)
+    total_count_rows = count_cps_rows[0][0]
     return {
-        "limit": count_cps_rows // total_number_of_extraction_cps_dags,
-        "offset": current_cps_sub_dag_id * (count_cps_rows // total_number_of_extraction_cps_dags) + 1,
+        "limit": total_count_rows // total_number_of_extraction_cps_dags,
+        "offset": current_cps_sub_dag_id * (total_count_rows // total_number_of_extraction_cps_dags) + 1,
     }
 
 

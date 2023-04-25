@@ -27,7 +27,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO one_to_one_topic_mapping (table_unique_key,meeting_id,mentor_user_id,'
+            'INSERT INTO group_sessions (table_unique_key,meeting_id,mentor_user_id,'
             'mentor_report_type,course_id,mentee_user_id,mentee_report_type,mentor_min_join_time,'
             'mentor_max_leave_time,mentor_total_time_in_mins,mentee_min_join_time,'
             'mentee_max_leave_time,mentee_total_time_in_mins,mentee_overlapping_time_in_mins)'
