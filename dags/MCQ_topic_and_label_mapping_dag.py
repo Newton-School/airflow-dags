@@ -94,7 +94,7 @@ create_table = PostgresOperator(
             difficulty_level int,
             hash varchar(32),
             is_deleted boolean,
-            question_text varchar(8256)
+            question_text varchar(8256),
             question_type int,
             question_for_assessment_type integer[],
             peer_reviewed boolean,
