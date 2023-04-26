@@ -60,7 +60,7 @@ dag = DAG(
     'assignment_question_dag',
     default_args=default_args,
     description='Assignment Questions raw',
-    schedule_interval='0 21 * * *',
+    schedule_interval='10 20 * * *',
     catchup=False
 )
 
