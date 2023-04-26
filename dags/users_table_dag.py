@@ -80,7 +80,7 @@ dag = DAG(
     'users_table_transformation_DAG',
     default_args=default_args,
     description='A DAG for users table transformation',
-    schedule_interval='0 20 * * *',
+    schedule_interval='0 5 * * *',
     catchup=False
 )
 
