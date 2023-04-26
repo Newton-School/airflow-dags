@@ -64,7 +64,7 @@ dag = DAG(
     'Live_lecture_course_user_reports_dag',
     default_args=default_args,
     description='Per lecture per user time spent and overlapping time',
-    schedule_interval='30 22 * * *',
+    schedule_interval='0 22 * * *',
     catchup=False
 )
 
