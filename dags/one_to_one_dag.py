@@ -74,7 +74,7 @@ dag = DAG(
     'One_to_one_dag',
     default_args=default_args,
     description='One to One Table DAG',
-    schedule_interval='0 20 * * *',
+    schedule_interval='0 6 * * *',
     catchup=False
 )
 
