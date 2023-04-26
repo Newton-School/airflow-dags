@@ -29,17 +29,16 @@ def extract_data_to_nested(**kwargs):
         pg_cursor.execute(
 
             'INSERT INTO assessments (assessment_id,created_at,hash,'
-            'start_timestamp,end_timestamp,title,syllabus,course_id,hidden,is_proctored_exam,'
+            'start_timestamp,end_timestamp,title,course_id,hidden,is_proctored_exam,'
             'max_marks,clearing_marks,max_attempts,assessment_type,lecture_slot_id,'
             'was_competitive,random_multiple_choice_questions,sub_type,preserve_question_sequence,'
             'assessment_mapping_type,question_count)'
             
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             
             'on conflict (assessment_id) do update set start_timestamp = EXCLUDED.start_timestamp,'
             'end_timestamp = EXCLUDED.end_timestamp,'
             'title = EXCLUDED.title,'
-            'syllabus = EXCLUDED.syllabus,'
             'hidden = EXCLUDED.hidden,'
             'is_proctored_exam = EXCLUDED.is_proctored_exam,'
             'max_marks = EXCLUDED.max_marks,'
@@ -73,8 +72,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[16],
                 transform_row[17],
                 transform_row[18],
-                transform_row[19],
-                transform_row[20]
+                transform_row[19]
             )
         )
     pg_conn.commit()
@@ -98,7 +96,6 @@ create_table = PostgresOperator(
             start_timestamp timestamp,
             end_timestamp timestamp,
             title varchar(256),
-            syllabus varchar(256),
             course_id bigint,
             hidden boolean,
             is_proctored_exam boolean,
@@ -129,7 +126,6 @@ transform_data = PostgresOperator(
         assessments_assessment.start_timestamp,
         assessments_assessment.end_timestamp,
         assessments_assessment.title,
-        assessments_assessment.syllabus,
         assessments_assessment.course_id,
         assessments_assessment.hidden,
         assessments_assessment.is_proctored_exam,
