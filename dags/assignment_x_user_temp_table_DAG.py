@@ -127,6 +127,7 @@ transform_data = PostgresOperator(
                                 and assignments_assignmentcourseuserrandomassignedquestionmapping.assignment_id = assignments_assignment.id
 
                             where assignments_assignment.original_assignment_type in (3,4)
+                            limit 10
                 )
                 select
                 distinct questions_released.user_id,
