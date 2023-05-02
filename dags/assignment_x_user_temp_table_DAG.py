@@ -71,9 +71,9 @@ def extract_data_to_nested(**kwargs):
 
 
 dag = DAG(
-    'Assignment_question_user_mapping_DAG',
+    'Assignment_x_user_temp_table_DAG',
     default_args=default_args,
-    description='Assignment Question User Mapping Table DAG',
+    description='Assignment Question User Mapping Table Temp Table approach DAG',
     schedule_interval='0 23 * * *',
     catchup=False
 )
