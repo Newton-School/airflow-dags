@@ -149,11 +149,10 @@ select distinct auth_user.id as user_id,auth_user.first_name,auth_user.last_name
     left join education_fieldofstudy MF on D.field_of_study_id = MF.id
     )
     select 
-        distinct user_id,first_name,last_name,date_joined,last_login,username,email,phone,current_location,gender,
-        date_of_birth,utm_source,utm_medium,utm_campaign,
-        tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study
+        distinct user_id,first_name,last_name,date_joined,last_login,username,email,phone,current_location,gender,date_of_birth,utm_source,utm_medium,utm_campaign,
+        tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study
     from t1
-        where rank =1 and user_id is not null;
+        where rank =1;
         ''',
     dag=dag
 )
