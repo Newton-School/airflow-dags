@@ -25,13 +25,13 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO assignment_random_question_user_mapping (user_id,assignment_id,question_id,question_started_at,'
+            'INSERT INTO assignment_random_question_user_mapping (uaq_id,user_id,assignment_id,question_id,question_started_at,'
             'question_completed_at,completed,all_test_case_passed,playground_type,playground_id,hash,'
             'latest_assignment_question_hint_mapping_id,late_submission,max_test_case_passed,assignment_started_at,'
             'assignment_completed_at,assignment_cheated_marked_at,cheated,plagiarism_submission_id,'
             'plagiarism_score,solution_length,number_of_submissions,error_faced_count) '
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (user_id,assignment_id,question_id) do update set question_completed_at = EXCLUDED.question_completed_at,'
+            'on conflict (uaq_id) do update set question_completed_at = EXCLUDED.question_completed_at,'
             'completed=EXCLUDED.completed, all_test_case_passed=EXCLUDED.all_test_case_passed, latest_assignment_question_hint_mapping_id=EXCLUDED.latest_assignment_question_hint_mapping_id,'
             'late_submission=EXCLUDED.late_submission, max_test_case_passed=EXCLUDED.max_test_case_passed, assignment_completed_at=EXCLUDED.assignment_completed_at,'
             'assignment_cheated_marked_at=EXCLUDED.assignment_cheated_marked_at, cheated=EXCLUDED.cheated,'
@@ -78,7 +78,8 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS assignment_random_question_user_mapping (
-            id serial not null PRIMARY KEY,
+            id serial not null,
+            uaq_id double precision not null PRIMARY KEY, 
             user_id bigint,
             assignment_id bigint,
             question_id bigint,
@@ -131,6 +132,7 @@ transform_data = PostgresOperator(
                 distinct questions_released.user_id,
                 questions_released.assignment_id,
                 questions_released.question_id,
+                concat(questions_released.user_id,questions_released.assignment_id,questions_released.question_id) as uaq_id,
                 cast(assignments_assignmentcourseuserquestionmapping.started_at as varchar) as question_started_at,
                 cast(assignments_assignmentcourseuserquestionmapping.completed_at as varchar) as question_completed_at,
                 assignments_assignmentcourseuserquestionmapping.completed,
@@ -202,7 +204,7 @@ transform_data = PostgresOperator(
 
                     left join playgrounds_gameplaygroundsubmission pgps on pgps.game_playground_id = assignments_assignmentcourseuserquestionmapping.game_playground_id
                     left join playgrounds_playgroundplagiarismreport as plag_game on plag_game.object_id = pgps.id and plag_game.content_type_id = 179
-                    group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,assignments_assignmentcourseuserquestionmapping.coding_playground_id,assignments_assignmentcourseuserquestionmapping.front_end_playground_id,assignments_assignmentcourseuserquestionmapping.game_playground_id,assignments_assignmentcourseuserquestionmapping.project_playground_id
+                    group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,assignments_assignmentcourseuserquestionmapping.coding_playground_id,assignments_assignmentcourseuserquestionmapping.front_end_playground_id,assignments_assignmentcourseuserquestionmapping.game_playground_id,assignments_assignmentcourseuserquestionmapping.project_playground_id
     ;
         ''',
     dag=dag
