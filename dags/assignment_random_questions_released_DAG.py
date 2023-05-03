@@ -56,7 +56,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
         task_id='transform_data',
         postgres_conn_id='postgres_read_replica',
         dag=dag,
-        sql='''select
+        sql='''select distinct cast(concat(assignments_assignment.id, row_number() over(order by assignments_assignment.id)) as double precision) as table_unique_key,
                     courses_courseusermapping.user_id,
                     courses_course.id as course_id,
                     assignments_assignment.id  as assignment_id,
