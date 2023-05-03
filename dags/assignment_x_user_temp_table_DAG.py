@@ -130,8 +130,8 @@ transform_data = PostgresOperator(
                             limit 100
                 )
                 select
-                distinct questions_released.user_id,
-                cast(concat(questions_released.user_id,questions_released.assignment_id,questions_released.question_id) as double precision) as uaq_id,
+                distinct cast(concat(questions_released.user_id,questions_released.assignment_id,questions_released.question_id) as double precision) as uaq_id, 
+                questions_released.user_id,
                 questions_released.assignment_id,
                 questions_released.question_id,
                 cast(assignments_assignmentcourseuserquestionmapping.started_at as varchar) as question_started_at,
