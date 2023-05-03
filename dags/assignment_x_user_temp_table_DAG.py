@@ -127,12 +127,13 @@ transform_data = PostgresOperator(
                                 and assignments_assignmentcourseuserrandomassignedquestionmapping.assignment_id = assignments_assignment.id
 
                             where assignments_assignment.original_assignment_type in (3,4)
+                            limit 100
                 )
                 select
                 distinct questions_released.user_id,
+                cast(concat(questions_released.user_id,questions_released.assignment_id,questions_released.question_id) as double precision) as uaq_id,
                 questions_released.assignment_id,
                 questions_released.question_id,
-                cast(concat(questions_released.user_id,questions_released.assignment_id,questions_released.question_id) as double precision) as uaq_id,
                 cast(assignments_assignmentcourseuserquestionmapping.started_at as varchar) as question_started_at,
                 cast(assignments_assignmentcourseuserquestionmapping.completed_at as varchar) as question_completed_at,
                 assignments_assignmentcourseuserquestionmapping.completed,
