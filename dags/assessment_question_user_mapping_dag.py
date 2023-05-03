@@ -1,33 +1,32 @@
 from airflow import DAG
+# from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.models import Variable
+from airflow.utils.task_group import TaskGroup
 from datetime import datetime
+from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
+assessment_per_dags = Variable.get("assessment_per_dags", 8)
+total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 1250)
 
 
 def extract_data_to_nested(**kwargs):
-    def clean_input(data_type, data_value):
-        if data_type == 'string':
-            return 'null' if not data_value else f'\"{data_value}\"'
-        elif data_type == 'datetime':
-            return 'null' if not data_value else f'CAST(\'{data_value}\' As TIMESTAMP)'
-        else:
-            return data_value
-
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
-    transform_data_output = ti.xcom_pull(task_ids='transform_data')
+    current_task_index = kwargs['current_task_index']
+    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_task_index}.transform_data')
     for transform_row in transform_data_output:
+        print(transform_row)
         pg_cursor.execute(
-
             'INSERT INTO assessment_question_user_mapping (table_unique_key,course_user_assessment_mapping_id,assessment_id,'
             'course_user_mapping_id,assessment_completed,assessment_completed_at,user_assessment_level_hash,'
             'assessment_late_completed,marks_obtained,assessment_started_at,cheated,'
@@ -68,7 +67,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[13],
                 transform_row[14],
                 transform_row[15],
-                transform_row[16]
+                transform_row[16],
             )
         )
     pg_conn.commit()
@@ -81,6 +80,41 @@ dag = DAG(
     schedule_interval='20 4 * * *',
     catchup=False
 )
+
+
+def transform_data_per_query(start_assignment_id, end_assignment_id):
+    return PostgresOperator(
+        task_id='transform_data',
+        postgres_conn_id='postgres_read_replica',
+        dag=dag,
+        sql='''select
+            cast(concat(assessments_courseuserassessmentmapping.id, row_number() over (order by assessments_courseuserassessmentmapping.id)) as double precision) as table_unique_key,
+            assessments_courseuserassessmentmapping.id as course_user_assessment_mapping_id,
+            assessments_courseuserassessmentmapping.assessment_id,
+            assessments_courseuserassessmentmapping.course_user_mapping_id,
+            assessments_courseuserassessmentmapping.completed as assessment_completed,
+            assessments_courseuserassessmentmapping.completed_at as assessment_completed_at,
+            assessments_courseuserassessmentmapping.hash as user_assessment_level_hash,
+            assessments_courseuserassessmentmapping.late_completed as assessment_late_completed,
+            assessments_courseuserassessmentmapping.marks as marks_obtained,
+            assessments_courseuserassessmentmapping.started_at as assessment_started_at,
+            assessments_courseuserassessmentmapping.cheated,
+            assessments_courseuserassessmentmapping.cheated_marked_at,
+            assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id as mcq_id,
+            assessments_multiplechoicequestioncourseusermapping.marked_at as option_marked_at,
+            assessments_multiplechoicequestioncourseusermapping.marked_choice,
+            assessments_multiplechoicequestion.correct_choice,
+            assessments_multiplechoicequestioncourseusermapping.hash as user_question_level_hash
+        from
+            assessments_courseuserassessmentmapping
+        left join assessments_multiplechoicequestioncourseusermapping
+            on assessments_multiplechoicequestioncourseusermapping.course_user_assessment_mapping_id = assessments_courseuserassessmentmapping.id and (assessments_courseuserassessmentmapping.assessment_id between %d and %d)
+        left join assessments_multiplechoicequestion
+            on assessments_multiplechoicequestion.id = assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id
+        ;
+            ''' % (start_assignment_id, end_assignment_id),
+    )
+
 
 create_table = PostgresOperator(
     task_id='create_table',
@@ -108,42 +142,15 @@ create_table = PostgresOperator(
     ''',
     dag=dag
 )
-
-transform_data = PostgresOperator(
-    task_id='transform_data',
-    postgres_conn_id='postgres_read_replica',
-    sql='''select
-    cast(concat(assessments_courseuserassessmentmapping.id, row_number() over (order by assessments_courseuserassessmentmapping.id)) as double precision) as table_unique_key,
-    assessments_courseuserassessmentmapping.id as course_user_assessment_mapping_id,
-    assessments_courseuserassessmentmapping.assessment_id,
-    assessments_courseuserassessmentmapping.course_user_mapping_id,
-    assessments_courseuserassessmentmapping.completed as assessment_completed,
-    assessments_courseuserassessmentmapping.completed_at as assessment_completed_at,
-    assessments_courseuserassessmentmapping.hash as user_assessment_level_hash,
-    assessments_courseuserassessmentmapping.late_completed as assessment_late_completed,
-    assessments_courseuserassessmentmapping.marks as marks_obtained,
-    assessments_courseuserassessmentmapping.started_at as assessment_started_at,
-    assessments_courseuserassessmentmapping.cheated,
-    assessments_courseuserassessmentmapping.cheated_marked_at,
-    assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id as mcq_id,
-    assessments_multiplechoicequestioncourseusermapping.marked_at as option_marked_at,
-    assessments_multiplechoicequestioncourseusermapping.marked_choice,
-    assessments_multiplechoicequestion.correct_choice,
-    assessments_multiplechoicequestioncourseusermapping.hash as user_question_level_hash
-from
-    assessments_courseuserassessmentmapping
-left join assessments_multiplechoicequestioncourseusermapping
-    on assessments_multiplechoicequestioncourseusermapping.course_user_assessment_mapping_id = assessments_courseuserassessmentmapping.id
-left join assessments_multiplechoicequestion
-    on assessments_multiplechoicequestion.id = assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id;
-        ''',
-    dag=dag
-)
-
-extract_python_data = PythonOperator(
-    task_id='extract_python_data',
-    python_callable=extract_data_to_nested,
-    provide_context=True,
-    dag=dag
-)
-create_table >> transform_data >> extract_python_data
+for i in range(int(total_number_of_sub_dags)):
+    with TaskGroup(group_id=f"transforming_data_{i}", dag=dag) as sub_dag_task_group:
+        transform_data = transform_data_per_query(i * int(assessment_per_dags) + 1, (i + 1) * int(assessment_per_dags))
+        extract_python_data = PythonOperator(
+            task_id='extract_python_data',
+            python_callable=extract_data_to_nested,
+            provide_context=True,
+            op_kwargs={'current_task_index': i},
+            dag=dag,
+        )
+        transform_data >> extract_python_data
+    create_table >> sub_dag_task_group
