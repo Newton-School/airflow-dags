@@ -1,31 +1,33 @@
 from airflow import DAG
+# from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.models import Variable
+from airflow.utils.task_group import TaskGroup
 from datetime import datetime
+from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
-def extract_data_to_nested(**kwargs):
-    def clean_input(data_type, data_value):
-        if data_type == 'string':
-            return 'null' if not data_value else f'\"{data_value}\"'
-        elif data_type == 'datetime':
-            return 'null' if not data_value else f'CAST(\'{data_value}\' As TIMESTAMP)'
-        else:
-            return data_value
+assignment_per_dags = Variable.get("assignment_per_dag", 40)
+total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 500)
 
+
+def extract_data_to_nested(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
-    transform_data_output = ti.xcom_pull(task_ids='transform_data')
+    current_task_index = kwargs['current_task_index']
+    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_task_index}.transform_data')
     for transform_row in transform_data_output:
+        print(transform_row)
         pg_cursor.execute(
-            'INSERT INTO assignment_question_user_mapping (uaq_id,user_id,assignment_id,question_id,question_started_at,'
+             'INSERT INTO assignment_question_user_mapping (table_unique_key,user_id,assignment_id,question_id,question_started_at,'
             'question_completed_at,completed,all_test_case_passed,playground_type,playground_id,hash,'
             'latest_assignment_question_hint_mapping_id,late_submission,max_test_case_passed,assignment_started_at,'
             'assignment_completed_at,assignment_cheated_marked_at,cheated,plagiarism_submission_id,'
@@ -74,44 +76,16 @@ dag = DAG(
     schedule_interval='0 23 * * *',
     catchup=False
 )
-create_table = PostgresOperator(
-    task_id='create_table',
-    postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE IF NOT EXISTS assignment_question_user_mapping (
-            id serial not null,
-            uaq_id double precision not null PRIMARY KEY, 
-            user_id bigint,
-            assignment_id bigint,
-            question_id bigint,
-            question_started_at timestamp,
-            question_completed_at timestamp,
-            completed boolean,
-            all_test_case_passed boolean,
-            playground_type varchar(20),
-            playground_id bigint,
-            hash varchar(30),
-            latest_assignment_question_hint_mapping_id bigint,
-            late_submission boolean,
-            max_test_case_passed int,
-            assignment_started_at timestamp,
-            assignment_completed_at timestamp,
-            assignment_cheated_marked_at timestamp,
-            cheated boolean,
-            plagiarism_submission_id bigint,
-            plagiarism_score double precision,
-            solution_length bigint,
-            number_of_submissions int,
-            error_faced_count int
-        );
-    ''',
-    dag=dag
-)
-transform_data = PostgresOperator(
-    task_id='transform_data',
-    postgres_conn_id='postgres_read_replica',
-    sql='''select
+
+
+def transform_data_per_query(start_assignment_id, end_assignment_id):
+    return PostgresOperator(
+        task_id='transform_data',
+        postgres_conn_id='postgres_read_replica',
+        dag=dag,
+        sql='''select
             distinct 
-            cast(concat(courses_courseusermapping.user_id,assignments_assignment.id,assignments_assignmentcourseuserquestionmapping.assignment_question_id) as double precision) as uaq_id,
+            cast(concat(courses_courseusermapping.user_id,assignments_assignment.id,assignments_assignmentcourseuserquestionmapping.assignment_question_id) as double precision) as table_unique_key,
             courses_courseusermapping.user_id,
             assignments_assignment.id as assignment_id,
             assignments_assignmentcourseuserquestionmapping.assignment_question_id as question_id,
@@ -167,7 +141,7 @@ transform_data = PostgresOperator(
             
             from assignments_assignment
                 left join courses_course 
-                        on assignments_assignment.course_id = courses_course.id
+                        on assignments_assignment.course_id = courses_course.id and (assignments_assignment.id between %d and %d)
                 left join courses_courseusermapping 
                     on courses_courseusermapping.course_id = courses_course.id
                 
@@ -190,14 +164,52 @@ transform_data = PostgresOperator(
                 left join playgrounds_gameplaygroundsubmission pgps on pgps.game_playground_id = assignments_assignmentcourseuserquestionmapping.game_playground_id
                 left join playgrounds_playgroundplagiarismreport as plag_game on plag_game.object_id = pgps.id and plag_game.content_type_id = 179
             group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,assignments_assignmentcourseuserquestionmapping.coding_playground_id,assignments_assignmentcourseuserquestionmapping.front_end_playground_id,assignments_assignmentcourseuserquestionmapping.game_playground_id,assignments_assignmentcourseuserquestionmapping.project_playground_id
-    ;
-        ''',
+        ;
+            ''' % (start_assignment_id, end_assignment_id),
+    )
+
+
+create_table = PostgresOperator(
+    task_id='create_table',
+    postgres_conn_id='postgres_result_db',
+    sql='''CREATE TABLE IF NOT EXISTS assignment_question_user_mapping (
+            id serial not null,
+            table_unique_key double precision not null PRIMARY KEY, 
+            user_id bigint,
+            assignment_id bigint,
+            question_id bigint,
+            question_started_at timestamp,
+            question_completed_at timestamp,
+            completed boolean,
+            all_test_case_passed boolean,
+            playground_type varchar(20),
+            playground_id bigint,
+            hash varchar(30),
+            latest_assignment_question_hint_mapping_id bigint,
+            late_submission boolean,
+            max_test_case_passed int,
+            assignment_started_at timestamp,
+            assignment_completed_at timestamp,
+            assignment_cheated_marked_at timestamp,
+            cheated boolean,
+            plagiarism_submission_id bigint,
+            plagiarism_score double precision,
+            solution_length bigint,
+            number_of_submissions int,
+            error_faced_count int
+        );
+    ''',
     dag=dag
 )
-extract_python_data = PythonOperator(
-    task_id='extract_python_data',
-    python_callable=extract_data_to_nested,
-    provide_context=True,
-    dag=dag
-)
-create_table >> transform_data >> extract_python_data
+for i in range(int(total_number_of_sub_dags)):
+    with TaskGroup(group_id=f"transforming_data_{i}", dag=dag) as sub_dag_task_group:
+        transform_data = transform_data_per_query(i * int(assignment_per_dags) + 1, (i + 1) * int(assignment_per_dags))
+        extract_python_data = PythonOperator(
+            task_id='extract_python_data',
+            python_callable=extract_data_to_nested,
+            provide_context=True,
+            op_kwargs={'current_task_index': i},
+            dag=dag,
+        )
+        transform_data >> extract_python_data
+    create_table >> sub_dag_task_group
