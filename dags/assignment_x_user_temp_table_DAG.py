@@ -127,7 +127,7 @@ transform_data = PostgresOperator(
                                 and assignments_assignmentcourseuserrandomassignedquestionmapping.assignment_id = assignments_assignment.id
 
                             where assignments_assignment.original_assignment_type in (3,4)
-                            limit 100
+                            limit 100000
                 )
                 select
                 distinct cast(concat(questions_released.user_id,questions_released.assignment_id,questions_released.question_id) as double precision) as uaq_id, 
