@@ -64,7 +64,7 @@ create_table = PostgresOperator(
             report_type int,
             inst_min_join_time timestamp,
             inst_max_leave_time timestamp,
-            duration int
+            duration_time_in_mins int
     );
     ''',
     dag=dag
@@ -81,7 +81,7 @@ transform_data = PostgresOperator(
         report_type,
         inst_min_join_time,
         inst_max_leave_time,
-        duration_time_in_secs/60 as duration_time_in_mins
+        (duration_time_in_secs/60) as duration_time_in_mins
     from
             (with raw_mapping as
 
