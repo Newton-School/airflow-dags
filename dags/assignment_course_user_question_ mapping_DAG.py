@@ -201,15 +201,30 @@ create_table = PostgresOperator(
     ''',
     dag=dag
 )
-for i in range(int(total_number_of_sub_dags)):
-    with TaskGroup(group_id=f"transforming_data_{i}", dag=dag) as sub_dag_task_group:
-        transform_data = transform_data_per_query(i * int(assignment_per_dags) + 1, (i + 1) * int(assignment_per_dags))
-        extract_python_data = PythonOperator(
-            task_id='extract_python_data',
-            python_callable=extract_data_to_nested,
-            provide_context=True,
-            op_kwargs={'current_task_index': i},
-            dag=dag,
-        )
-        transform_data >> extract_python_data
-    create_table >> sub_dag_task_group
+# for i in range(int(total_number_of_sub_dags)):
+#     with TaskGroup(group_id=f"transforming_data_{i}", dag=dag) as sub_dag_task_group:
+#         transform_data = transform_data_per_query(i * int(assignment_per_dags) + 1, (i + 1) * int(assignment_per_dags))
+#         extract_python_data = PythonOperator(
+#             task_id='extract_python_data',
+#             python_callable=extract_data_to_nested,
+#             provide_context=True,
+#             op_kwargs={'current_task_index': i},
+#             dag=dag,
+#         )
+#         transform_data >> extract_python_data
+#     create_table >> sub_dag_task_group
+sub_dag_index = Variable.get("sub_dag_index", default_var="0")
+sub_dag_index = int(sub_dag_index)
+
+with TaskGroup(group_id=f"transforming_data_{sub_dag_index}", dag=dag) as sub_dag_task_group:
+    transform_data = transform_data_per_query(sub_dag_index * int(assignment_per_dags) + 1, (sub_dag_index + 1) * int(assignment_per_dags))
+    extract_python_data = PythonOperator(
+        task_id='extract_python_data',
+        python_callable=extract_data_to_nested,
+        provide_context=True,
+        op_kwargs={'current_task_index': sub_dag_index},
+        dag=dag,
+    )
+    transform_data >> extract_python_data
+
+create_table >> sub_dag_task_group
