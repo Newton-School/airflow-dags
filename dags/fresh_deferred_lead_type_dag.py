@@ -27,7 +27,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO mentor_mentee_mapping (user_id,'
+            'INSERT INTO fresh_deferred_lead_type (user_id,'
             'lead_type,email)'
             'VALUES (%s,%s,%s)'
             'on conflict (user_id) do update set lead_type = EXCLUDED.lead_type,'
