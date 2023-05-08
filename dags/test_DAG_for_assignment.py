@@ -170,7 +170,7 @@ transform_data = PostgresOperator(
             
             from assignments_assignment
                 left join courses_course 
-                        on assignments_assignment.course_id = courses_course.id and (assignments_assignment.id between 1 and 1000)
+                        on assignments_assignment.course_id = courses_course.id and (assignments_assignment.id between 1 and 500)
                 left join courses_courseusermapping 
                     on courses_courseusermapping.course_id = courses_course.id
                 
