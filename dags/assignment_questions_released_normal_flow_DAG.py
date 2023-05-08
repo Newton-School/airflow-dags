@@ -45,7 +45,7 @@ dag = DAG(
     'assignment_questions_released_normal_flow_DAG',
     default_args=default_args,
     description='A DAG for assignment questions released though the normal flow',
-    schedule_interval='35 4 * * *',
+    schedule_interval='0 17 * * *',
     catchup=False
 )
 create_table = PostgresOperator(

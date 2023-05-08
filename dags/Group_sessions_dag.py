@@ -69,7 +69,7 @@ dag = DAG(
     'group_sessions_dag',
     default_args=default_args,
     description='Group Sessions mentor and mentee data',
-    schedule_interval='0 3 * * *',
+    schedule_interval='0 17 * * *',
     catchup=False
 )
 

@@ -77,7 +77,7 @@ dag = DAG(
     'assessment_question_user_mapping_dag',
     default_args=default_args,
     description='Assessment questions (MCQ) and user level data all attempted questions data',
-    schedule_interval='20 4 * * *',
+    schedule_interval='45 17 * * *',
     catchup=False
 )
 

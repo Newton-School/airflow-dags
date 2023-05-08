@@ -46,7 +46,7 @@ dag = DAG(
     'Topics_and_Template_mapping',
     default_args=default_args,
     description='Topics and template mapping',
-    schedule_interval='30 18 * * *',
+    schedule_interval='30 16 * * *',
     catchup=False
 )
 

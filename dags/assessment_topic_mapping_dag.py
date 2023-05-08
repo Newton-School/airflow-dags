@@ -52,7 +52,7 @@ dag = DAG(
     'assessment_topic_mapping_dag',
     default_args=default_args,
     description='Assessment mapping with topics',
-    schedule_interval='55 3 * * *',
+    schedule_interval='30 16 * * *',
     catchup=False
 )
 
