@@ -16,18 +16,17 @@ default_args = {
 assignment_per_dags = Variable.get("assignment_per_dag", 40)
 total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 500)
 
-
 def extract_data_to_nested(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     pg_conn = pg_hook.get_conn()
-    pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
-    current_task_index = kwargs['current_task_index']
-    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_task_index}.transform_data')
+    current_assignment_sub_dag_id = kwargs['current_assignment_sub_dag_id']
+    current_cps_sub_dag_id = kwargs['current_cps_sub_dag_id']
+    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_assignment_sub_dag_id}.extract_and_transform_individual_assignment_sub_dag_{current_assignment_sub_dag_id}_cps_sub_dag_{current_cps_sub_dag_id}.transform_data')
     for transform_row in transform_data_output:
-        print(transform_row)
+        pg_cursor = pg_conn.cursor()
         pg_cursor.execute(
-             'INSERT INTO assignment_question_user_mapping (table_unique_key,user_id,assignment_id,question_id,question_started_at,'
+                 'INSERT INTO assignment_question_user_mapping (table_unique_key,user_id,assignment_id,question_id,question_started_at,'
             'question_completed_at,completed,all_test_case_passed,playground_type,playground_id,hash,'
             'latest_assignment_question_hint_mapping_id,late_submission,max_test_case_passed,assignment_started_at,'
             'assignment_completed_at,assignment_cheated_marked_at,cheated,plagiarism_submission_id,'
@@ -40,33 +39,36 @@ def extract_data_to_nested(**kwargs):
             'plagiarism_submission_id=EXCLUDED.plagiarism_submission_id,plagiarism_score=EXCLUDED.plagiarism_score,'
             'solution_length=EXCLUDED.solution_length, number_of_submissions=EXCLUDED.number_of_submissions,'
             'error_faced_count=EXCLUDED.error_faced_count ;',
-            (
-                transform_row[0],
-                transform_row[1],
-                transform_row[2],
-                transform_row[3],
-                transform_row[4],
-                transform_row[5],
-                transform_row[6],
-                transform_row[7],
-                transform_row[8],
-                transform_row[9],
-                transform_row[10],
-                transform_row[11],
-                transform_row[12],
-                transform_row[13],
-                transform_row[14],
-                transform_row[15],
-                transform_row[16],
-                transform_row[17],
-                transform_row[18],
-                transform_row[19],
-                transform_row[20],
-                transform_row[21],
-                transform_row[22],
-            )
+                (
+                    transform_row[0],
+                    transform_row[1],
+                    transform_row[2],
+                    transform_row[3],
+                    transform_row[4],
+                    transform_row[5],
+                    transform_row[6],
+                    transform_row[7],
+                    transform_row[8],
+                    transform_row[9],
+                    transform_row[10],
+                    transform_row[11],
+                    transform_row[12],
+                    transform_row[13],
+                    transform_row[14],
+                    transform_row[15],
+                    transform_row[16],
+                    transform_row[17],
+                    transform_row[18],
+                    transform_row[19],
+                    transform_row[20],
+                    transform_row[21],
+                    transform_row[22],
+                 )
         )
-    pg_conn.commit()
+        pg_conn.commit()
+        pg_cursor.close()
+    pg_conn.close()
+
 
 
 dag = DAG(
