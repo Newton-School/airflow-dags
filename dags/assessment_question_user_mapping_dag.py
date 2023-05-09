@@ -20,12 +20,12 @@ total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 1250)
 def extract_data_to_nested(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     pg_conn = pg_hook.get_conn()
-    pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
-    current_task_index = kwargs['current_task_index']
-    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_task_index}.transform_data')
+    current_assessment_sub_dag_id = kwargs['current_assessment_sub_dag_id']
+    current_cps_sub_dag_id = kwargs['current_cps_sub_dag_id']
+    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_assessment_sub_dag_id}.extract_and_transform_individual_assignment_sub_dag_{current_assessment_sub_dag_id}_cps_sub_dag_{current_cps_sub_dag_id}.transform_data')
     for transform_row in transform_data_output:
-        print(transform_row)
+        pg_cursor = pg_conn.cursor()
         pg_cursor.execute(
             'INSERT INTO assessment_question_user_mapping (table_unique_key,course_user_assessment_mapping_id,assessment_id,'
             'course_user_mapping_id,assessment_completed,assessment_completed_at,user_assessment_level_hash,'
@@ -50,28 +50,29 @@ def extract_data_to_nested(**kwargs):
             'marked_choice = EXCLUDED.marked_choice,'
             'correct_choice = EXCLUDED.correct_choice,'
             'user_question_level_hash = EXCLUDED.user_question_level_hash;',
-            (
-                transform_row[0],
-                transform_row[1],
-                transform_row[2],
-                transform_row[3],
-                transform_row[4],
-                transform_row[5],
-                transform_row[6],
-                transform_row[7],
-                transform_row[8],
-                transform_row[9],
-                transform_row[10],
-                transform_row[11],
-                transform_row[12],
-                transform_row[13],
-                transform_row[14],
-                transform_row[15],
-                transform_row[16],
-            )
+                (
+                    transform_row[0],
+                    transform_row[1],
+                    transform_row[2],
+                    transform_row[3],
+                    transform_row[4],
+                    transform_row[5],
+                    transform_row[6],
+                    transform_row[7],
+                    transform_row[8],
+                    transform_row[9],
+                    transform_row[10],
+                    transform_row[11],
+                    transform_row[12],
+                    transform_row[13],
+                    transform_row[14],
+                    transform_row[15],
+                    transform_row[16],
+                 )
         )
-    pg_conn.commit()
-
+        pg_conn.commit()
+        pg_cursor.close()
+    pg_conn.close()
 
 dag = DAG(
     'assessment_question_user_mapping_dag',
