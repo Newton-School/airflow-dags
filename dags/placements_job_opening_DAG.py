@@ -11,6 +11,7 @@ default_args = {
 }
 
 def extract_data_to_nested(**kwargs):
+
     def clean_input(data_type, data_value):
         if data_type == 'string':
             return 'null' if not data_value else f'\"{data_value}\"'
@@ -18,14 +19,13 @@ def extract_data_to_nested(**kwargs):
             return 'null' if not data_value else f'CAST(\'{data_value}\' As TIMESTAMP)'
         else:
             return data_value
+
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     pg_conn = pg_hook.get_conn()
+    pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
-    current_placements_job_opening_sub_dag_id = kwargs['current_placements_job_opening_sub_dag_id']
-    current_cps_sub_dag_id = kwargs['current_cps_sub_dag_id']
-    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_placements_job_opening_sub_dag_id}.extract_and_transform_individual_assignment_sub_dag_{current_placements_job_opening_sub_dag_id}_cps_sub_dag_{current_cps_sub_dag_id}.transform_data')
+    transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
-        pg_cursor = pg_conn.cursor()
         pg_cursor.execute(
             'INSERT INTO placements_job_openings (job_opening_id,company_id,city_id,created_at,'
             'created_by_id,job_description,hash,interview_process,max_ctc,min_ctc,number_of_openings,'
@@ -73,11 +73,9 @@ def extract_data_to_nested(**kwargs):
                     transform_row[30],
                     transform_row[31],
                     transform_row[32],
-                 )
+                )
         )
         pg_conn.commit()
-        pg_cursor.close()
-    pg_conn.close()
 
 
 dag = DAG(
