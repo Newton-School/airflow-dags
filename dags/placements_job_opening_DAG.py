@@ -92,7 +92,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS placements_job_openings (
-            job_opening_id bigint,
+            job_opening_id bigint not null PRIMARY KEY,
             company_id bigint,
             city_id int,
             created_at TIMESTAMP,
