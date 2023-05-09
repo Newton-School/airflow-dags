@@ -104,7 +104,7 @@ create_table = PostgresOperator(
             min_ctc int,
             number_of_openings int,
             short_description varchar(300),
-            job_title (128),
+            job_title varchar(128),
             updated_at TIMESTAMP,
             number_of_rounds int,
             closure_date DATE,
