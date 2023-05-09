@@ -119,10 +119,10 @@ create_table = PostgresOperator(
             company_criteria_twelfth_percent integer[],
             company_criteria_gender integer[],
             company_criteria_overall_work_experience_match_type int,
-            company_criteria_overall_work_experience integer[],
+            company_criteria_overall_work_experience text[],
             company_criteria_notice_period integer[],
             company_criteria_bond integer[],
-            company_criteria_technical_work_experience integer[]
+            company_criteria_technical_work_experience text[]
         );
     ''',
     dag=dag
