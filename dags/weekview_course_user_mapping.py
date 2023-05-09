@@ -47,7 +47,7 @@ dag = DAG(
     'weekly_user_details_dag',
     default_args=default_args,
     description='A DAG for maintaining WoW user data (user_id + course_id)',
-    schedule_interval='0 20 * * SUN',
+    schedule_interval='0 20 * * MON',
     catchup=False
 )
 
