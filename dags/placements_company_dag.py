@@ -70,7 +70,7 @@ create_table = PostgresOperator(
             company_id bigint not null PRIMARY KEY,
             company_name varchar(256),
             company_type varchar(10),
-            created_at TIMESTAMP.
+            created_at TIMESTAMP,
             created_by_id bigint,
             information varchar(4500),
             remark varchar(3000),
