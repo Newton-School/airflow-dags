@@ -75,7 +75,7 @@ dag = DAG(
     'assignment_question_user_mapping_transformation_DAG',
     default_args=default_args,
     description='A DAG for assignment x users table transformation',
-    schedule_interval='45 22 * * *',
+    schedule_interval='0 23 * * *',
     catchup=False
 )
 
