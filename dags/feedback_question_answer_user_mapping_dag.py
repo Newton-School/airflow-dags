@@ -31,7 +31,7 @@ def extract_data_to_nested(**kwargs):
             'feedback_form_user_mapping_id,user_id,feedback_form_id,'
             'feedback_form_user_mapping_hash,course_id,feedback_question_id, created_at, completed_at,'
             'entity_content_type_id,entity_object_id,feedback_answer)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set feedback_form_user_mapping_id = EXCLUDED.feedback_form_user_mapping_id,'
             'user_id = EXCLUDED.user_id,'
             'feedback_form_id = EXCLUDED.feedback_form_id,'
