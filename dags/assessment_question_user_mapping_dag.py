@@ -220,8 +220,7 @@ for assessment_sub_dag_id in range(int(total_number_of_sub_dags)):
     with TaskGroup(group_id=f"transforming_data_{assessment_sub_dag_id}", dag=dag) as assessment_sub_dag_task_group:
         assessment_start_id = assessment_sub_dag_id * int(assessment_per_dags) + 1
         assessment_end_id = (assessment_sub_dag_id + 1) * int(assessment_per_dags)
-        number_of_rows_per_assignment_sub_dag = number_of_rows_per_assignment_sub_dag_func(assessment_start_id,
-                                                                                           assessment_end_id)
+        number_of_rows_per_assignment_sub_dag = number_of_rows_per_assignment_sub_dag_func(assessment_start_id,assessment_end_id)
 
         for cps_sub_dag_id in range(int(total_number_of_extraction_cps_dags)):
             with TaskGroup(
@@ -238,8 +237,7 @@ for assessment_sub_dag_id in range(int(total_number_of_sub_dags)):
                     dag=dag,
                 )
 
-                transform_data = transform_data_per_query(assessment_start_id, assessment_end_id, cps_sub_dag_id,
-                                                          assessment_sub_dag_id)
+                transform_data = transform_data_per_query(assessment_start_id, assessment_end_id, cps_sub_dag_id,assessment_sub_dag_id)
 
                 extract_python_data = PythonOperator(
                     task_id='extract_python_data',
