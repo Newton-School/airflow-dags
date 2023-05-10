@@ -216,37 +216,37 @@ def transform_data_per_query(start_assessment_id, end_assessment_id, cps_sub_dag
     )
 
 
-for assignment_sub_dag_id in range(int(total_number_of_sub_dags)):
-    with TaskGroup(group_id=f"transforming_data_{assignment_sub_dag_id}", dag=dag) as assignment_sub_dag_task_group:
-        assignment_start_id = assignment_sub_dag_id * int(assessment_per_dags) + 1
-        assignment_end_id = (assignment_sub_dag_id + 1) * int(assessment_per_dags)
-        number_of_rows_per_assignment_sub_dag = number_of_rows_per_assignment_sub_dag_func(assignment_start_id,
-                                                                                           assignment_end_id)
+for assessment_sub_dag_id in range(int(total_number_of_sub_dags)):
+    with TaskGroup(group_id=f"transforming_data_{assessment_sub_dag_id}", dag=dag) as assessment_sub_dag_task_group:
+        assessment_start_id = assessment_sub_dag_id * int(assessment_per_dags) + 1
+        assessment_end_id = (assessment_sub_dag_id + 1) * int(assessment_per_dags)
+        number_of_rows_per_assignment_sub_dag = number_of_rows_per_assignment_sub_dag_func(assessment_start_id,
+                                                                                           assessment_end_id)
 
         for cps_sub_dag_id in range(int(total_number_of_extraction_cps_dags)):
             with TaskGroup(
-                    group_id=f"extract_and_transform_individual_assignment_sub_dag_{assignment_sub_dag_id}_cps_sub_dag_{cps_sub_dag_id}",
+                    group_id=f"extract_and_transform_individual_assignment_sub_dag_{assessment_sub_dag_id}_cps_sub_dag_{cps_sub_dag_id}",
                     dag=dag) as cps_sub_dag:
                 limit_offset_generator = PythonOperator(
                     task_id='limit_offset_generator',
                     python_callable=limit_offset_generator_func,
                     provide_context=True,
                     op_kwargs={
-                        'current_assessment_sub_dag_id': assignment_sub_dag_id,
+                        'current_assessment_sub_dag_id': assessment_sub_dag_id,
                         'current_cps_sub_dag_id': cps_sub_dag_id,
                     },
                     dag=dag,
                 )
 
-                transform_data = transform_data_per_query(assignment_start_id, assignment_end_id, cps_sub_dag_id,
-                                                          assignment_sub_dag_id)
+                transform_data = transform_data_per_query(assessment_start_id, assessment_end_id, cps_sub_dag_id,
+                                                          assessment_sub_dag_id)
 
                 extract_python_data = PythonOperator(
                     task_id='extract_python_data',
                     python_callable=extract_data_to_nested,
                     provide_context=True,
                     op_kwargs={
-                        'current_assessment_sub_dag_id': assignment_sub_dag_id,
+                        'current_assessment_sub_dag_id': assessment_sub_dag_id,
                         'current_cps_sub_dag_id': cps_sub_dag_id
                     },
                     dag=dag,
@@ -256,4 +256,4 @@ for assignment_sub_dag_id in range(int(total_number_of_sub_dags)):
 
             number_of_rows_per_assignment_sub_dag >> cps_sub_dag
 
-    create_table >> assignment_sub_dag_task_group
+    create_table >> assessment_sub_dag_task_group
