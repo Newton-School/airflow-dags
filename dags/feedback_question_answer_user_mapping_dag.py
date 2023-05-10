@@ -29,12 +29,13 @@ def extract_data_to_nested(**kwargs):
         pg_cursor.execute(
             'INSERT INTO feedback_form_all_responses (table_unique_key,'
             'feedback_form_user_mapping_id,user_id,feedback_form_id,'
-            'course_id,feedback_question_id, created_at, completed_at,'
+            'feedback_form_user_mapping_hash,course_id,feedback_question_id, created_at, completed_at,'
             'entity_content_type_id,entity_object_id,feedback_answer)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set feedback_form_user_mapping_id = EXCLUDED.feedback_form_user_mapping_id,'
             'user_id = EXCLUDED.user_id,'
             'feedback_form_id = EXCLUDED.feedback_form_id,'
+            'feedback_form_user_mapping_hash = EXCLUDED.feedback_form_user_mapping_hash,'
             'course_id = EXCLUDED.course_id,'
             'feedback_question_id = EXCLUDED.feedback_question_id,'
             'created_at = EXCLUDED.created_at,'
@@ -53,7 +54,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[7],
                 transform_row[8],
                 transform_row[9],
-                transform_row[10]
+                transform_row[10],
+                transform_row[11]
             )
         )
     pg_conn.commit()
@@ -74,6 +76,7 @@ create_table = PostgresOperator(
     sql='''CREATE TABLE IF NOT EXISTS feedback_form_all_responses (
             table_unique_key double precision not null PRIMARY KEY,
             feedback_form_user_mapping_id bigint,
+            feedback_form_user_mapping_hash varchar(32),
             user_id bigint,
             feedback_form_id bigint,
             course_id int,
@@ -94,11 +97,11 @@ transform_data = PostgresOperator(
     sql='''Select  
     *
 from
-
     (with raw as
     
         (Select
             feedback_feedbackformusermapping.id as feedback_form_user_mapping_id,
+            feedback_feedbackformusermapping.hash as feedback_form_user_mapping_hash,
             feedback_feedbackformusermapping.filled_by_id as user_id,
             feedback_feedbackform.id as feedback_form_id,
             feedback_feedbackformusermapping.course_id,
