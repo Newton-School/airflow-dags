@@ -64,7 +64,8 @@ dag = DAG(
     default_args=default_args,
     description='per user per feedback question response ',
     schedule_interval='0 5 * * *',
-    catchup=False
+    catchup=False,
+    max_active_runs=1
 )
 
 create_table = PostgresOperator(
