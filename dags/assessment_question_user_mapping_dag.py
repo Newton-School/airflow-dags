@@ -7,22 +7,20 @@ from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from datetime import datetime
 from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
-
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
-assignment_per_dags = Variable.get("assignment_per_dag", 40)
-total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 500)
-
+assessment_per_dags = Variable.get("assessment_per_dags", 8)
+total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 1250)
 def extract_data_to_nested(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     pg_conn = pg_hook.get_conn()
     ti = kwargs['ti']
-    current_assignment_sub_dag_id = kwargs['current_assignment_sub_dag_id']
+    current_assessment_sub_dag_id = kwargs['current_assessment_sub_dag_id']
     current_cps_sub_dag_id = kwargs['current_cps_sub_dag_id']
-    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_assignment_sub_dag_id}.extract_and_transform_individual_assignment_sub_dag_{current_assignment_sub_dag_id}_cps_sub_dag_{current_cps_sub_dag_id}.transform_data')
+    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_assessment_sub_dag_id}.extract_and_transform_individual_assignment_sub_dag_{current_assessment_sub_dag_id}_cps_sub_dag_{current_cps_sub_dag_id}.transform_data')
     for transform_row in transform_data_output:
         pg_cursor = pg_conn.cursor()
         pg_cursor.execute(
@@ -30,9 +28,7 @@ def extract_data_to_nested(**kwargs):
             'course_user_mapping_id,assessment_completed,assessment_completed_at,user_assessment_level_hash,'
             'assessment_late_completed,marks_obtained,assessment_started_at,cheated,'
             'cheated_marked_at,mcq_id,option_marked_at,marked_choice,correct_choice,user_question_level_hash)'
-
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-
             'on conflict (table_unique_key) do update set course_user_assessment_mapping_id = EXCLUDED.course_user_assessment_mapping_id,'
             'assessment_id = EXCLUDED.assessment_id,'
             'course_user_mapping_id = EXCLUDED.course_user_mapping_id,'
@@ -72,17 +68,16 @@ def extract_data_to_nested(**kwargs):
         pg_conn.commit()
         pg_cursor.close()
     pg_conn.close()
-
 dag = DAG(
     'assessment_question_user_mapping_dag',
     default_args=default_args,
     description='Assessment questions (MCQ) and user level data all attempted questions data',
+    schedule_interval='30 17 * * *',
     schedule_interval='40 17 * * *',
     catchup=False
 )
 
-
-def transform_data_per_query(start_assignment_id, end_assignment_id):
+def transform_data_per_query(start_assessment_id, end_assessment_id):
     return PostgresOperator(
         task_id='transform_data',
         postgres_conn_id='postgres_read_replica',
@@ -112,10 +107,8 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
         left join assessments_multiplechoicequestion
             on assessments_multiplechoicequestion.id = assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id
         ;
-            ''' % (start_assignment_id, end_assignment_id),
+            ''' % (start_assessment_id, end_assessment_id),
     )
-
-
 create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
@@ -144,7 +137,7 @@ create_table = PostgresOperator(
 )
 for i in range(int(total_number_of_sub_dags)):
     with TaskGroup(group_id=f"transforming_data_{i}", dag=dag) as sub_dag_task_group:
-        transform_data = transform_data_per_query(i * int(assignment_per_dags) + 1, (i + 1) * int(assignment_per_dags))
+        transform_data = transform_data_per_query(i * int(assessment_per_dags) + 1, (i + 1) * int(assessment_per_dags))
         extract_python_data = PythonOperator(
             task_id='extract_python_data',
             python_callable=extract_data_to_nested,
