@@ -70,11 +70,11 @@ create_table = PostgresOperator(
     sql='''CREATE TABLE IF NOT EXISTS feedback_forms_and_questions (
             table_unique_key bigint not null PRIMARY KEY,
             feedback_form_id bigint,
-            form_title varchar(),
+            form_title varchar(256),
             feedback_form_for int,
             default_feedback_form boolean,
             feedback_question_id int,
-            question_text varchar(),
+            question_text varchar(1024),
             feedback_question_type int,
             question_mandatory boolean
     );
