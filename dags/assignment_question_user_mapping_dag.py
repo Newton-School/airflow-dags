@@ -12,6 +12,8 @@ from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 default_args = {
     'owner': 'airflow',
     'max_active_tasks': 2,
+    'max_active_runs': 2,
+    'concurrency': 2,
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
