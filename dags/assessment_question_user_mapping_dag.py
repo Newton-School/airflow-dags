@@ -13,17 +13,16 @@ default_args = {
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
-assessment_per_dags = Variable.get("assessment_per_dags", 8)
-total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 1250)
-
+assignment_per_dags = Variable.get("assignment_per_dag", 40)
+total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 500)
 
 def extract_data_to_nested(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     pg_conn = pg_hook.get_conn()
     ti = kwargs['ti']
-    current_assessment_sub_dag_id = kwargs['current_assessment_sub_dag_id']
+    current_assignment_sub_dag_id = kwargs['current_assignment_sub_dag_id']
     current_cps_sub_dag_id = kwargs['current_cps_sub_dag_id']
-    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_assessment_sub_dag_id}.extract_and_transform_individual_assignment_sub_dag_{current_assessment_sub_dag_id}_cps_sub_dag_{current_cps_sub_dag_id}.transform_data')
+    transform_data_output = ti.xcom_pull(task_ids=f'transforming_data_{current_assignment_sub_dag_id}.extract_and_transform_individual_assignment_sub_dag_{current_assignment_sub_dag_id}_cps_sub_dag_{current_cps_sub_dag_id}.transform_data')
     for transform_row in transform_data_output:
         pg_cursor = pg_conn.cursor()
         pg_cursor.execute(
@@ -145,7 +144,7 @@ create_table = PostgresOperator(
 )
 for i in range(int(total_number_of_sub_dags)):
     with TaskGroup(group_id=f"transforming_data_{i}", dag=dag) as sub_dag_task_group:
-        transform_data = transform_data_per_query(i * int(assessment_per_dags) + 1, (i + 1) * int(assessment_per_dags))
+        transform_data = transform_data_per_query(i * int(assignment_per_dags) + 1, (i + 1) * int(assignment_per_dags))
         extract_python_data = PythonOperator(
             task_id='extract_python_data',
             python_callable=extract_data_to_nested,
