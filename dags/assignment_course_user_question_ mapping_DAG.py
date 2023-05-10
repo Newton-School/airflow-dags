@@ -32,7 +32,7 @@ def extract_data_to_nested(**kwargs):
             'assignment_completed_at,assignment_cheated_marked_at,cheated,plagiarism_submission_id,'
             'plagiarism_score,solution_length,number_of_submissions,error_faced_count) '
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (uaq_id) do update set question_completed_at = EXCLUDED.question_completed_at,'
+            'on conflict (table_unique_key) do update set question_completed_at = EXCLUDED.question_completed_at,'
             'completed=EXCLUDED.completed, all_test_case_passed=EXCLUDED.all_test_case_passed, latest_assignment_question_hint_mapping_id=EXCLUDED.latest_assignment_question_hint_mapping_id,'
             'late_submission=EXCLUDED.late_submission, max_test_case_passed=EXCLUDED.max_test_case_passed, assignment_completed_at=EXCLUDED.assignment_completed_at,'
             'assignment_cheated_marked_at=EXCLUDED.assignment_cheated_marked_at, cheated=EXCLUDED.cheated,'

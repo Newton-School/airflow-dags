@@ -68,6 +68,7 @@ def extract_data_to_nested(**kwargs):
         pg_conn.commit()
         pg_cursor.close()
     pg_conn.close()
+
 dag = DAG(
     'assessment_question_user_mapping_dag',
     default_args=default_args,
