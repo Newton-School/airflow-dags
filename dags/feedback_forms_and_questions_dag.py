@@ -28,17 +28,21 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO feedback_forms_and_questions (table_unique_key,'
-            'feedback_form_id,form_title,feedback_form_for,'
-            'default_feedback_form,feedback_question_id, question_text, feedback_question_type,'
-            'question_mandatory)'
+            'feedback_form_id,form_title,feedback_form_hash,feedback_form_for,'
+            'default_feedback_form,feedback_form_for_roles,feedback_question_id,feedback_question_for_role,question_text,feedback_question_type,'
+            'feedback_question_hash,question_mandatory)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set feedback_form_id = EXCLUDED.feedback_form_id,'
             'form_title = EXCLUDED.form_title,'
+            'feedback_form_hash = EXCLUDED.feedback_form_hash,'
             'feedback_form_for = EXCLUDED.feedback_form_for,'
             'default_feedback_form = EXCLUDED.default_feedback_form,'
+            'feedback_form_for_roles = EXCLUDED.feedback_form_for_roles,'
             'feedback_question_id = EXCLUDED.feedback_question_id,'
+            'feedback_question_for_role = EXCLUDED.feedback_question_for_role,'
             'question_text = EXCLUDED.question_text,'
             'feedback_question_type = EXCLUDED.feedback_question_type,'
+            'feedback_question_hash = EXCLUDED.feedback_question_hash,'
             'question_mandatory = EXCLUDED.question_mandatory;',
             (
                 transform_row[0],
@@ -49,7 +53,11 @@ def extract_data_to_nested(**kwargs):
                 transform_row[5],
                 transform_row[6],
                 transform_row[7],
-                transform_row[8]
+                transform_row[8],
+                transform_row[9],
+                transform_row[10],
+                transform_row[11],
+                transform_row[12]
             )
         )
     pg_conn.commit()
@@ -71,11 +79,15 @@ create_table = PostgresOperator(
             table_unique_key bigint not null PRIMARY KEY,
             feedback_form_id bigint,
             form_title varchar(256),
+            feedback_form_hash varchar(32),
             feedback_form_for int,
             default_feedback_form boolean,
+            feedback_form_for_roles integer[],
             feedback_question_id int,
+            feedback_question_for_role int,
             question_text varchar(1024),
             feedback_question_type int,
+            feedback_question_hash varchar(32),
             question_mandatory boolean
     );
     ''',
@@ -86,16 +98,19 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
     sql='''select
-    cast(concat(feedback_feedbackform.id, feedback_feedbackquestion.id, row_number()over(order by feedback_feedbackquestion.id)) as bigint) as table_unique_key,
+    cast(concat(feedback_feedbackform.id, feedback_feedbackquestion.id, row_number()over(order by feedback_feedbackquestion.id)) as bigint) as unique_key,
     feedback_feedbackform.id as feedback_form_id,
     feedback_feedbackform.title as form_title,
+    feedback_feedbackform.hash as feedback_form_hash,
     feedback_feedbackform.feedback_form_for,
     feedback_feedbackform.default_feedback_form,
+    feedback_feedbackform.feedback_form_for_roles,
     feedback_feedbackquestion.id as feedback_question_id,
+    feedback_feedbackquestion.feedback_question_for_role,
     feedback_feedbackquestion.text as question_text,
     feedback_feedbackquestion.feedback_question_type,
+    feedback_feedbackquestion.hash as feedback_question_hash,
     feedback_feedbackformquestionmapping.mandatory as question_mandatory
-    
 from
     feedback_feedbackform
 join feedback_feedbackformquestionmapping
