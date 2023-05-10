@@ -27,7 +27,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO feedback_forms_and_questions (table_unique_key,'
+            'INSERT INTO feedback_form_all_responses (table_unique_key,'
             'feedback_form_user_mapping_id,user_id,feedback_form_id,'
             'course_id,feedback_question_id, created_at, completed_at,'
             'entity_content_type_id,entity_object_id,feedback_answer)'
@@ -63,14 +63,14 @@ dag = DAG(
     'feedback_question_answer_user_mapping_dag',
     default_args=default_args,
     description='per user per feedback question response ',
-    schedule_interval='0 17 * * *',
+    schedule_interval='0 5 * * *',
     catchup=False
 )
 
 create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE IF NOT EXISTS feedback_forms_and_questions (
+    sql='''CREATE TABLE IF NOT EXISTS feedback_form_all_responses (
             table_unique_key double precision not null PRIMARY KEY,
             feedback_form_user_mapping_id bigint,
             user_id bigint,
