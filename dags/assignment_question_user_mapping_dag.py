@@ -27,6 +27,9 @@ total_number_of_extraction_cps_dags = Variable.get("total_number_of_extraction_c
 dag = DAG(
     'Assignment_question_user_mapping_DAG',
     default_args=default_args,
+    concurrency=2,
+    max_active_tasks=2,
+    max_active_runs=1,
     description='Assignment Question User Mapping Table DAG',
     schedule_interval='0 23 * * *',
     catchup=False
