@@ -27,12 +27,14 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO group_sessions (table_unique_key,meeting_id,mentor_user_id,'
+            'INSERT INTO group_sessions (table_unique_key,meeting_id,start_timestamp,end_timestamp,mentor_user_id,'
             'mentor_report_type,course_id,mentee_user_id,mentee_report_type,mentor_min_join_time,'
             'mentor_max_leave_time,mentor_total_time_in_mins,mentee_min_join_time,'
             'mentee_max_leave_time,mentee_total_time_in_mins,mentee_overlapping_time_in_mins)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set meeting_id = EXCLUDED.meeting_id,'
+            'start_timestamp = EXCLUDED.start_timestamp,'
+            'end_timestamp = EXCLUDED.end_timestamp,'
             'mentor_user_id = EXCLUDED.mentor_user_id,'
             'mentor_report_type = EXCLUDED.mentor_report_type,'
             'course_id = EXCLUDED.course_id,'
@@ -59,7 +61,9 @@ def extract_data_to_nested(**kwargs):
                 transform_row[10],
                 transform_row[11],
                 transform_row[12],
-                transform_row[13]
+                transform_row[13],
+                transform_row[14],
+                transform_row[15]
             )
         )
     pg_conn.commit()
@@ -80,6 +84,8 @@ create_table = PostgresOperator(
             id serial not null,
             table_unique_key double precision not null PRIMARY KEY,
             meeting_id bigint,
+            start_timestamp timestamp,
+            end_timestamp timestamp,
             mentor_user_id bigint,
             mentor_report_type int,
             course_id int,
@@ -104,6 +110,8 @@ transform_data = PostgresOperator(
 
     (select 
         video_sessions_meeting.id as meeting_id,
+        video_sessions_meeting.start_timestamp,
+        video_sessions_meeting.end_timestamp,
         video_sessions_meeting.booked_by_id as mentor_user_id,
         video_sessions_meetingcourseuserreport.report_type,
         video_sessions_meeting.course_id,
@@ -123,12 +131,14 @@ transform_data = PostgresOperator(
             and video_sessions_meetingcourseuserreport.report_type in (1,2,4)
     
     where report_type in (1,2,4)
-    group by 1,2,3,4),
+    group by 1,2,3,4,5,6),
 
 mentee_data as 
 
     (select 
         video_sessions_meeting.id as meeting_id,
+        video_sessions_meeting.start_timestamp,
+        video_sessions_meeting.end_timestamp,
         video_sessions_meeting_booked_with.user_id as mentee_user_id,
         video_sessions_meetingcourseuserreport.report_type,
         video_sessions_meeting.course_id,
@@ -157,30 +167,31 @@ mentee_data as
     
     left join mentor_data
         on mentor_data.meeting_id = video_sessions_meeting.id and mentor_data.report_type = video_sessions_meetingcourseuserreport.report_type
-    group by 1,2,3,4)
+    group by 1,2,3,4,5,6)
     
     
 select
     cast(concat(mentor_data.meeting_id, row_number()over(order by mentor_data.meeting_id)) as double precision) as table_unique_key,
     mentor_data.meeting_id,
+    mentor_data.start_timestamp,
+    mentor_data.end_timestamp,
     mentor_user_id,
     mentor_data.report_type as mentor_report_type,
     mentor_data.course_id,
     mentee_data.mentee_user_id,
     mentee_data.report_type as mentee_report_type,
-    cast(mentor_data.min_join_time as varchar) as mentor_min_join_time,
-    cast(mentor_data.max_leave_time as varchar) as mentor_max_leave_time,
+    mentor_data.min_join_time as mentor_min_join_time,
+    mentor_data.max_leave_time as mentor_max_leave_time,
     mentor_data.total_time/60 as mentor_total_time_in_mins,
-    cast(mentee_data.min_join_time as varchar) as mentee_min_join_time,
-    cast(mentee_data.max_leave_time as varchar) as mentee_max_leave_time,
+    mentee_data.min_join_time as mentee_min_join_time,
+    mentee_data.max_leave_time as mentee_max_leave_time,
     mentee_data.total_time/60 as mentee_total_time_in_mins,
     mentee_data.overlapping_time/60 as mentee_overlapping_time_in_mins
     
 from
     mentor_data
 left join mentee_data
-    on mentor_data.meeting_id = mentee_data.meeting_id and mentee_data.report_type = mentor_data.report_type
-order by 7 desc;
+    on mentor_data.meeting_id = mentee_data.meeting_id and mentee_data.report_type = mentor_data.report_type;
         ''',
     dag=dag
 )
