@@ -74,7 +74,8 @@ dag = DAG(
     default_args=default_args,
     description='Group Sessions mentor and mentee data',
     schedule_interval='0 17 * * *',
-    catchup=False
+    catchup=False,
+    max_active_runs=1
 )
 
 create_table = PostgresOperator(
