@@ -12,8 +12,8 @@ from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 default_args = {
     'owner': 'airflow',
     'max_active_tasks': 6,
-    'max_active_runs': 1,
-    'concurrency': 6,
+    'max_active_runs': 6,
+    'concurrency': 2,
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
@@ -28,8 +28,8 @@ dag = DAG(
     'Assignment_question_user_mapping_DAG',
     default_args=default_args,
     concurrency=2,
-    max_active_tasks=2,
-    max_active_runs=1,
+    max_active_tasks=6,
+    max_active_runs=6,
     description='Assignment Question User Mapping Table DAG',
     schedule_interval='40 17 * * *',
     catchup=False
