@@ -13,7 +13,7 @@ default_args = {
     'owner': 'airflow',
     'max_active_tasks': 6,
     'max_active_runs': 6,
-    'concurrency': 2,
+    'concurrency': 5,
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
@@ -27,7 +27,7 @@ total_number_of_extraction_cps_dags = Variable.get("total_number_of_extraction_c
 dag = DAG(
     'Assignment_question_user_mapping_DAG',
     default_args=default_args,
-    concurrency=2,
+    concurrency=5,
     max_active_tasks=6,
     max_active_runs=6,
     description='Assignment Question User Mapping Table DAG',
