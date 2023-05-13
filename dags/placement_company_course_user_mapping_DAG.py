@@ -31,9 +31,15 @@ def extract_data_to_nested(**kwargs):
                 'job_opening_set_id,referral_accepted,reasons_for_rejection,job_opening_set,job_opening_set_created_at,'
                 'job_opening_set_created_by_id,job_opening_set_opened,job_opening_set_opened_at,job_opening_set_opened_by_id,referral_set)'
                 ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                'on conflict (course_id) do update set course_structure_id =EXCLUDED.course_structure_id,'
-                'course_structure_name = EXCLUDED.course_structure_name,course_structure_class =EXCLUDED.course_structure_class,'
-                'course_start_timestamp=EXCLUDED.course_start_timestamp,course_end_timestamp=EXCLUDED.course_end_timestamp ;',
+                'on conflict (company_course_user_mapping_id) do update set feedback =EXCLUDED.feedback,'
+                'join_timestamp = EXCLUDED.join_timestamp,placed_at =EXCLUDED.placed_at,'
+                'status=EXCLUDED.status,referred_at=EXCLUDED.referred_at,'
+                'latest_important_timestamp=EXCLUDED.latest_important_timestamp,referral_accepted=EXCLUDED.referral_accepted,'
+                'reasons_for_rejection=EXCLUDED.reasons_for_rejection,job_opening_set=EXCLUDED.job_opening_set,'
+                'job_opening_set_created_at=EXCLUDED.job_opening_set_created_at,job_opening_set_created_by_id=EXCLUDED.job_opening_set_created_by_id,'
+                'job_opening_set_opened=EXCLUDED.job_opening_set_opened,job_opening_set_opened_at=EXCLUDED.job_opening_set_opened_at,'
+                'job_opening_set_opened_by_id=EXCLUDED.job_opening_set_opened_by_id,referral_set=EXCLUDED.referral_set,ctc=EXCLUDED.ctc,'
+                'job_opening_id=EXCLUDED.job_opening_id,course_user_mapping_id=EXCLUDED.course_user_mapping_id ;',
                 (
                     transform_row[0],
                     transform_row[1],
