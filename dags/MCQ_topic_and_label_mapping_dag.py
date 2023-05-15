@@ -87,7 +87,7 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS mcq_topic_and_label_mapping (
             id serial not null,
-            table_unique_key double precision not null PRIMARY KEY,
+            table_unique_key bigint not null PRIMARY KEY,
             mcq_id bigint not null,
             mcq_created_at timestamp,
             correct_choice int,
@@ -113,7 +113,7 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
     sql='''select
-    cast(concat(assessments_multiplechoicequestion.id, row_number()over (order by assessments_multiplechoicequestion.id)) as bigint) as table_unique_key,
+    cast(concat(assessments_multiplechoicequestion.id, assessments_multiplechoicequestiontopicmapping.topic_id, technologies_label.id) as bigint) as table_unique_key,
     assessments_multiplechoicequestion.id as mcq_id,
     assessments_multiplechoicequestion.created_at as mcq_created_at,
     assessments_multiplechoicequestion.correct_choice,
