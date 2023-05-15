@@ -129,9 +129,10 @@ def number_of_rows_per_assignment_sub_dag_func(start_assessment_id, end_assessme
         dag=dag,
         sql=''' select count(table_unique_key) from
         (select
-        cast(concat(assessments_courseuserassessmentmapping.id, row_number() over (order by assessments_courseuserassessmentmapping.id)) as double precision) as table_unique_key,
+        cast(concat(assessments_courseuserassessmentmapping.id, assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id, courses_courseusermapping.user_id) as double precision) as table_unique_key,
         assessments_courseuserassessmentmapping.id as course_user_assessment_mapping_id,
         assessments_courseuserassessmentmapping.assessment_id,
+        courses_courseusermapping.user_id,
         assessments_courseuserassessmentmapping.course_user_mapping_id,
         assessments_courseuserassessmentmapping.completed as assessment_completed,
         assessments_courseuserassessmentmapping.completed_at as assessment_completed_at,
@@ -148,14 +149,17 @@ def number_of_rows_per_assignment_sub_dag_func(start_assessment_id, end_assessme
         assessments_multiplechoicequestioncourseusermapping.hash as user_question_level_hash
     from
         assessments_courseuserassessmentmapping
-    left join assessments_multiplechoicequestioncourseusermapping
-        on assessments_multiplechoicequestioncourseusermapping.course_user_assessment_mapping_id = assessments_courseuserassessmentmapping.id and (assessments_courseuserassessmentmapping.assessment_id between %d and %d)
+    join assessments_assessment
+        on assessments_assessment.id = assessments_courseuserassessmentmapping.assessment_id and (assessments_courseuserassessmentmapping.assessment_id between %d and %d)
+    join courses_courseusermapping
+        on courses_courseusermapping.id = assessments_courseuserassessmentmapping.course_user_mapping_id
+    join assessments_multiplechoicequestioncourseusermapping
+        on assessments_multiplechoicequestioncourseusermapping.course_user_assessment_mapping_id = assessments_courseuserassessmentmapping.id
     left join assessments_multiplechoicequestion
         on assessments_multiplechoicequestion.id = assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id
         ) query_rows;
             ''' % (start_assessment_id, end_assessment_id),
     )
-
 
 # Python Limit Offset generator
 def limit_offset_generator_func(**kwargs):
@@ -185,9 +189,10 @@ def transform_data_per_query(start_assessment_id, end_assessment_id, cps_sub_dag
         },
         sql=''' select * from
         (select
-        cast(concat(assessments_courseuserassessmentmapping.id, row_number() over (order by assessments_courseuserassessmentmapping.id)) as double precision) as table_unique_key,
+        cast(concat(assessments_courseuserassessmentmapping.id, assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id, courses_courseusermapping.user_id) as double precision) as table_unique_key,
         assessments_courseuserassessmentmapping.id as course_user_assessment_mapping_id,
         assessments_courseuserassessmentmapping.assessment_id,
+        courses_courseusermapping.user_id,
         assessments_courseuserassessmentmapping.course_user_mapping_id,
         assessments_courseuserassessmentmapping.completed as assessment_completed,
         assessments_courseuserassessmentmapping.completed_at as assessment_completed_at,
@@ -204,8 +209,12 @@ def transform_data_per_query(start_assessment_id, end_assessment_id, cps_sub_dag
         assessments_multiplechoicequestioncourseusermapping.hash as user_question_level_hash
     from
         assessments_courseuserassessmentmapping
-    left join assessments_multiplechoicequestioncourseusermapping
-        on assessments_multiplechoicequestioncourseusermapping.course_user_assessment_mapping_id = assessments_courseuserassessmentmapping.id and (assessments_courseuserassessmentmapping.assessment_id between %d and %d)
+    join assessments_assessment
+        on assessments_assessment.id = assessments_courseuserassessmentmapping.assessment_id and (assessments_courseuserassessmentmapping.assessment_id between %d and %d)
+    join courses_courseusermapping
+        on courses_courseusermapping.id = assessments_courseuserassessmentmapping.course_user_mapping_id
+    join assessments_multiplechoicequestioncourseusermapping
+        on assessments_multiplechoicequestioncourseusermapping.course_user_assessment_mapping_id = assessments_courseuserassessmentmapping.id
     left join assessments_multiplechoicequestion
         on assessments_multiplechoicequestion.id = assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id
         ) final_query
