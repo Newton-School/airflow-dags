@@ -98,7 +98,7 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
     sql='''select
-    cast(concat(feedback_feedbackform.id, feedback_feedbackquestion.id, row_number()over(order by feedback_feedbackquestion.id)) as bigint) as unique_key,
+    cast(concat(feedback_feedbackform.id, feedback_feedbackquestion.id, feedback_feedbackform.id, feedback_feedbackquestion.feedback_question_type) as bigint) as table_unique_key,
     feedback_feedbackform.id as feedback_form_id,
     feedback_feedbackform.title as form_title,
     feedback_feedbackform.hash as feedback_form_hash,
