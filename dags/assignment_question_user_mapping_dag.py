@@ -193,7 +193,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                 left join courses_courseusermapping 
                     on courses_courseusermapping.course_id = courses_course.id
                 
-                left join assignments_assignmentcourseusermapping 
+                join assignments_assignmentcourseusermapping 
                     on assignments_assignmentcourseusermapping.course_user_mapping_id = courses_courseusermapping.id 
                         and assignments_assignmentcourseusermapping.assignment_id = assignments_assignment.id
               
