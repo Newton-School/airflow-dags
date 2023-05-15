@@ -56,19 +56,20 @@ def transform_data_per_query(start_assignment_id, end_assignment_id):
         task_id='transform_data',
         postgres_conn_id='postgres_read_replica',
         dag=dag,
-        sql='''select distinct cast(concat(assignments_assignment.id, row_number() over(order by assignments_assignment.id)) as double precision) as table_unique_key,
+        sql='''select distinct cast(concat(assignments_assignment.id, courses_courseusermapping.user_id, assignments_assignmentcourseuserrandomassignedquestionmapping.assignment_question_id) as double precision) as table_unique_key,
                     courses_courseusermapping.user_id,
                     courses_course.id as course_id,
                     assignments_assignment.id  as assignment_id,
                     assignments_assignmentcourseuserrandomassignedquestionmapping.assignment_question_id as question_id
                 from
                     assignments_assignment
-                left join courses_course 
+                join courses_course 
                     on courses_course.id = assignments_assignment.course_id and assignments_assignment.random_assignment_questions = true
-                left join courses_courseusermapping on courses_courseusermapping.course_id = courses_course.id
-                left join assignments_assignmentcourseuserrandomassignedquestionmapping 
+                join courses_courseusermapping on courses_courseusermapping.course_id = courses_course.id
+                
+                join assignments_assignmentcourseuserrandomassignedquestionmapping 
                     on assignments_assignmentcourseuserrandomassignedquestionmapping.course_user_mapping_id = courses_courseusermapping.id
-                    and assignments_assignmentcourseuserrandomassignedquestionmapping.assignment_id = assignments_assignment.id
+                        and assignments_assignmentcourseuserrandomassignedquestionmapping.assignment_id = assignments_assignment.id
 
                 where (assignments_assignment.id between %d and %d)
         ;
