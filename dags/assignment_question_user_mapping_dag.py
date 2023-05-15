@@ -305,7 +305,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                 left join courses_courseusermapping 
                     on courses_courseusermapping.course_id = courses_course.id
                 
-                left join assignments_assignmentcourseusermapping 
+                join assignments_assignmentcourseusermapping 
                     on assignments_assignmentcourseusermapping.course_user_mapping_id = courses_courseusermapping.id 
                         and assignments_assignmentcourseusermapping.assignment_id = assignments_assignment.id
               
