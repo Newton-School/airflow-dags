@@ -44,6 +44,7 @@ create_table = PostgresOperator(
         table_unique_key double precision not null PRIMARY KEY,
         course_user_assessment_mapping_id bigint,
         assessment_id bigint,
+        user_id bigint,
         course_user_mapping_id bigint,
         assessment_completed boolean,
         assessment_completed_at timestamp,
@@ -77,10 +78,10 @@ def extract_data_to_nested(**kwargs):
         pg_cursor = pg_conn.cursor()
         pg_cursor.execute(
             'INSERT INTO assessment_question_user_mapping (table_unique_key,course_user_assessment_mapping_id,assessment_id,'
-        'course_user_mapping_id,assessment_completed,assessment_completed_at,user_assessment_level_hash,'
+        'user_id,course_user_mapping_id,assessment_completed,assessment_completed_at,user_assessment_level_hash,'
         'assessment_late_completed,marks_obtained,assessment_started_at,cheated,'
         'cheated_marked_at,mcq_id,option_marked_at,marked_choice,correct_choice,user_question_level_hash)'
-        'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+        'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
         'on conflict (table_unique_key) do update set course_user_assessment_mapping_id = EXCLUDED.course_user_assessment_mapping_id,'
         'assessment_id = EXCLUDED.assessment_id,'
         'course_user_mapping_id = EXCLUDED.course_user_mapping_id,'
@@ -95,7 +96,7 @@ def extract_data_to_nested(**kwargs):
         'mcq_id = EXCLUDED.mcq_id,'
         'option_marked_at = EXCLUDED.option_marked_at,'
         'marked_choice = EXCLUDED.marked_choice,'
-        'correct_choice = EXCLUDED.correct_choice,'
+        'correct_choice = EXCLUDED.correct_choice,user_id = EXCLUDED.user_id,'
         'user_question_level_hash = EXCLUDED.user_question_level_hash;',
             (
                 transform_row[0],
@@ -115,6 +116,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[14],
                 transform_row[15],
                 transform_row[16],
+                transform_row[17],
             )
         )
         pg_conn.commit()
