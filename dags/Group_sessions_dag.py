@@ -172,7 +172,7 @@ mentee_data as
     
     
 select
-    cast(concat(mentor_data.meeting_id, row_number()over(order by mentor_data.meeting_id)) as double precision) as table_unique_key,
+    cast(concat(mentor_data.meeting_id,mentee_data.mentee_user_id,mentor_data.report_type,mentee_data.report_type) as double precision) as table_unique_key,
     mentor_data.meeting_id,
     mentor_data.start_timestamp,
     mentor_data.end_timestamp,
