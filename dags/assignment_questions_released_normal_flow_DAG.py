@@ -65,7 +65,7 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
     sql='''select
-            distinct cast(concat(assignments_assignment.id, row_number() over(order by assignments_assignment.id)) as double precision) as table_unique_key,
+            distinct cast(concat(assignments_assignment.id, courses_course.id, aaq.id) as double precision) as table_unique_key,
             courses_course.id as course_id,
             assignments_assignment.id as assignment_id,
             aaq.id as question_id
