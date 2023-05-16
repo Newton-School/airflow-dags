@@ -55,7 +55,7 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS recorded_lectures_course_user_reports (
             id serial not null,
-            table_unique_key double precision not null PRIMARY KEY,
+            table_unique_key bigint not null PRIMARY KEY,
             lecture_id bigint,
             course_user_mapping_id bigint,
             total_time_watched_in_mins bigint
@@ -68,13 +68,14 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
     sql='''select
-    concat(video_sessions_lecturecourseuserreport.lecture_id, row_number() over(order by lecture_id)) as table_unique_key,
-    lecture_id,
-    course_user_mapping_id,
-    sum(duration) / 60 as total_time_watched_in_mins
-from
-    video_sessions_lecturecourseuserreport
-group by 2,3;
+        cast(concat(course_user_mapping_id, video_sessions_lecturecourseuserreport.lecture_id, right(cast(course_user_mapping_id AS varchar),3)) as bigint) as table_unique_key_one,
+        lecture_id,
+        course_user_mapping_id,
+        sum(duration) / 60 as total_time_watched_in_mins
+    from
+        video_sessions_lecturecourseuserreport
+    where report_type = 3
+    group by 2,3;
         ''',
     dag=dag
 )
