@@ -85,7 +85,7 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
     sql='''select distinct
-    concat(video_sessions_onetoonetokentopicpoolmapping.one_to_one_token_id, row_number() over (order by video_sessions_onetoonetokentopicpoolmapping.one_to_one_token_id)) as table_unique_key,
+    cast (concat(video_sessions_onetoonetokentopicpoolmapping.one_to_one_token_id,topic_pool_id,topic_id,right(cast(video_sessions_onetoone.id as varchar),4),topic_id) as double precision) as table_unique_key,
     video_sessions_onetoone.id as one_to_one_id,
     video_sessions_onetoonetokentopicpoolmapping.one_to_one_token_id,
     video_sessions_onetoonetokentopicpoolmapping.created_at as vsoto_token_topic_pool_created_at,
