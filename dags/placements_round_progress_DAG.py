@@ -80,7 +80,7 @@ dag = DAG(
     'placements_round_progress_dag',
     default_args=default_args,
     description='A DAG for Placements Company Course User mapping Progress',
-    schedule_interval='0 17 * * *',
+    schedule_interval='0 14 * * *',
     catchup=False
 )
 
