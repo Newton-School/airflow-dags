@@ -12,6 +12,7 @@ default_args = {
 
 
 def extract_data_to_nested(**kwargs):
+
     def clean_input(data_type, data_value):
         if data_type == 'string':
             return 'null' if not data_value else f'\"{data_value}\"'
@@ -55,8 +56,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[10],
                 transform_row[11],
                 transform_row[12],
-                transform_row[13]
-            )
+                transform_row[13],
+                 )
         )
     pg_conn.commit()
 
