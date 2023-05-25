@@ -57,7 +57,7 @@ create_table = PostgresOperator(
             topic_node_id bigint not null PRIMARY KEY,
             topic_id bigint ,
             topic_name varchar(128),
-            topic_template_id varchar(128),
+            topic_template_id int,
             template_name varchar(128)
         );
     ''',
