@@ -31,9 +31,18 @@ def extract_data_to_nested(**kwargs):
                 'lecture_slot_is_deleted,lecture_slot_created_at,lecture_slot_created_by_id,'
                 'lecture_slot_deleted_by_id,lecture_slot_modified_at,automated_content_release_triggered) '
                 'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                'on conflict (lecture_id) do update set mandatory =EXCLUDED.mandatory,lecture_slot_status=EXCLUDED.lecture_slot_status,'
-                'lecture_slot_is_deleted=EXCLUDED.lecture_slot_is_deleted,lecture_slot_created_by_id= EXCLUDED.lecture_slot_created_by_id,'
-                'lecture_slot_deleted_by_id= EXCLUDED.lecture_slot_deleted_by_id,lecture_slot_modified_at=EXCLUDED.lecture_slot_modified_at,'
+                'on conflict (lecture_id) do update set mandatory =EXCLUDED.mandatory,'
+                'lecture_title =EXCLUDED.lecture_title,'
+                'child_video_session =EXCLUDED.child_video_session,'
+                'lecture_slot_status=EXCLUDED.lecture_slot_status,'
+                'start_timestamp=EXCLUDED.start_timestamp,'
+                'end_timestamp=EXCLUDED.end_timestamp,'
+                'lecture_slot_is_deleted=EXCLUDED.lecture_slot_is_deleted,'
+                'lecture_slot_created_by_id= EXCLUDED.lecture_slot_created_by_id,'
+                'lecture_slot_deleted_by_id= EXCLUDED.lecture_slot_deleted_by_id,'
+                'lecture_slot_modified_at=EXCLUDED.lecture_slot_modified_at,'
+                'instructor_user_id =EXCLUDED.instructor_user_id,'
+                'lecture_slot_id =EXCLUDED.lecture_slot_id,'
                 'automated_content_release_triggered=EXCLUDED.automated_content_release_triggered ;',
                 (
                     transform_row[0],
