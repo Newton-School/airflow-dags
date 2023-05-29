@@ -15,9 +15,10 @@ def execute_query_on_db(db_name, query):
     pg_hook = PostgresHook(postgres_conn_id=db_name)
     pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
-    res = pg_cursor.execute(query)
-    print(res)
-    return pd.DataFrame(pg_cursor.fetchall(), columns=pg_cursor.keys())
+    pg_cursor.execute(query)
+    columns = [desc[0] for desc in pg_cursor.description]
+    print(columns)
+    return pd.DataFrame(pg_cursor.fetchall(), columns=columns)
 
 
 def join_two_tables(table1, table2, common_column):
