@@ -85,7 +85,7 @@ from
     courses_courseusermapping
 left join courses_course 
     on courses_course.id = courses_courseusermapping.course_id
-left join courses_courseuserlabelmapping on courses_courseuserlabelmapping.course_user_mapping_id = courses_courseusermapping.id and label_id =677;
+left join courses_courseuserlabelmapping on courses_courseuserlabelmapping.course_user_mapping_id = courses_courseusermapping.admin_course_user_mapping_id and label_id =677;
         ''',
     dag=dag
 )
