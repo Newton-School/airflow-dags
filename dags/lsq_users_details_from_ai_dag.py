@@ -3,7 +3,7 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from datetime import datetime
-
+import pandas as pd
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
@@ -16,28 +16,19 @@ def execute_query_on_db(db_name, query):
     pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
     pg_cursor.execute(query)
-    return pg_cursor.fetchall()
+    return pd.DataFrame(pg_cursor.fetchall(), columns=pg_cursor.keys())
 
 
-def join_two_tables(table1, table2, join_column_table1, join_column_table2):
-    joined_data = []
-
-    join_values_table2 = set(row[join_column_table2] for row in table2)
-    for row_table1 in table1:
-        join_value_table1 = row_table1[join_column_table1]
-        if join_value_table1 in join_values_table2:
-            joined_data.append(row_table1)
-
-    return joined_data
+def join_two_tables(table1, table2, common_column):
+    return pd.merge(table2, table1, on=common_column)
 
 
 def join_api_users_with_lsq_leads():
-    api_enrolled_users_query = '''select auth_user.email, auth_user.username, auth_user.id as "user_id", concat(auth_user.first_name, ' ' , auth_user.last_name) as "full_name", courses_course.title as "course_title" from courses_courseusermapping join auth_user on auth_user.id = courses_courseusermapping.user_id join courses_course on courses_course.id = courses_courseusermapping.course_id where courses_courseusermapping.status in (8,10)'''
+    api_enrolled_users_query = '''select auth_user.email as "email", auth_user.username as "username", auth_user.id as "user_id", concat(auth_user.first_name, ' ' , auth_user.last_name) as "full_name", courses_course.title as "course_title" from courses_courseusermapping join auth_user on auth_user.id = courses_courseusermapping.user_id join courses_course on courses_course.id = courses_courseusermapping.course_id where courses_courseusermapping.status in (8,10)'''
     first_table = execute_query_on_db('postgres_read_replica', api_enrolled_users_query)
-
-    lsq_prospects_query = '''select emailaddress, mx_graduation_year as "graduation_year_from_lsq", mx_work_experience as "work_experience_from_lsq", mx_product_graduation_year as "graduation_year_from_product", prospectid as "prospect_id" from leadsquareleadsdata'''
+    lsq_prospects_query = '''select emailaddress as "email", mx_graduation_year as "graduation_year_from_lsq", mx_work_experience as "work_experience_from_lsq", mx_product_graduation_year as "graduation_year_from_product", prospectid as "prospect_id" from leadsquareleadsdata'''
     second_table = execute_query_on_db('postgres_lsq_leads', lsq_prospects_query)
-    joined_data = join_two_tables(first_table, second_table, "email" ,"emailaddress")
+    joined_data = join_two_tables(first_table, second_table, 'email')
     return joined_data
 
 
@@ -50,11 +41,11 @@ user_extracted_information -> 'is_working_professional' as "is_working_professio
 user_extracted_information -> 'years_of_work_experience' as "years_of_work_experience_ai",
 meta_data -> 'activity_id' as "activity_id",
 meta_data -> 'prospect_activity_id' as "prospect_activity_id",
-meta_data -> 'related_prospect_id' as "related_prospect_id"
+meta_data -> 'related_prospect_id' as "prospect_id"
 from openai_transcribeaudio'''
     first_table = join_api_users_with_lsq_leads()
     second_table = execute_query_on_db('postgres_newton_ds', ds_info_query)
-    joined_data = join_two_tables(first_table, second_table, "prospect_id" ,"related_prospect_id")
+    joined_data = join_two_tables(first_table, second_table, "prospect_id")
     return joined_data
 
 
