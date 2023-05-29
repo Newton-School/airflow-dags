@@ -17,9 +17,9 @@ def execute_query_on_db(db_name, query):
     pg_cursor = pg_conn.cursor()
     pg_cursor.execute(query)
 
-    print(pg_cursor.fetchall())
-
-    return pd.DataFrame(pg_cursor.fetchall())
+    res = pg_cursor.fetchall()
+    print(res)
+    return pd.DataFrame(res)
 
 
 def join_two_tables(table1, table2, common_column):
