@@ -72,7 +72,7 @@ def dump_joined_data_in_results_db(**kwargs):
         pg_cursor.execute(
                 'INSERT INTO lsq_leads_joined_data (user_id, email, username, full_name, graduation_year_from_lsq, work_experience_from_lsq, graduation_year_from_product, prospect_id, current_ctc_ai, expected_ctc_ai, graduation_year_ai, current_employer_ai, is_working_professional_ai, years_of_work_experience_ai)'
                 'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                'on conflict (user_id) do update set'
+                'on conflict (user_id) do update set '
                 'email=EXCLUDED.email,'
                 'username = EXCLUDED.username,'
                 'graduation_year_from_lsq=EXCLUDED.graduation_year_from_lsq,'
