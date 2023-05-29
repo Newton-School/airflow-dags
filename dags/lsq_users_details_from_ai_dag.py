@@ -62,7 +62,7 @@ def dump_joined_data_in_results_db(**kwargs):
     pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
-    transform_data_output = ti.xcom_pull(task_ids='transform_data')
+    transform_data_output = ti.xcom_pull(task_ids='join_python_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
                 'INSERT INTO lsq_leads_joined_data (user_id, email, username, full_name, graduation_year_from_lsq, work_experience_from_lsq, graduation_year_from_product, prospect_id, current_ctc_ai, expected_ctc_ai, graduation_year_ai, current_employer_ai, is_working_professional_ai, years_of_work_experience_ai)'
