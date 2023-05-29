@@ -65,13 +65,11 @@ def dump_joined_data_in_results_db(**kwargs):
     pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='join_python_data')
-    print(transform_data_output)
-    for transform_row in transform_data_output:
-        print(transform_row)
+    for i, transform_row in transform_data_output:
         pg_cursor.execute(
                 'INSERT INTO lsq_leads_joined_data (user_id, email, username, full_name, graduation_year_from_lsq, work_experience_from_lsq, graduation_year_from_product, prospect_id, current_ctc_ai, expected_ctc_ai, graduation_year_ai, current_employer_ai, is_working_professional_ai, years_of_work_experience_ai)'
                 'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                'on conflict (user_id) do update set '
+                'on conflict (user_id) do update set'
                 'email=EXCLUDED.email,'
                 'username = EXCLUDED.username,'
                 'graduation_year_from_lsq=EXCLUDED.graduation_year_from_lsq,'
@@ -81,20 +79,20 @@ def dump_joined_data_in_results_db(**kwargs):
                 'graduation_year_ai=EXCLUDED.graduation_year_ai,'
                 'graduation_year_from_product=EXCLUDED.graduation_year_from_product;',
                 (
-                    transform_row[0],
-                    transform_row[1],
-                    transform_row[2],
-                    transform_row[3],
-                    transform_row[4],
-                    transform_row[5],
-                    transform_row[6],
-                    transform_row[7],
-                    transform_row[8],
-                    transform_row[9],
-                    transform_row[10],
-                    transform_row[11],
-                    transform_row[12],
-                    transform_row[13]
+                    transform_row['user_id'],
+                    transform_row['email'],
+                    transform_row['username'],
+                    transform_row['full_name'],
+                    transform_row['graduation_year_from_lsq'],
+                    transform_row['work_experience_from_lsq'],
+                    transform_row['graduation_year_from_product'],
+                    transform_row['prospect_id'],
+                    transform_row['current_ctc_ai'],
+                    transform_row['expected_ctc_ai'],
+                    transform_row['graduation_year_ai'],
+                    transform_row['current_employer_ai'],
+                    transform_row['is_working_professional_ai'],
+                    transform_row['years_of_work_experience_ai']
                  )
         )
     pg_conn.commit()
