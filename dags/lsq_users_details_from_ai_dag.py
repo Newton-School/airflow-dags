@@ -22,6 +22,7 @@ def execute_query_on_db(db_name, query):
     return pd.DataFrame(res)
 
 
+
 def join_two_tables(table1, table2, common_column):
     return pd.merge(table2, table1, on=common_column)
 
