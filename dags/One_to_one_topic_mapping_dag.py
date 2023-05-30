@@ -58,7 +58,7 @@ dag = DAG(
     'one_to_one_topic_mapping_dag',
     default_args=default_args,
     description='Maps one to one id with tokens topic pools and topics',
-    schedule_interval='0 17 * * *',
+    schedule_interval='35 20 * * *',
     catchup=False
 )
 
