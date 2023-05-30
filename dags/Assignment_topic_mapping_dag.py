@@ -48,7 +48,7 @@ dag = DAG(
     'assignment_topic_mapping_dag',
     default_args=default_args,
     description='Assignments Topic mapping table dump',
-    schedule_interval='30 16 * * *',
+    schedule_interval='30 20 * * *',
     catchup=False
 )
 
