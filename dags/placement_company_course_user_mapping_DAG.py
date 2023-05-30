@@ -74,7 +74,7 @@ dag = DAG(
     'placements_company_user_mapping_dag',
     default_args=default_args,
     description='A DAG for referral user mapping',
-    schedule_interval='0 14 * * *',
+    schedule_interval='35 20 * * *',
     catchup=False
 )
 
