@@ -48,7 +48,7 @@ dag = DAG(
     'placements_job_opening_topic_mapping_dag',
     default_args=default_args,
     description='Placements Job Opening Topic mapping DAG',
-    schedule_interval='0 14 * * *',
+    schedule_interval='30 20 * * *',
     catchup=False
 )
 
