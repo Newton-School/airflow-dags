@@ -45,7 +45,7 @@ dag = DAG(
     'mentor_mentee_mapping_dag',
     default_args=default_args,
     description='Weekly dump of mentor and mapped mentees',
-    schedule_interval='30 15 * * FRI',
+    schedule_interval='30 20 * * FRI',
     catchup=False
 )
 
