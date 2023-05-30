@@ -45,7 +45,7 @@ dag = DAG(
     'fresh_deferred_lead_type_dag',
     default_args=default_args,
     description='Classifies userid as fresh or deferred',
-    schedule_interval='00 16 * * *',
+    schedule_interval='30 20 * * *',
     catchup=False
 )
 

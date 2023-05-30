@@ -67,7 +67,7 @@ dag = DAG(
     'feedback_forms_and_questions_dag',
     default_args=default_args,
     description='feedback form cross feedback questions table',
-    schedule_interval='10 5 * * *',
+    schedule_interval='30 20 * * *',
     catchup=False,
     max_active_runs=1
 )
