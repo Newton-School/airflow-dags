@@ -46,7 +46,7 @@ dag = DAG(
     'assignment_random_questions_released_DAG',
     default_args=default_args,
     description='A DAG for assignment questions released though the random flow',
-    schedule_interval='30 16 * * *',
+    schedule_interval='30 20 * * *',
     catchup=False
 )
 
