@@ -46,7 +46,7 @@ dag = DAG(
     'recorded_lectures_dag',
     default_args=default_args,
     description='Per lecture per user recorded lectures time',
-    schedule_interval='0 17 * * *',
+    schedule_interval='35 20 * * *',
     catchup=False
 )
 

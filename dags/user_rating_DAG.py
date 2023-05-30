@@ -72,7 +72,7 @@ dag = DAG(
     'user_rating_dag',
     default_args=default_args,
     description='An Analytics Data Layer DAG for User Rating from the Data Science Schema',
-    schedule_interval='30 0 * * *',
+    schedule_interval='35 20 * * *',
     catchup=False
 )
 
