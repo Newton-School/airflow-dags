@@ -78,7 +78,7 @@ dag = DAG(
     'mcq_topic_and_label_mapping_dag',
     default_args=default_args,
     description='Multiple choice questions (MCQs) mapping with topics and labels',
-    schedule_interval='0 17 * * *',
+    schedule_interval='30 20 * * *',
     catchup=False
 )
 
