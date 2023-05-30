@@ -57,7 +57,7 @@ dag = DAG(
     'assignments_dag',
     default_args=default_args,
     description='Assignments Details, a version of assignments_assignment',
-    schedule_interval='30 16 * * *',
+    schedule_interval='30 20 * * *',
     catchup=False
 )
 
