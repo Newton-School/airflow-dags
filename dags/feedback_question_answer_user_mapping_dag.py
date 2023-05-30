@@ -69,7 +69,7 @@ dag = DAG(
     'feedback_question_answer_user_mapping_dag',
     default_args=default_args,
     description='per user per feedback question response ',
-    schedule_interval='0 5 * * *',
+    schedule_interval='0 21 * * *',
     catchup=False,
     max_active_runs=1
 )
