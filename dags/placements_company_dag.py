@@ -59,7 +59,7 @@ dag = DAG(
     'placements_company_dag',
     default_args=default_args,
     description='A DAG for placements company details',
-    schedule_interval='0 14 * * *',
+    schedule_interval='30 20 * * *',
     catchup=False
 )
 
