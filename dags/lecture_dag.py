@@ -75,7 +75,7 @@ dag = DAG(
     'Lectures_dag',
     default_args=default_args,
     description='Lectures Info Table DAG',
-    schedule_interval='30 16 * * *',
+    schedule_interval='30 20 * * *',
     catchup=False
 )
 
