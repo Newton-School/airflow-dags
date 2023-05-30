@@ -51,7 +51,7 @@ dag = DAG(
     'lecture_instructor_mapping_dag',
     default_args=default_args,
     description='Lecture and instructor mapping',
-    schedule_interval='0 17 * * *',
+    schedule_interval='30 20 * * *',
     catchup=False
 )
 

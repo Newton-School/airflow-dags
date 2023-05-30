@@ -47,7 +47,7 @@ dag = DAG(
     'Lecture_topic_mapping_DAG',
     default_args=default_args,
     description='Lecture Topic Mapping Table DAG',
-    schedule_interval='30 16 * * *',
+    schedule_interval='30 20 * * *',
     catchup=False
 )
 
