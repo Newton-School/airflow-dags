@@ -49,7 +49,7 @@ dag = DAG(
     'courses_dag',
     default_args=default_args,
     description='Courses Details, a version of courses_course',
-    schedule_interval='30 20 * * *',
+    schedule_interval='31 20 * * *',
     catchup=False
 )
 
