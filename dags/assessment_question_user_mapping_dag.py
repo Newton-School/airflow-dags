@@ -31,7 +31,7 @@ dag = DAG(
     concurrency=6,
     max_active_tasks=6,
     max_active_runs=6,
-    schedule_interval='30 20 * * *',
+    schedule_interval='30 19 * * *',
     catchup=False
 )
 
