@@ -60,7 +60,7 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS topic_pool_mapping (
             id Serial,
-            table_unique_key not null bigint PRIMARY KEY,
+            table_unique_key bigint not null PRIMARY KEY,
             topic_pool_id int,
             topic_pool_created_at TIMESTAMP,
             created_by_id bigint,
