@@ -79,7 +79,7 @@ create_table = PostgresOperator(
             table_unique_key double precision not null PRIMARY KEY,
             course_id int,
             one_to_one_date Date,
-            one_to_one_type varchar(30),
+            one_to_one_type varchar(64),
             topic_pool_id int,
             topic_pool_title varchar(64),
             scheduled int,
