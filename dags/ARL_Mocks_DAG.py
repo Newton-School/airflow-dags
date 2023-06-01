@@ -32,7 +32,7 @@ def extract_data_to_nested(**kwargs):
             'scheduled,pending_confirmation,interviewer_declined,confirmation,'
             'student_cancellation,interviewer_cancellation,conducted,cleared,'
             'final_call_no,final_call_maybe,student_no_show,interviewer_no_show)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set scheduled=EXCLUDED.scheduled,'
             'pending_confirmation=EXCLUDED.pending_confirmation,interviewer_declined=EXCLUDED.interviewer_declined,'
             'confirmation=EXCLUDED.confirmation,student_cancellation=EXCLUDED.student_cancellation,'

@@ -145,36 +145,45 @@ transform_data = PostgresOperator(
 
 question_count as 
 
-    (select distinct
-        assessments_assessment.id as assessment_id,
-    
-        case 
-            when assessments_assessmentmultiplechoicequestionmapping.id is not null then 'Question Mapping'
-            when assessments_assessmentlabelmapping.id is not null then 'Label Mapping'
-            when assessments_assessmenttopicmapping.id is not null then 'Topic Mapping'
-            else 'other'
-        end as assessment_mapping_type,
-        
-        case
-            when assessments_assessmentmultiplechoicequestionmapping.id is not null then count(distinct assessments_assessmentmultiplechoicequestionmapping.multiple_choice_question_id) 
-            when assessments_assessmentlabelmapping.id is not null then sum(assessments_assessmentlabellevelnumbermapping.number)
-            when assessments_assessmenttopicmapping.id is not null then sum(assessments_assessmenttopiclevelnumbermapping.number)
-            else null
-        end as question_count
-    from
-        assessments_assessment
-    left join assessments_assessmentmultiplechoicequestionmapping
-        on assessments_assessmentmultiplechoicequestionmapping.assessment_id = assessments_assessment.id
-    left join assessments_assessmentlabelmapping
-        on assessments_assessmentlabelmapping.assessment_id = assessments_assessment.id
-    left join assessments_assessmentlabellevelnumbermapping
-        on assessments_assessmentlabellevelnumbermapping.assessment_label_mapping_id = assessments_assessmentlabelmapping.id
-    left join assessments_assessmenttopicmapping
-        on assessments_assessmenttopicmapping.assessment_id = assessments_assessment.id
-    left join assessments_assessmenttopiclevelnumbermapping
-        on assessments_assessmenttopiclevelnumbermapping.assessment_topic_mapping_id = assessments_assessmenttopicmapping.id
-    group by 1,2,assessments_assessmentmultiplechoicequestionmapping.id,assessments_assessmentlabelmapping.id,assessments_assessmenttopicmapping.id
-    order by 1)
+    (select * from
+
+            ((select distinct
+                    assessments_assessment.id as assessment_id,
+                    'Question Mapping' as assessment_mapping_type,
+                    count(distinct assessments_assessmentmultiplechoicequestionmapping.multiple_choice_question_id) as question_count
+            from
+                assessments_assessment
+            join assessments_assessmentmultiplechoicequestionmapping
+                on assessments_assessmentmultiplechoicequestionmapping.assessment_id = assessments_assessment.id
+            group by 1,2)
+            
+            union 
+            
+            (select distinct
+                assessments_assessment.id as assessment_id,
+                'Label Mapping' as assessment_mapping_type,
+                sum(assessments_assessmentlabellevelnumbermapping.number) as question_count
+            from
+                assessments_assessment
+            join assessments_assessmentlabelmapping
+                on assessments_assessmentlabelmapping.assessment_id = assessments_assessment.id
+            join assessments_assessmentlabellevelnumbermapping
+                on assessments_assessmentlabellevelnumbermapping.assessment_label_mapping_id = assessments_assessmentlabelmapping.id
+            group by 1,2)
+            
+            union 
+            
+            (select distinct
+                assessments_assessment.id as assessment_id,
+                'Topic Mapping' as assessment_mapping_type,
+                sum(assessments_assessmenttopiclevelnumbermapping.number) as question_count
+            from
+                assessments_assessment
+                join assessments_assessmenttopicmapping
+                    on assessments_assessmenttopicmapping.assessment_id = assessments_assessment.id
+                join assessments_assessmenttopiclevelnumbermapping
+                    on assessments_assessmenttopiclevelnumbermapping.assessment_topic_mapping_id = assessments_assessmenttopicmapping.id
+            group by 1,2)) all_assessments_data)
 
 
 select 
