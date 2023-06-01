@@ -106,7 +106,7 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
     sql='''select
-            distinct concat(one_to_one.course_id,EXTRACT(month FROM date(one_to_one.one_to_one_start_timestamp)),EXTRACT(year FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.one_to_one_type,one_to_one_topic_mapping.topic_pool_id,EXTRACT(day FROM date(one_to_one.one_to_one_start_timestamp))) as table_unique_key, 
+            distinct concat(one_to_one.course_id,EXTRACT(month FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.difficulty_level,EXTRACT(year FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.one_to_one_type,one_to_one_topic_mapping.topic_pool_id,EXTRACT(day FROM date(one_to_one.one_to_one_start_timestamp))) as table_unique_key, 
             one_to_one.course_id,
             date(one_to_one.one_to_one_start_timestamp) as one_to_one_date,
             case
