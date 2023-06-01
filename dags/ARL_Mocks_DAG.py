@@ -134,8 +134,7 @@ transform_data = PostgresOperator(
             from one_to_one
             left join one_to_one_topic_mapping on one_to_one_topic_mapping.one_to_one_id = one_to_one.one_to_one_id
             left join topic_pool_mapping on topic_pool_mapping.topic_pool_id = one_to_one_topic_mapping.topic_pool_id
-            group by 1,2,3,4,5
-            order by 1,2;
+            group by 1,2,3,4,5,6;
         ''',
     dag=dag
 )
