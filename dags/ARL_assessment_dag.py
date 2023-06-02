@@ -36,13 +36,22 @@ def extract_data_to_nested(**kwargs):
             'users_with_marks_btw_0_and_25,users_with_marks_btw_25_and_50,'
             'users_with_marks_btw_50_and_75,users_with_marks_btw_75_and_100,users_with_full_marks)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set difficulty_level=EXCLUDED.difficulty_level,'
-            ' scheduled=EXCLUDED.scheduled,'
-            'pending_confirmation=EXCLUDED.pending_confirmation,interviewer_declined=EXCLUDED.interviewer_declined,'
-            'confirmation=EXCLUDED.confirmation,student_cancellation=EXCLUDED.student_cancellation,'
-            'interviewer_cancellation=EXCLUDED.interviewer_cancellation,conducted=EXCLUDED.conducted,'
-            'cleared=EXCLUDED.cleared,final_call_no=EXCLUDED.final_call_no,final_call_maybe=EXCLUDED.final_call_maybe,'
-            'student_no_show=EXCLUDED.student_no_show,interviewer_no_show=EXCLUDED.interviewer_no_show ;',
+            'on conflict (assessment_id) do update set max_marks=EXCLUDED.max_marks,'
+            'total_questions=EXCLUDED.total_questions,total_mcqs_marked=EXCLUDED.total_mcqs_marked,'
+            'total_correct_mcqs=EXCLUDED.total_correct_mcqs,students_opened=EXCLUDED.students_opened,'
+            'users_opened_on_time=EXCLUDED.users_opened_on_time,users_opened_late=EXCLUDED.users_opened_late,'
+            'students_submitted=EXCLUDED.students_submitted,users_submitted_on_time=EXCLUDED.users_submitted_on_time,'
+            'users_submitted_late=EXCLUDED.users_submitted_late,'
+            'overall_avg_assessment_percent=EXCLUDED.overall_avg_assessment_percent,'
+            'students_above_avg_percent=EXCLUDED.students_above_avg_percent,'
+            'students_below_avg_percent=EXCLUDED.students_below_avg_percent,'
+            'median_marks=EXCLUDED.median_marks,'
+            'users_with_zero_marks=EXCLUDED.users_with_zero_marks,'
+            'users_with_marks_btw_0_and_25=EXCLUDED.users_with_marks_btw_0_and_25,'
+            'users_with_marks_btw_25_and_50=EXCLUDED.users_with_marks_btw_25_and_50,'
+            'users_with_marks_btw_50_and_75=EXCLUDED.users_with_marks_btw_50_and_75,'
+            'users_with_marks_btw_75_and_100=EXCLUDED.users_with_marks_btw_75_and_100,'
+            'users_with_full_marks=EXCLUDED.users_with_full_marks ;',
             (
                 transform_row[0],
                 transform_row[1],
