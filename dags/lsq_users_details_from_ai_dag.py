@@ -65,8 +65,6 @@ def dump_joined_data_in_results_db(**kwargs):
     pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='join_python_data')
-    print(type(transform_data_output))
-    print(transform_data_output)
 
     for i, transform_row in transform_data_output.iterrows():
         pg_cursor.execute(
