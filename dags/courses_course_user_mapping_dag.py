@@ -27,7 +27,7 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
                 'INSERT INTO course_user_mapping (course_user_mapping_id,user_id,course_id,course_name,unit_type,admin_course_user_mapping_id,admin_unit_name,admin_course_id,created_at,status,label_id,utm_campaign,utm_source,utm_medium,hash) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                'on conflict (course_user_mapping_id) do update set status = EXCLUDED.status,label_id = EXCLUDED.label_id,admin_course_user_mapping_id = EXCLUDED.admin_course_user_mapping_id;',
+                'on conflict (course_user_mapping_id) do update set course_name=EXCLUDED.course_name,status = EXCLUDED.status,label_id = EXCLUDED.label_id,admin_course_user_mapping_id = EXCLUDED.admin_course_user_mapping_id;',
                 (
                     transform_row[0],
                     transform_row[1],
