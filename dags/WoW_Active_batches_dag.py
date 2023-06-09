@@ -56,13 +56,13 @@ create_table = PostgresOperator(
     sql='''CREATE TABLE IF NOT EXISTS wow_active_batches (
             id serial not null PRIMARY KEY,
             lu_course_id bigint not null,
-            lu_batch_name varchar(100),
+            lu_batch_name varchar(128),
             course_type varchar(128),
             week_view timestamp,
             lu_start_date timestamp,
             lu_end_date timestamp,
             total_student_count int,
-            final_batch_active_status varchar(16)
+            final_batch_active_status varchar(128)
             
         );
     ''',
