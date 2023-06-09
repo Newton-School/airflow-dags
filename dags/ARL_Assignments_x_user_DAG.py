@@ -121,9 +121,9 @@ transform_data = PostgresOperator(
                        count(distinct aqum.id) as opened_questions,
                        count(distinct aqum.id) filter(where aqum.max_test_case_passed is not null) as attempted_questions,
                        count(distinct aqum.id) filter(where aqum.all_test_case_passed = 'true') as completed_questions,
-                       count(distinct aqum.id) filter(where plagiarism_score >= 0.90) as plag_score_90_questions,
-                       count(distinct aqum.id) filter(where plagiarism_score >= 0.95) as plag_score_95_questions,
-                       count(distinct aqum.id) filter(where plagiarism_score >= 0.99) as plag_score_99_questions
+                       count(distinct aqum.id) filter(where plagiarism_score >= 0.90) as questions_with_plag_score_90,
+                       count(distinct aqum.id) filter(where plagiarism_score >= 0.95) as questions_with_plag_score_95,
+                       count(distinct aqum.id) filter(where plagiarism_score >= 0.99) as questions_with_plag_score_99
                     from assignment_question_user_mapping aqum
                     left join assignments a 
                        on a.assignment_id = aqum.assignment_id 
@@ -140,9 +140,9 @@ transform_data = PostgresOperator(
                        count(distinct aqum.id) as opened_questions,
                        count(distinct aqum.id) filter(where aqum.max_test_case_passed is not null) as attempted_questions,
                        count(distinct aqum.id) filter(where aqum.all_test_case_passed = 'true') as completed_questions,
-                       count(distinct aqum.id) filter(where plagiarism_score >= 0.90) as plag_score_90_questions,
-                       count(distinct aqum.id) filter(where plagiarism_score >= 0.95) as plag_score_95_questions,
-                       count(distinct aqum.id) filter(where plagiarism_score >= 0.99) as plag_score_99_questions
+                       count(distinct aqum.id) filter(where plagiarism_score >= 0.90) as questions_with_plag_score_90,
+                       count(distinct aqum.id) filter(where plagiarism_score >= 0.95) as questions_with_plag_score_95,
+                       count(distinct aqum.id) filter(where plagiarism_score >= 0.99) as questions_with_plag_score_99
                     from assignment_question_user_mapping aqum
                     left join assignments a 
                        on a.assignment_id = aqum.assignment_id 
