@@ -153,6 +153,7 @@ transform_data = PostgresOperator(
                    aqum.assignment_id,
                    c.course_id,
                    c.course_name,
+                   t.topic_template_id,
                    t.template_name as module_name,
                    date(a.start_timestamp) as assignment_release_date,
                    count(distinct aqum.id) as opened_questions,
@@ -177,7 +178,7 @@ transform_data = PostgresOperator(
                 left join topics t
                    on t.topic_id = atm.topic_id and topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
                 left join course_user_mapping on course_user_mapping.course_id = c.course_id and course_user_mapping.status in (5,8,9) and course_user_mapping.label_id is null
-                group by 1,2,3,4,5,6
+                group by 1,2,3,4,5,6,7
                    ),
             history_based_user_details as 
                   (select aqum.user_id,
@@ -275,7 +276,7 @@ transform_data = PostgresOperator(
                     on a.course_id = course_user_mapping_new.course_id and date_trunc('week',a.start_timestamp) = course_user_mapping_new.week_view
                           ) as sq
                         )
-             select distinct concat(user_details.user_id,'0',user_details.assignment_id,module_raw.topic_template_id,user_details.course_id) as table_unique_key, 
+             select distinct concat(user_details.user_id,'0',user_details.assignment_id,user_details.topic_template_id,user_details.course_id) as table_unique_key, 
                     user_details.user_id,
                     user_details.assignment_id as contest_id,
                     user_details.course_id,
