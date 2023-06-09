@@ -434,7 +434,6 @@ transform_data = PostgresOperator(
                   assignment_details.assignment_type,
                   assignment_details.assignment_sub_type,
                   assignment_details.course_id,
-                  assignment_details.course_name,
                   module_raw.module_name as module_name,
                   assignment_details.original_assignment_type,
                   assignment_details.release_date,
