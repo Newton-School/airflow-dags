@@ -38,7 +38,7 @@ def extract_data_to_nested(**kwargs):
             'history_based_hard_completed_questions,challenge_completed_questions,'
             'history_based_challenge_completed_questions,hard_and_challenge_completed_questions,'
             'history_based_hard_and_challenge_completed_questions,marks_obtained,history_based_marks_obtained)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set module_name=EXCLUDED.module_name,'
             'contest_release_date=EXCLUDED.contest_release_date,'
             'total_contest_questions=EXCLUDED.total_contest_questions,'
