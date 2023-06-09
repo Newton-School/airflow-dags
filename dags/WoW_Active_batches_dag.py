@@ -54,7 +54,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS wow_active_batches (
-            id serial not null PRIMARY KEY
+            id serial not null PRIMARY KEY,
             lu_course_id bigint not null,
             lu_batch_name varchar(100),
             course_type varchar(16),
