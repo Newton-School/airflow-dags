@@ -223,282 +223,273 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
     sql='''with module_raw as (
-                select atm.assignment_id,
-                       t.topic_template_id,
-                       t.template_name as module_name
-                from assignment_topic_mapping atm 
-                left join topics t 
-                on atm.topic_id  = t.topic_id 
-                where topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
-                group by 1,2,3),
-            history_based_assignment_details as(
-            select a.assignment_id,
-                   a.title as assignment_name,
-                   case when a.assignment_type = 1 then 'Normal Assignment'
-                        when a.assignment_type = 2 then 'Filtering Assignment'
-                        when a.assignment_type = 3 then 'Competitive Assignment'
-                        when a.assignment_type = 4 then 'Duration Assignment'
-                        when a.assignment_type = 5 then 'Milestone Assignment'
-                        when a.assignment_type = 6 then 'Question of the Day Assignment'
-                        end as assignment_type,
-                    case when a.assignment_sub_type = 1 then 'General'
-                         when a.assignment_sub_type = 2 then 'In Class'
-                         when a.assignment_sub_type = 3 then 'Post Class'
-                         when a.assignment_sub_type = 4 then 'Module Contest'
-                         when a.assignment_sub_type = 5 then 'Module Assignment'
-                         end as assignment_sub_type,
-                    a.original_assignment_type,
-                    a.course_id,
-                    c.course_name,
-                    date(a.start_timestamp) as release_date,
-                    count(distinct aqum.table_unique_key) as questions_opened,
-                    count(distinct aqum.table_unique_key) filter(where aqum.max_test_case_passed is not null ) as questions_attempted,
-                    count(distinct aqum.table_unique_key) filter(where aqum.all_test_case_passed is true ) as questions_completed
-                 from assignments a 
-                 left join courses c 
-                   on c.course_id = a.course_id
-                 left join assignment_question_mapping aqm
-                   on aqm.assignment_id = a.assignment_id 
-                 left join assignment_question_user_mapping aqum
-                   on aqum.assignment_id  = a.assignment_id
-                 join (select distinct
-                                wud.course_user_mapping_id,
-                                wud.user_id ,
-                                c.course_id,
-                                wud.week_view ,
-                                wud.status
-                            from
-                                weekly_user_details wud 
-                            join courses c 
-                                on c.course_id = wud.course_id and c.course_structure_id in (1,6,8,11,12,14,18,19,20,22,23,26,32)
-                                and wud.label_mapping_id is null and wud.status in (5,8,9) and wud.unit_type like 'LEARNING') as course_user_mapping_new
-                    on a.course_id = course_user_mapping_new.course_id and date_trunc('week',a.start_timestamp) = course_user_mapping_new.week_view
-                group by 1,2,3,4,5,6,7),
-            history_based_users_final_raw as (
-              with user_raw as
-                 (Select aqum.assignment_id,
-                   aqum.user_id,
-                   count(distinct question_id) as questions_opened,
-                   count(distinct question_id) filter(where max_test_case_passed is not null) as questions_attempted,
-                   count(distinct question_id) filter(where all_test_case_passed = 'true') as questions_completed,
-                   count(distinct question_id) filter(where plagiarism_score >= 0.90) as plag_score_90,
-                   count(distinct question_id) filter(where plagiarism_score >= 0.95) as plag_score_95,
-                   count(distinct question_id) filter(where plagiarism_score >= 0.99) as plag_score_99
-               from assignment_question_user_mapping aqum
-               left join assignments on aqum.assignment_id = assignments.assignment_id
-               join (select distinct
-                                wud.course_user_mapping_id,
-                                wud.user_id ,
-                                c.course_id,
-                                wud.week_view ,
-                                wud.status
-                            from
-                                weekly_user_details wud 
-                            join courses c 
-                                on c.course_id = wud.course_id and c.course_structure_id in (1,6,8,11,12,14,18,19,20,22,23,26,32)
-                                and wud.label_mapping_id is null and wud.status in (5,8,9) and wud.unit_type like 'LEARNING') as course_user_mapping_new
-                    on assignments.course_id = course_user_mapping_new.course_id and date_trunc('week',assignments.start_timestamp) = course_user_mapping_new.week_view
-               group by 1,2),
-            assignment_questions as 
-               (Select aqm.assignment_id,
-                       count(distinct aqm.question_id) as assignment_question_count
-                from assignment_question_mapping aqm
-                group by 1
-               ),
-            user_raw2 as
-               (
-               Select user_raw.assignment_id,
-                    user_raw.user_id,
-                    user_raw.questions_opened*100/assignment_questions.assignment_question_count as opened_question_percent,
-                    user_raw.questions_attempted*100/assignment_questions.assignment_question_count as attempted_question_percent,
-                    user_raw.questions_completed*100/assignment_questions.assignment_question_count as completed_question_percent,
-                    plag_score_90,
-                    plag_score_95,
-                    plag_score_99
-             from assignment_questions
-             left join user_raw
-               on user_raw.assignment_id = assignment_questions.assignment_id
-               )
-             select assignment_id,
-                    count(distinct user_id) filter(where opened_question_percent = 0) as _0_percent_opened_users,
-                    count(distinct user_id) filter(where opened_question_percent >= 25) as _25_percent_opened_users,
-                    count(distinct user_id) filter(where opened_question_percent >= 50) as _50_percent_opened_users,
-                    count(distinct user_id) filter(where opened_question_percent >= 75) as _75_percent_opened_users,
-                    count(distinct user_id) filter(where opened_question_percent = 100) as _100_percent_opened_users,
-                    count(distinct user_id) filter(where attempted_question_percent = 0) as _0_percent_attempted_users,
-                    count(distinct user_id) filter(where attempted_question_percent >= 25) as _25_percent_attempted_users,
-                    count(distinct user_id) filter(where attempted_question_percent >= 50) as _50_percent_attempted_users,
-                    count(distinct user_id) filter(where attempted_question_percent >= 75) as _75_percent_attempted_users,
-                    count(distinct user_id) filter(where attempted_question_percent = 100) as _100_percent_attempted_users,
-                    count(distinct user_id) filter(where completed_question_percent = 0) as _0_percent_completed_users,
-                    count(distinct user_id) filter(where completed_question_percent >= 25) as _25_percent_completed_users,
-                    count(distinct user_id) filter(where completed_question_percent >= 50) as _50_percent_completed_users,
-                    count(distinct user_id) filter(where completed_question_percent >= 75) as _75_percent_completed_users,
-                    count(distinct user_id) filter(where completed_question_percent = 100) as _100_percent_completed_users,
-                    count(distinct user_id) filter(where plag_score_90 > 0) as _90_plag_users,
-                    count(distinct user_id) filter(where plag_score_95 > 0) as _95_plag_users,
-                    count(distinct user_id) filter(where plag_score_99 > 0) as _99_plag_users
-             from user_raw2
-             group by 1
-             ),
-            assignment_details as (
-             select a.assignment_id,
-                   a.title as assignment_name,
-                   case when a.assignment_type = 1 then 'Normal Assignment'
-                        when a.assignment_type = 2 then 'Filtering Assignment'
-                        when a.assignment_type = 3 then 'Competitive Assignment'
-                        when a.assignment_type = 4 then 'Duration Assignment'
-                        when a.assignment_type = 5 then 'Milestone Assignment'
-                        when a.assignment_type = 6 then 'Question of the Day Assignment'
-                        end as assignment_type,
-                    case when a.assignment_sub_type = 1 then 'General'
-                         when a.assignment_sub_type = 2 then 'In Class'
-                         when a.assignment_sub_type = 3 then 'Post Class'
-                         when a.assignment_sub_type = 4 then 'Module Contest'
-                         when a.assignment_sub_type = 5 then 'Module Assignment'
-                         end as assignment_sub_type,
-                    a.original_assignment_type,
-                    a.course_id,
-                    c.course_name,
-                    date(a.start_timestamp) as release_date,
-                    count(distinct aqum.table_unique_key) as questions_opened,
-                    count(distinct aqum.table_unique_key) filter(where aqum.max_test_case_passed is not null ) as questions_attempted,
-                    count(distinct aqum.table_unique_key) filter(where aqum.all_test_case_passed is true ) as questions_completed
-                 from assignments a 
-                 left join courses c 
-                   on c.course_id = a.course_id
-                 left join assignment_question_mapping aqm
-                   on aqm.assignment_id = a.assignment_id 
-                 left join assignment_question_user_mapping aqum
-                   on aqum.assignment_id  = a.assignment_id
-                 join (select distinct
-                                wud.course_user_mapping_id,
-                                wud.user_id ,
-                                c.course_id,
-                                wud.week_view ,
-                                wud.status
-                            from
-                                weekly_user_details wud 
-                            join courses c 
-                                on c.course_id = wud.course_id and c.course_structure_id in (1,6,8,11,12,14,18,19,20,22,23,26,32)
-                                and wud.label_mapping_id is null and wud.status in (5,8,9) and wud.unit_type like 'LEARNING') as mod_cum
-                    on a.course_id = mod_cum.course_id and date_trunc('week',a.start_timestamp) = mod_cum.week_view
-                group by 1,2,3,4,5,6,7),
-            user_final_raw as (
-              with user_raw as
-                 (Select aqum.assignment_id,
-                   aqum.user_id,
-                   count(distinct question_id) as questions_opened,
-                   count(distinct question_id) filter(where max_test_case_passed is not null) as questions_attempted,
-                   count(distinct question_id) filter(where all_test_case_passed = 'true') as questions_completed,
-                   count(distinct question_id) filter(where plagiarism_score >= 0.90) as plag_score_90,
-                   count(distinct question_id) filter(where plagiarism_score >= 0.95) as plag_score_95,
-                   count(distinct question_id) filter(where plagiarism_score >= 0.99) as plag_score_99
-               from assignment_question_user_mapping aqum
-               left join assignments on aqum.assignment_id = assignments.assignment_id
-               group by 1,2),
-            assignment_questions as 
-               (Select aqm.assignment_id,
-                       count(distinct aqm.question_id) as assignment_question_count
-                from assignment_question_mapping aqm
-                group by 1
-               ),
-            user_raw2 as
-               (
-               Select user_raw.assignment_id,
-                    user_raw.user_id,
-                    user_raw.questions_opened*100/assignment_questions.assignment_question_count as opened_question_percent,
-                    user_raw.questions_attempted*100/assignment_questions.assignment_question_count as attempted_question_percent,
-                    user_raw.questions_completed*100/assignment_questions.assignment_question_count as completed_question_percent,
-                    plag_score_90,
-                    plag_score_95,
-                    plag_score_99
-             from assignment_questions
-             left join user_raw
-               on user_raw.assignment_id = assignment_questions.assignment_id
-               )
-             select assignment_id,
-                    count(distinct user_id) filter(where opened_question_percent = 0) as _0_percent_opened_users,
-                    count(distinct user_id) filter(where opened_question_percent >= 25) as _25_percent_opened_users,
-                    count(distinct user_id) filter(where opened_question_percent >= 50) as _50_percent_opened_users,
-                    count(distinct user_id) filter(where opened_question_percent >= 75) as _75_percent_opened_users,
-                    count(distinct user_id) filter(where opened_question_percent = 100) as _100_percent_opened_users,
-                    count(distinct user_id) filter(where attempted_question_percent = 0) as _0_percent_attempted_users,
-                    count(distinct user_id) filter(where attempted_question_percent >= 25) as _25_percent_attempted_users,
-                    count(distinct user_id) filter(where attempted_question_percent >= 50) as _50_percent_attempted_users,
-                    count(distinct user_id) filter(where attempted_question_percent >= 75) as _75_percent_attempted_users,
-                    count(distinct user_id) filter(where attempted_question_percent = 100) as _100_percent_attempted_users,
-                    count(distinct user_id) filter(where completed_question_percent = 0) as _0_percent_completed_users,
-                    count(distinct user_id) filter(where completed_question_percent >= 25) as _25_percent_completed_users,
-                    count(distinct user_id) filter(where completed_question_percent >= 50) as _50_percent_completed_users,
-                    count(distinct user_id) filter(where completed_question_percent >= 75) as _75_percent_completed_users,
-                    count(distinct user_id) filter(where completed_question_percent = 100) as _100_percent_completed_users,
-                    count(distinct user_id) filter(where plag_score_90 > 0) as _90_plag_users,
-                    count(distinct user_id) filter(where plag_score_95 > 0) as _95_plag_users,
-                    count(distinct user_id) filter(where plag_score_99 > 0) as _99_plag_users
-             from user_raw2
-             group by 1) 
-             select 
-                      concat(assignment_details.assignment_id,assignment_details.course_id,extract(day from assignment_details.release_date),extract(month from assignment_details.release_date),extract(year from assignment_details.release_date),module_raw.topic_template_id) as table_unique_key,
-                      assignment_details.assignment_id,
-                      assignment_details.assignment_name,
-                      assignment_details.assignment_type,
-                      assignment_details.assignment_sub_type,
-                      assignment_details.course_id,
-                      module_raw.module_name as module_name,
-                      assignment_details.original_assignment_type,
-                      assignment_details.release_date,
-                      assignment_details.questions_opened as questions_opened,
-                      history_based_assignment_details.questions_opened as history_based_questions_opened,
-                      assignment_details.questions_attempted as questions_attempted,
-                      history_based_assignment_details.questions_attempted as history_based_questions_attempted,
-                      assignment_details.questions_completed as questions_completed,
-                      history_based_assignment_details.questions_completed as history_based_questions_completed,
-                      user_final_raw._0_percent_opened_users as _0_percent_opened_users,
-                      history_based_users_final_raw._0_percent_opened_users as  history_based_0_percent_opened_users,
-                      user_final_raw._25_percent_opened_users as _25_percent_opened_users,
-                      history_based_users_final_raw._25_percent_opened_users as history_based_25_percent_opened_users,
-                      user_final_raw._50_percent_opened_users as _50_percent_opened_users,
-                      history_based_users_final_raw._50_percent_opened_users as history_based_50_percent_opened_users,
-                      user_final_raw._75_percent_opened_users as _75_percent_opened_users,
-                      history_based_users_final_raw._75_percent_opened_users as history_based_75_percent_opened_users,
-                      user_final_raw._100_percent_opened_users as _100_percent_opened_users,
-                      history_based_users_final_raw._100_percent_opened_users as history_based_100_percent_opened_users,
-                      user_final_raw._0_percent_attempted_users as _0_percent_attempted_users,
-                      history_based_users_final_raw._0_percent_attempted_users as history_based_0_percent_attempted_users,
-                      user_final_raw._25_percent_attempted_users as _25_percent_attempted_users,
-                      history_based_users_final_raw._25_percent_attempted_users as history_based_25_percent_attempted_users,
-                      user_final_raw._50_percent_attempted_users as _50_percent_attempted_users,
-                      history_based_users_final_raw._50_percent_attempted_users as history_based_50_percent_attempted_users,
-                      user_final_raw._75_percent_attempted_users as _75_percent_attempted_users,
-                      history_based_users_final_raw._75_percent_attempted_users as history_based_75_percent_attempted_users,
-                      user_final_raw._100_percent_attempted_users as _100_percent_attempted_users,
-                      history_based_users_final_raw._100_percent_attempted_users as history_based_100_percent_attempted_users,
-                      user_final_raw._0_percent_completed_users as _0_percent_completed_users,
-                      history_based_users_final_raw._0_percent_completed_users as history_based_0_percent_completed_users,
-                      user_final_raw._25_percent_completed_users as _25_percent_completed_users,
-                      history_based_users_final_raw._25_percent_completed_users as history_based_25_percent_completed_users,
-                      user_final_raw._50_percent_completed_users as _50_percent_completed_users,
-                      history_based_users_final_raw._50_percent_completed_users as history_based_50_percent_completed_users,
-                      user_final_raw._75_percent_completed_users as _75_percent_completed_users,
-                      history_based_users_final_raw._75_percent_completed_users as history_based_75_percent_completed_users,
-                      user_final_raw._100_percent_completed_users as _100_percent_completed_users,
-                      history_based_users_final_raw._100_percent_completed_users as history_based_100_percent_completed_users,
-                      user_final_raw._90_plag_users as _90_plag_users,
-                      history_based_users_final_raw._90_plag_users as history_based_90_plag_users,
-                      user_final_raw._95_plag_users as _95_plag_users,
-                      history_based_users_final_raw._95_plag_users as history_based_95_plag_users,
-                      user_final_raw._99_plag_users as _99_plag_users,
-                      history_based_users_final_raw._99_plag_users as history_based_99_plag_users  
-             from assignment_details
-             left join user_final_raw 
-               on assignment_details.assignment_id = user_final_raw.assignment_id
-             left join history_based_assignment_details
-               on history_based_assignment_details.assignment_id = assignment_details.assignment_id
-             left join history_based_users_final_raw
-               on history_based_users_final_raw.assignment_id = assignment_details.assignment_id
-             left join module_raw
-               on module_raw.assignment_id = assignment_details.assignment_id;
+            select atm.assignment_id,
+                   t.topic_template_id,
+                   t.template_name as module_name
+            from assignment_topic_mapping atm 
+            left join topics t 
+            on atm.topic_id  = t.topic_id 
+            where topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
+            group by 1,2,3),
+        history_based_assignment_details as(
+        select a.assignment_id,
+               a.title as assignment_name,
+               case when a.assignment_type = 1 then 'Normal Assignment'
+                    when a.assignment_type = 2 then 'Filtering Assignment'
+                    when a.assignment_type = 3 then 'Competitive Assignment'
+                    when a.assignment_type = 4 then 'Duration Assignment'
+                    when a.assignment_type = 5 then 'Milestone Assignment'
+                    when a.assignment_type = 6 then 'Question of the Day Assignment'
+                    end as assignment_type,
+                case when a.assignment_sub_type = 1 then 'General'
+                     when a.assignment_sub_type = 2 then 'In Class'
+                     when a.assignment_sub_type = 3 then 'Post Class'
+                     when a.assignment_sub_type = 4 then 'Module Contest'
+                     when a.assignment_sub_type = 5 then 'Module Assignment'
+                     end as assignment_sub_type,
+                a.original_assignment_type,
+                a.course_id,
+                c.course_name,
+                date(a.start_timestamp) as release_date,
+                count(distinct aqum.table_unique_key) as questions_opened,
+                count(distinct aqum.table_unique_key) filter(where aqum.max_test_case_passed is not null ) as questions_attempted,
+                count(distinct aqum.table_unique_key) filter(where aqum.all_test_case_passed is true ) as questions_completed
+             from assignments a 
+             left join courses c 
+               on c.course_id = a.course_id
+             left join assignment_question_mapping aqm
+               on aqm.assignment_id = a.assignment_id 
+             left join assignment_question_user_mapping aqum
+               on aqum.assignment_id  = a.assignment_id
+             join (select distinct
+                            wud.course_user_mapping_id,
+                            wud.user_id ,
+                            c.course_id,
+                            wud.week_view ,
+                            wud.status
+                        from
+                            weekly_user_details wud 
+                        join courses c 
+                            on c.course_id = wud.course_id and c.course_structure_id in (1,6,8,11,12,14,18,19,20,22,23,26,32)
+                            and wud.label_mapping_id is null and wud.status in (5,8,9) and wud.unit_type like 'LEARNING') as course_user_mapping_new
+                on a.course_id = course_user_mapping_new.course_id and date_trunc('week',a.start_timestamp) = course_user_mapping_new.week_view
+            group by 1,2,3,4,5,6,7),
+        history_based_users_final_raw as (
+          with user_raw as
+             (Select aqum.assignment_id,
+               aqum.user_id,
+               count(distinct question_id) as questions_opened,
+               count(distinct question_id) filter(where max_test_case_passed is not null) as questions_attempted,
+               count(distinct question_id) filter(where all_test_case_passed = 'true') as questions_completed,
+               count(distinct question_id) filter(where plagiarism_score >= 0.90) as plag_score_90,
+               count(distinct question_id) filter(where plagiarism_score >= 0.95) as plag_score_95,
+               count(distinct question_id) filter(where plagiarism_score >= 0.99) as plag_score_99
+           from assignment_question_user_mapping aqum
+           left join assignments on aqum.assignment_id = assignments.assignment_id
+           join (select distinct
+                            wud.course_user_mapping_id,
+                            wud.user_id ,
+                            c.course_id,
+                            wud.week_view ,
+                            wud.status
+                        from
+                            weekly_user_details wud 
+                        join courses c 
+                            on c.course_id = wud.course_id and c.course_structure_id in (1,6,8,11,12,14,18,19,20,22,23,26,32)
+                            and wud.label_mapping_id is null and wud.status in (5,8,9) and wud.unit_type like 'LEARNING') as course_user_mapping_new
+                on assignments.course_id = course_user_mapping_new.course_id and date_trunc('week',assignments.start_timestamp) = course_user_mapping_new.week_view
+           group by 1,2),
+        assignment_questions as 
+           (Select aqm.assignment_id,
+                   count(distinct aqm.question_id) as assignment_question_count
+            from assignment_question_mapping aqm
+            group by 1
+           ),
+        user_raw2 as
+           (
+           Select user_raw.assignment_id,
+                user_raw.user_id,
+                user_raw.questions_opened*100/assignment_questions.assignment_question_count as opened_question_percent,
+                user_raw.questions_attempted*100/assignment_questions.assignment_question_count as attempted_question_percent,
+                user_raw.questions_completed*100/assignment_questions.assignment_question_count as completed_question_percent,
+                plag_score_90,
+                plag_score_95,
+                plag_score_99
+         from assignment_questions
+         left join user_raw
+           on user_raw.assignment_id = assignment_questions.assignment_id
+           )
+         select assignment_id,
+                count(distinct user_id) filter(where opened_question_percent = 0) as _0_percent_opened_users,
+                count(distinct user_id) filter(where opened_question_percent >= 25) as _25_percent_opened_users,
+                count(distinct user_id) filter(where opened_question_percent >= 50) as _50_percent_opened_users,
+                count(distinct user_id) filter(where opened_question_percent >= 75) as _75_percent_opened_users,
+                count(distinct user_id) filter(where opened_question_percent = 100) as _100_percent_opened_users,
+                count(distinct user_id) filter(where attempted_question_percent = 0) as _0_percent_attempted_users,
+                count(distinct user_id) filter(where attempted_question_percent >= 25) as _25_percent_attempted_users,
+                count(distinct user_id) filter(where attempted_question_percent >= 50) as _50_percent_attempted_users,
+                count(distinct user_id) filter(where attempted_question_percent >= 75) as _75_percent_attempted_users,
+                count(distinct user_id) filter(where attempted_question_percent = 100) as _100_percent_attempted_users,
+                count(distinct user_id) filter(where completed_question_percent = 0) as _0_percent_completed_users,
+                count(distinct user_id) filter(where completed_question_percent >= 25) as _25_percent_completed_users,
+                count(distinct user_id) filter(where completed_question_percent >= 50) as _50_percent_completed_users,
+                count(distinct user_id) filter(where completed_question_percent >= 75) as _75_percent_completed_users,
+                count(distinct user_id) filter(where completed_question_percent = 100) as _100_percent_completed_users,
+                count(distinct user_id) filter(where plag_score_90 > 0) as _90_plag_users,
+                count(distinct user_id) filter(where plag_score_95 > 0) as _95_plag_users,
+                count(distinct user_id) filter(where plag_score_99 > 0) as _99_plag_users
+         from user_raw2
+         group by 1
+         ),
+        assignment_details as (
+         select a.assignment_id,
+               a.title as assignment_name,
+               case when a.assignment_type = 1 then 'Normal Assignment'
+                    when a.assignment_type = 2 then 'Filtering Assignment'
+                    when a.assignment_type = 3 then 'Competitive Assignment'
+                    when a.assignment_type = 4 then 'Duration Assignment'
+                    when a.assignment_type = 5 then 'Milestone Assignment'
+                    when a.assignment_type = 6 then 'Question of the Day Assignment'
+                    end as assignment_type,
+                case when a.assignment_sub_type = 1 then 'General'
+                     when a.assignment_sub_type = 2 then 'In Class'
+                     when a.assignment_sub_type = 3 then 'Post Class'
+                     when a.assignment_sub_type = 4 then 'Module Contest'
+                     when a.assignment_sub_type = 5 then 'Module Assignment'
+                     end as assignment_sub_type,
+                a.original_assignment_type,
+                a.course_id,
+                c.course_name,
+                date(a.start_timestamp) as release_date,
+                count(distinct aqum.table_unique_key) as questions_opened,
+                count(distinct aqum.table_unique_key) filter(where aqum.max_test_case_passed is not null ) as questions_attempted,
+                count(distinct aqum.table_unique_key) filter(where aqum.all_test_case_passed is true ) as questions_completed
+             from assignments a 
+             left join courses c 
+               on c.course_id = a.course_id
+             left join assignment_question_mapping aqm
+               on aqm.assignment_id = a.assignment_id 
+             left join assignment_question_user_mapping aqum
+               on aqum.assignment_id  = a.assignment_id
+            left join course_user_mapping on course_user_mapping.course_id = c.course_id and course_user_mapping.status in (5,8,9) and course_user_mapping.label_id is null
+            group by 1,2,3,4,5,6,7),
+        user_final_raw as (
+          with user_raw as
+             (Select aqum.assignment_id,
+               aqum.user_id,
+               count(distinct question_id) as questions_opened,
+               count(distinct question_id) filter(where max_test_case_passed is not null) as questions_attempted,
+               count(distinct question_id) filter(where all_test_case_passed = 'true') as questions_completed,
+               count(distinct question_id) filter(where plagiarism_score >= 0.90) as plag_score_90,
+               count(distinct question_id) filter(where plagiarism_score >= 0.95) as plag_score_95,
+               count(distinct question_id) filter(where plagiarism_score >= 0.99) as plag_score_99
+           from assignment_question_user_mapping aqum
+           left join assignments on aqum.assignment_id = assignments.assignment_id
+           group by 1,2),
+        assignment_questions as 
+           (Select aqm.assignment_id,
+                   count(distinct aqm.question_id) as assignment_question_count
+            from assignment_question_mapping aqm
+            group by 1
+           ),
+        user_raw2 as
+           (
+           Select user_raw.assignment_id,
+                user_raw.user_id,
+                user_raw.questions_opened*100/assignment_questions.assignment_question_count as opened_question_percent,
+                user_raw.questions_attempted*100/assignment_questions.assignment_question_count as attempted_question_percent,
+                user_raw.questions_completed*100/assignment_questions.assignment_question_count as completed_question_percent,
+                plag_score_90,
+                plag_score_95,
+                plag_score_99
+         from assignment_questions
+         left join user_raw
+           on user_raw.assignment_id = assignment_questions.assignment_id
+           )
+         select assignment_id,
+                count(distinct user_id) filter(where opened_question_percent = 0) as _0_percent_opened_users,
+                count(distinct user_id) filter(where opened_question_percent >= 25) as _25_percent_opened_users,
+                count(distinct user_id) filter(where opened_question_percent >= 50) as _50_percent_opened_users,
+                count(distinct user_id) filter(where opened_question_percent >= 75) as _75_percent_opened_users,
+                count(distinct user_id) filter(where opened_question_percent = 100) as _100_percent_opened_users,
+                count(distinct user_id) filter(where attempted_question_percent = 0) as _0_percent_attempted_users,
+                count(distinct user_id) filter(where attempted_question_percent >= 25) as _25_percent_attempted_users,
+                count(distinct user_id) filter(where attempted_question_percent >= 50) as _50_percent_attempted_users,
+                count(distinct user_id) filter(where attempted_question_percent >= 75) as _75_percent_attempted_users,
+                count(distinct user_id) filter(where attempted_question_percent = 100) as _100_percent_attempted_users,
+                count(distinct user_id) filter(where completed_question_percent = 0) as _0_percent_completed_users,
+                count(distinct user_id) filter(where completed_question_percent >= 25) as _25_percent_completed_users,
+                count(distinct user_id) filter(where completed_question_percent >= 50) as _50_percent_completed_users,
+                count(distinct user_id) filter(where completed_question_percent >= 75) as _75_percent_completed_users,
+                count(distinct user_id) filter(where completed_question_percent = 100) as _100_percent_completed_users,
+                count(distinct user_id) filter(where plag_score_90 > 0) as _90_plag_users,
+                count(distinct user_id) filter(where plag_score_95 > 0) as _95_plag_users,
+                count(distinct user_id) filter(where plag_score_99 > 0) as _99_plag_users
+         from user_raw2
+         group by 1) 
+         select 
+                  concat(assignment_details.assignment_id,assignment_details.course_id,extract(day from assignment_details.release_date),extract(month from assignment_details.release_date),extract(year from assignment_details.release_date),module_raw.topic_template_id) as table_unique_key,
+                  assignment_details.assignment_id,
+                  assignment_details.assignment_name,
+                  assignment_details.assignment_type,
+                  assignment_details.assignment_sub_type,
+                  assignment_details.course_id,
+                  assignment_details.course_name,
+                  module_raw.module_name as module_name,
+                  assignment_details.original_assignment_type,
+                  assignment_details.release_date,
+                  assignment_details.questions_opened as questions_opened,
+                  history_based_assignment_details.questions_opened as history_based_questions_opened,
+                  assignment_details.questions_attempted as questions_attempted,
+                  history_based_assignment_details.questions_attempted as history_based_questions_attempted,
+                  assignment_details.questions_completed as questions_completed,
+                  history_based_assignment_details.questions_completed as history_based_questions_completed,
+                  user_final_raw._0_percent_opened_users as _0_percent_opened_users,
+                  history_based_users_final_raw._0_percent_opened_users as  history_based_0_percent_opened_users,
+                  user_final_raw._25_percent_opened_users as _25_percent_opened_users,
+                  history_based_users_final_raw._25_percent_opened_users as history_based_25_percent_opened_users,
+                  user_final_raw._50_percent_opened_users as _50_percent_opened_users,
+                  history_based_users_final_raw._50_percent_opened_users as history_based_50_percent_opened_users,
+                  user_final_raw._75_percent_opened_users as _75_percent_opened_users,
+                  history_based_users_final_raw._75_percent_opened_users as history_based_75_percent_opened_users,
+                  user_final_raw._100_percent_opened_users as _100_percent_opened_users,
+                  history_based_users_final_raw._100_percent_opened_users as history_based_100_percent_opened_users,
+                  user_final_raw._0_percent_attempted_users as _0_percent_attempted_users,
+                  history_based_users_final_raw._0_percent_attempted_users as history_based_0_percent_attempted_users,
+                  user_final_raw._25_percent_attempted_users as _25_percent_attempted_users,
+                  history_based_users_final_raw._25_percent_attempted_users as history_based_25_percent_attempted_users,
+                  user_final_raw._50_percent_attempted_users as _50_percent_attempted_users,
+                  history_based_users_final_raw._50_percent_attempted_users as history_based_50_percent_attempted_users,
+                  user_final_raw._75_percent_attempted_users as _75_percent_attempted_users,
+                  history_based_users_final_raw._75_percent_attempted_users as history_based_75_percent_attempted_users,
+                  user_final_raw._100_percent_attempted_users as _100_percent_attempted_users,
+                  history_based_users_final_raw._100_percent_attempted_users as history_based_100_percent_attempted_users,
+                  user_final_raw._0_percent_completed_users as _0_percent_completed_users,
+                  history_based_users_final_raw._0_percent_completed_users as history_based_0_percent_completed_users,
+                  user_final_raw._25_percent_completed_users as _25_percent_completed_users,
+                  history_based_users_final_raw._25_percent_completed_users as history_based_25_percent_completed_users,
+                  user_final_raw._50_percent_completed_users as _50_percent_completed_users,
+                  history_based_users_final_raw._50_percent_completed_users as history_based_50_percent_completed_users,
+                  user_final_raw._75_percent_completed_users as _75_percent_completed_users,
+                  history_based_users_final_raw._75_percent_completed_users as history_based_75_percent_completed_users,
+                  user_final_raw._100_percent_completed_users as _100_percent_completed_users,
+                  history_based_users_final_raw._100_percent_completed_users as history_based_100_percent_completed_users,
+                  user_final_raw._90_plag_users as _90_plag_users,
+                  history_based_users_final_raw._90_plag_users as history_based_90_plag_users,
+                  user_final_raw._95_plag_users as _95_plag_users,
+                  history_based_users_final_raw._95_plag_users as history_based_95_plag_users,
+                  user_final_raw._99_plag_users as _99_plag_users,
+                  history_based_users_final_raw._99_plag_users as history_based_99_plag_users  
+         from assignment_details
+         left join user_final_raw 
+           on assignment_details.assignment_id = user_final_raw.assignment_id
+         left join history_based_assignment_details
+           on history_based_assignment_details.assignment_id = assignment_details.assignment_id
+         left join history_based_users_final_raw
+           on history_based_users_final_raw.assignment_id = assignment_details.assignment_id
+         left join module_raw
+           on module_raw.assignment_id = assignment_details.assignment_id
+  ;
         ''',
     dag=dag
 )

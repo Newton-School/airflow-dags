@@ -129,6 +129,7 @@ transform_data = PostgresOperator(
                        on a.assignment_id = aqum.assignment_id 
                     left join courses c 
                        on c.course_id  = a.course_id
+                    left join course_user_mapping on course_user_mapping.course_id = c.course_id and course_user_mapping.status in (5,8,9) and course_user_mapping.label_id is null
                     where a.original_assignment_type = 1
                     group by 1,2,3,4
                        ),
