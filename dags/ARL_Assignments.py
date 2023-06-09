@@ -28,7 +28,7 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO arl_assignments (table_unique_key,assignment_id,'
-            'assignment_name,assignment_type,assignment_sub_type,course_id,course_name,'
+            'assignment_name,assignment_type,assignment_sub_type,course_id,'
             'module_name,original_assignment_type,release_date,questions_opened,'
             'history_based_questions_opened,questions_attempted,history_based_questions_attempted,'
             'questions_completed,history_based_questions_completed,_0_percent_opened_users,'
@@ -49,10 +49,10 @@ def extract_data_to_nested(**kwargs):
             'history_based_100_percent_completed_users,_90_plag_users,history_based_90_plag_users,'
             '_95_plag_users,history_based_95_plag_users,_99_plag_users,history_based_99_plag_users)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
-            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set assignment_name=EXCLUDED.assignment_name,'
             'assignment_type=EXCLUDED.assignment_type,assignment_sub_type=EXCLUDED.assignment_sub_type,'
-            'course_id=EXCLUDED.course_id,course_name=EXCLUDED.course_name,module_name=EXCLUDED.module_name,'
+            'course_id=EXCLUDED.course_id,module_name=EXCLUDED.module_name,'
             'original_assignment_type=EXCLUDED.original_assignment_type,release_date=EXCLUDED.release_date,'
             'questions_opened=EXCLUDED.questions_opened,'
             'history_based_questions_opened=EXCLUDED.history_based_questions_opened,'
@@ -145,7 +145,6 @@ def extract_data_to_nested(**kwargs):
                 transform_row[48],
                 transform_row[49],
                 transform_row[50],
-                transform_row[51],
             )
         )
     pg_conn.commit()
