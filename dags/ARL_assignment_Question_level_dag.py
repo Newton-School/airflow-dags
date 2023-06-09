@@ -127,7 +127,7 @@ dag = DAG(
     'ARL_assignment_question_level',
     default_args=default_args,
     description='An Analytics Reporting Layer DAG for Assignment question level cut',
-    schedule_interval='30 0 * * *',
+    schedule_interval='01 0 * * *',
     catchup=False
 )
 
