@@ -100,7 +100,7 @@ transform_data = PostgresOperator(
             courses_course.title as course_name,
             courses_course.unit_type,
             courses_courseusermapping.admin_course_user_mapping_id,
-            cast(courses_courseusermapping.created_at as varchar) as created_at,
+            courses_courseusermapping.created_at as created_at,
             courses_courseusermapping.status, 
             courses_courseuserlabelmapping.id as label_id,
             (courses_courseusermapping.utm_param_json->'utm_source'::text) #>> '{}' as utm_source,
