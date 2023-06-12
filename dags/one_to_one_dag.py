@@ -26,16 +26,27 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO one_to_one (one_to_one_id,student_user_id,course_id,expert_user_id,one_to_one_start_timestamp,one_to_one_end_timestamp,hash,one_to_one_created_at,one_to_one_confirmed_at,one_to_one_cancel_timestamp,one_to_one_status,one_to_one_type,final_call,cancel_reason,rating,reports_pulled,title,video_session_using,one_to_one_token_id,expert_min_join_time,expert_max_leave_time,student_min_join_time,student_max_leave_time,student_duration,expert_duration,overlapping_time,difficulty_level) '
+                'INSERT INTO one_to_one (one_to_one_id,student_user_id,course_id,expert_user_id,'
+                'one_to_one_start_timestamp,one_to_one_end_timestamp,hash,one_to_one_created_at,'
+                'one_to_one_confirmed_at,one_to_one_cancel_timestamp,one_to_one_status,one_to_one_type,'
+                'final_call,cancel_reason,rating,reports_pulled,title,video_session_using,one_to_one_token_id,'
+                'expert_min_join_time,expert_max_leave_time,student_min_join_time,student_max_leave_time,'
+                'student_duration,expert_duration,overlapping_time,difficulty_level) '
                 'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (one_to_one_id) do update set expert_user_id=EXCLUDED.expert_user_id,'
-                'one_to_one_start_timestamp = EXCLUDED.one_to_one_start_timestamp,one_to_one_end_timestamp=EXCLUDED.one_to_one_end_timestamp,'
-                'one_to_one_confirmed_at= EXCLUDED.one_to_one_confirmed_at,one_to_one_cancel_timestamp=EXCLUDED.one_to_one_cancel_timestamp,'
-                'one_to_one_status=EXCLUDED.one_to_one_status,one_to_one_type=EXCLUDED.one_to_one_type,final_call=EXCLUDED.final_call,'
+                'one_to_one_start_timestamp = EXCLUDED.one_to_one_start_timestamp,'
+                'one_to_one_end_timestamp=EXCLUDED.one_to_one_end_timestamp,'
+                'one_to_one_confirmed_at= EXCLUDED.one_to_one_confirmed_at,'
+                'one_to_one_cancel_timestamp=EXCLUDED.one_to_one_cancel_timestamp,'
+                'one_to_one_status=EXCLUDED.one_to_one_status,one_to_one_type=EXCLUDED.one_to_one_type,'
+                'final_call=EXCLUDED.final_call,'
                 'cancel_reason=EXCLUDED.cancel_reason,rating=EXCLUDED.rating,reports_pulled=EXCLUDED.reports_pulled,'
-                'expert_min_join_time=EXCLUDED.expert_min_join_time,expert_max_leave_time=EXCLUDED.expert_max_leave_time,'
-                'student_min_join_time=EXCLUDED.student_min_join_time,student_max_leave_time=EXCLUDED.student_max_leave_time,'
-                'student_duration=EXCLUDED.student_duration,expert_duration=EXCLUDED.expert_duration,overlapping_time=EXCLUDED.overlapping_time,'
+                'expert_min_join_time=EXCLUDED.expert_min_join_time,'
+                'expert_max_leave_time=EXCLUDED.expert_max_leave_time,'
+                'student_min_join_time=EXCLUDED.student_min_join_time,'
+                'student_max_leave_time=EXCLUDED.student_max_leave_time,'
+                'student_duration=EXCLUDED.student_duration,expert_duration=EXCLUDED.expert_duration,'
+                'overlapping_time=EXCLUDED.overlapping_time,'
                 'difficulty_level=EXCLUDED.difficulty_level ;',
                 (
                     transform_row[0],
@@ -150,12 +161,12 @@ transform_data = PostgresOperator(
             video_sessions_onetoone.booked_by_id as student_user_id,
             video_sessions_onetoone.course_id,
             video_sessions_onetoone.booked_with_id as expert_user_id,
-            cast(video_sessions_onetoone.start_timestamp as varchar) as one_to_one_start_timestamp,
-            cast(video_sessions_onetoone.end_timestamp as varchar) as one_to_one_end_timestamp,
+            video_sessions_onetoone.start_timestamp as one_to_one_start_timestamp,
+            video_sessions_onetoone.end_timestamp as one_to_one_end_timestamp,
             video_sessions_onetoone.hash,
-            cast(video_sessions_onetoone.created_at as varchar) as one_to_one_created_at,
-            cast(video_sessions_onetoone.confirmed_at as varchar) as one_to_one_confirmed_at,
-            cast(video_sessions_onetoone.cancel_timestamp as varchar) as one_to_one_cancel_timestamp,
+            video_sessions_onetoone.created_at as one_to_one_created_at,
+            video_sessions_onetoone.confirmed_at as one_to_one_confirmed_at,
+            video_sessions_onetoone.cancel_timestamp as one_to_one_cancel_timestamp,
             video_sessions_onetoone.one_to_one_status,
             video_sessions_onetoone.one_to_one_type,
             video_sessions_onetoone.final_call,
