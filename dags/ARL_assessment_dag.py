@@ -34,8 +34,9 @@ def extract_data_to_nested(**kwargs):
             'users_submitted_late,overall_avg_assessment_percent,students_above_avg_percent,'
             'students_below_avg_percent,median_marks,users_with_zero_marks,'
             'users_with_marks_btw_0_and_25,users_with_marks_btw_25_and_50,'
-            'users_with_marks_btw_50_and_75,users_with_marks_btw_75_and_100,users_with_full_marks)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'users_with_marks_btw_50_and_75,users_with_marks_btw_75_and_100,users_with_full_marks,'
+            'assessment_title)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (assessment_id) do update set max_marks=EXCLUDED.max_marks,'
             'total_questions=EXCLUDED.total_questions,total_mcqs_marked=EXCLUDED.total_mcqs_marked,'
             'total_correct_mcqs=EXCLUDED.total_correct_mcqs,students_opened=EXCLUDED.students_opened,'
@@ -51,7 +52,8 @@ def extract_data_to_nested(**kwargs):
             'users_with_marks_btw_25_and_50=EXCLUDED.users_with_marks_btw_25_and_50,'
             'users_with_marks_btw_50_and_75=EXCLUDED.users_with_marks_btw_50_and_75,'
             'users_with_marks_btw_75_and_100=EXCLUDED.users_with_marks_btw_75_and_100,'
-            'users_with_full_marks=EXCLUDED.users_with_full_marks ;',
+            'users_with_full_marks=EXCLUDED.users_with_full_marks,'
+            'assessment_title = EXCLUDED.assessment_title ;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -78,6 +80,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[22],
                 transform_row[23],
                 transform_row[24],
+                transform_row[25]
             )
         )
     pg_conn.commit()
@@ -119,7 +122,8 @@ create_table = PostgresOperator(
             users_with_marks_btw_25_and_50 int,
             users_with_marks_btw_50_and_75 int,
             users_with_marks_btw_75_and_100 int,
-            users_with_full_marks int
+            users_with_full_marks int,
+            assessment_title varchar(1028)
         );
     ''',
     dag=dag
