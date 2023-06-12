@@ -89,11 +89,11 @@ transform_data = PostgresOperator(
         when courses_course.course_structure_id in (11,26) then 'Data Science - IU'
         when courses_course.course_structure_id in (6,12,19) then 'Upfront - FSD'
     end as course_structure_class,
-    cast(courses_course.start_timestamp as varchar) as course_start_timestamp,
-    cast(courses_course.end_timestamp as varchar) as course_end_timestamp,
+    courses_course.start_timestamp as course_start_timestamp,
+    courses_course.end_timestamp as course_end_timestamp,
     courses_course.course_type,
     courses_course.hash,
-    cast(courses_course.created_at as varchar) as created_at
+    courses_course.created_at as created_at
 from
     courses_course
 left join courses_coursestructure
