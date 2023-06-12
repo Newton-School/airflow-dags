@@ -203,7 +203,6 @@ transform_data = PostgresOperator(
                 
             select 
                 distinct student_all_raw.assessment_id,
-                student_all.assessment_title,
                 student_all_raw.course_id,
                 assessment_release_date,
                 assessment_type,
@@ -230,12 +229,13 @@ transform_data = PostgresOperator(
                 count(distinct user_id) filter (where assessment_percent >= 25 and assessment_percent < 50)  as "users_with_marks_btw_25_and_50",
                 count(distinct user_id) filter (where assessment_percent >= 50 and assessment_percent < 75) as "users_with_marks_btw_50_and_75",
                 count(distinct user_id) filter (where assessment_percent >= 75 and assessment_percent < 100) as "users_with_marks_btw_75_and_100",
-                count(distinct user_id) filter (where assessment_percent = 100) as users_with_full_marks
+                count(distinct user_id) filter (where assessment_percent = 100) as users_with_full_marks,
+                student_all.assessment_title
             from
                 student_all_raw
             left join overall_avg_marks
                 on overall_avg_marks.assessment_id = student_all_raw.assessment_id
-            group by 1,2,3,4,5,6,7,8;
+            group by 1,2,3,4,5,6,7,26;
         ''',
     dag=dag
 )
