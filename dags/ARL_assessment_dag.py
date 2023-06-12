@@ -203,6 +203,7 @@ transform_data = PostgresOperator(
                 
             select 
                 distinct student_all_raw.assessment_id,
+                student_all.assessment_title,
                 student_all_raw.course_id,
                 assessment_release_date,
                 assessment_type,
@@ -234,7 +235,7 @@ transform_data = PostgresOperator(
                 student_all_raw
             left join overall_avg_marks
                 on overall_avg_marks.assessment_id = student_all_raw.assessment_id
-            group by 1,2,3,4,5,6,7;
+            group by 1,2,3,4,5,6,7,8;
         ''',
     dag=dag
 )
