@@ -28,9 +28,11 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO arl_lectures_x_users (table_unique_key,user_id,course_id,inst_user_id,template_name,'
+            'lecture_date,'
             'total_lectures,overall_lectures_watched,live_lectures_attended,inst_total_time,total_overlapping_time)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set template_name=EXCLUDED.template_name,'
+            'lecture_date=EXCLUDED.lecture_date,'
             'total_lectures=EXCLUDED.total_lectures,overall_lectures_watched=EXCLUDED.overall_lectures_watched,'
             'live_lectures_attended=EXCLUDED.live_lectures_attended,inst_total_time=EXCLUDED.inst_total_time,'
             'total_overlapping_time=EXCLUDED.total_overlapping_time;',
@@ -45,6 +47,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[7],
                 transform_row[8],
                 transform_row[9],
+                transform_row[10],
             )
         )
     pg_conn.commit()
@@ -68,6 +71,7 @@ create_table = PostgresOperator(
             course_id int,
             inst_user_id bigint,
             template_name varchar(256),
+            lecture_date DATE,
             total_lectures int,
             overall_lectures_watched int,
             live_lectures_attended int,
