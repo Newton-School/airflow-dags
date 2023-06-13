@@ -234,10 +234,18 @@ transform_data = PostgresOperator(
     dag=dag
 )
 
+drop_table = PostgresOperator(
+    task_id='drop_table',
+    postgres_conn_id='postgres_result_db',
+    sql='''DROP TABLE IF EXISTS arl_placements;
+    ''',
+    dag=dag
+)
+
 extract_python_data = PythonOperator(
     task_id='extract_python_data',
     python_callable=extract_data_to_nested,
     provide_context=True,
     dag=dag
 )
-create_table >> transform_data >> extract_python_data
+drop_table >> create_table >> transform_data >> extract_python_data
