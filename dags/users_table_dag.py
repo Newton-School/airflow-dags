@@ -125,7 +125,17 @@ def extract_data_to_nested(**kwargs):
                     'tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,'
                     'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study) '
                     'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
-                    'on conflict (user_id) do update set last_login = EXCLUDED.last_login ;',
+                    'on conflict (user_id) do update set first_name=EXCLUDED.first_name,'
+                    'last_name=EXCLUDED.last_name,last_login=EXCLUDED.last_login,'
+                    'username=EXCLUDED.username,email=EXCLUDED.email,phone=EXCLUDED.phone,'
+                    'current_location_city=EXCLUDED.current_location_city,current_location_state=EXCLUDED.current_location_state,'
+                    'gender=EXCLUDED.gender,date_of_birth=EXCLUDED.date_of_birth,'
+                    'utm_source=EXCLUDED.utm_source,utm_medium=EXCLUDED.utm_medium,utm_campaign=EXCLUDED.utm_campaign,'
+                    'tenth_marks=EXCLUDED.tenth_marks,twelfth_marks=EXCLUDED.twelfth_marks,'
+                    'bachelors_marks=EXCLUDED.bachelors_marks,bachelors_grad_year=EXCLUDED.bachelors_grad_year,'
+                    'bachelors_degree=EXCLUDED.bachelors_degree,bachelors_field_of_study=EXCLUDED.bachelors_field_of_study,'
+                    'masters_marks=EXCLUDED.masters_marks,masters_grad_year=EXCLUDED.masters_grad_year,'
+                    'masters_degree=EXCLUDED.masters_degree,masters_field_of_study=EXCLUDED.masters_field_of_study ;',
                     (
                         transform_row[0],
                         transform_row[1],
