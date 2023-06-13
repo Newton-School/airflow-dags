@@ -89,6 +89,7 @@ transform_data = PostgresOperator(
                     t.template_name,
                     t.topic_template_id,
                     l.lecture_id,
+                    date(l.start_timestamp) as lecture_date,
                     count(distinct l.lecture_id) as total_lectures,
                     count(distinct l.lecture_id) filter (where lectures_info.lecture_id is not null) as overall_lectures_watched,
                     count(distinct l.lecture_id) filter (where llcur2.lecture_id is not null) as live_lectures_attended,
@@ -124,7 +125,7 @@ transform_data = PostgresOperator(
                  join topics t 
                     on t.topic_id = ltm.topic_id and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
                 
-                group by 1,2,3,4,5,6),
+                group by 1,2,3,4,5,6,7),
                 
             user_details as 
                 (select 
@@ -132,21 +133,22 @@ transform_data = PostgresOperator(
                     course_id,
                     topic_template_id,
                     template_name,
+                    lecture_date,
                     sum(total_lectures) as lectures_conducted,
                     sum(overall_lectures_watched) as overall_lectures_watched,
                     sum(live_lectures_attended) as live_lectures_attended,
                     sum(total_overlapping_time) as total_overlapping_time
                 from
                     user_details_raw
-                group by 1,2,3,4),
+                group by 1,2,3,4,5),
             
             inst_details as 
-                (select 
-            --		l.lecture_id,
+                (select
                     c.course_id,
                     t.template_name,
                     cum.user_id as inst_user_id,
                     lim.inst_course_user_mapping_id,
+                    date(l.start_timestamp) as lecture_date,
                     count(distinct l.lecture_id) as total_lectures,
                     floor(sum(distinct llcur2.inst_total_time_in_mins))  as inst_total_time
                 from
@@ -164,13 +166,14 @@ transform_data = PostgresOperator(
                     on lim.lecture_id = l.lecture_id 
                 join course_user_mapping cum 
                     on cum.course_user_mapping_id = lim.inst_course_user_mapping_id and c.course_id = cum.course_id 
-                group by 1,2,3,4)
+                group by 1,2,3,4,5)
             select 
                 distinct concat(user_details.user_id,user_details.topic_template_id,user_details.course_id,inst_details.inst_user_id) as table_unique_key,
                 user_details.user_id,
                 user_details.course_id,
                 inst_details.inst_user_id,
                 user_details.template_name,
+                user_details.lecture_date,
                 inst_details.total_lectures,
                 user_details.overall_lectures_watched,
                 user_details.live_lectures_attended,
@@ -179,7 +182,7 @@ transform_data = PostgresOperator(
             from
                 user_details
             join inst_details
-                on inst_details.course_id = user_details.course_id and user_details.template_name = inst_details.template_name;
+                on inst_details.course_id = user_details.course_id and user_details.template_name = inst_details.template_name and user_details.lecture_date = inst_details.lecture_date;
         ''',
     dag=dag
 )
