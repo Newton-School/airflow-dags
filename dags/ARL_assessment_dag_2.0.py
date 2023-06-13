@@ -27,7 +27,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO arl_assessments_test (assessment_id,course_id,assessment_release_date,'
+            'INSERT INTO arl_assessments (assessment_id,course_id,assessment_release_date,'
             'assessment_type,assessment_sub_type,max_marks,total_questions,total_mcqs_marked,'
             'history_based_total_mcqs_marked,total_correct_mcqs,history_based_total_correct_mcqs,'
             'students_opened,history_based_students_opened,users_opened_on_time,'
@@ -132,7 +132,7 @@ def extract_data_to_nested(**kwargs):
 
 
 dag = DAG(
-    'ARL_Assessments_2',
+    'ARL_Assessments_DAG',
     default_args=default_args,
     description='An Analytics Reporting Layer DAG for Assessments',
     schedule_interval='35 0 * * *',
@@ -142,7 +142,7 @@ dag = DAG(
 create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE IF NOT EXISTS arl_assessments_test (
+    sql='''CREATE TABLE IF NOT EXISTS arl_assessments (
             assessment_id int not null PRIMARY KEY,
             course_id int,
             assessment_release_date DATE,
