@@ -172,7 +172,7 @@ transform_data = PostgresOperator(
                     on cum.course_user_mapping_id = lim.inst_course_user_mapping_id and c.course_id = cum.course_id 
                 group by 1,2,3,4,5)
             select 
-                distinct concat(user_details.user_id,user_details.topic_template_id,user_details.course_id,inst_details.inst_user_id) as table_unique_key,
+                distinct concat(user_details.user_id,user_details.topic_template_id,user_details.course_id,inst_details.inst_user_id,extract(day from user_details.lecture_date),extract(month from user_details.lecture_date),extract(year from user_details.lecture_date)) as table_unique_key,
                 user_details.user_id,
                 user_details.course_id,
                 inst_details.inst_user_id,
@@ -186,7 +186,8 @@ transform_data = PostgresOperator(
             from
                 user_details
             join inst_details
-                on inst_details.course_id = user_details.course_id and user_details.template_name = inst_details.template_name and user_details.lecture_date = inst_details.lecture_date;
+                on inst_details.course_id = user_details.course_id and user_details.template_name = inst_details.template_name 
+                and user_details.lecture_date = inst_details.lecture_date;
         ''',
     dag=dag
 )
