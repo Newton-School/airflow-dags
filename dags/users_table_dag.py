@@ -48,7 +48,8 @@ create_table = PostgresOperator(
             masters_marks double precision,
             masters_grad_year date,
             masters_degree varchar(128),
-            masters_field_of_study varchar(128)
+            masters_field_of_study varchar(128),
+            lead_type varchar(32)
         );
     ''',
     dag=dag
@@ -57,7 +58,63 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
-    sql='''with t1 as(
+    sql='''with lead_type_table as(
+            select distinct 
+                user_id,
+                case 
+                    when other_status is null then 'Fresh'
+                    else 'Deferred'
+                end as lead_type
+            
+            from
+            
+                (with raw_data as
+                
+                    (select
+                        courses_course.id as course_id,
+                        courses_course.title as batch_name,
+                        courses_course.start_timestamp,
+                        courses_course.end_timestamp,
+                        user_id,
+                        courses_courseusermapping.status,
+                        email
+                    from
+                        courses_courseusermapping
+                    join courses_course
+                        on courses_course.id = courses_courseusermapping.course_id and courses_courseusermapping.status not in (13,14,18,27) and courses_course.course_type in (1,6)
+                    join auth_user
+                        on auth_user.id = courses_courseusermapping.user_id
+                    where date(courses_course.start_timestamp) < date(current_date)
+                    and courses_course.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26)
+                    and unit_type like 'LEARNING'),
+                
+                non_studying as 
+                    (select 
+                        * 
+                    from
+                        raw_data
+                    where status in (11,30)),
+                    
+                studying as 
+                    (select 
+                        *
+                    from
+                        raw_data
+                    where status in (5,8,9))
+                    
+                select
+                    studying.*,
+                    non_studying.status as other_status,
+                    non_studying.course_id as other_course_id,
+                    non_studying.start_timestamp as other_st,
+                    non_studying.end_timestamp as other_et
+                from
+                    studying
+                left join non_studying
+                    on non_studying.user_id = studying.user_id
+                group by 1,2,3,4,5,6,7,8,9,10,11) raw
+            ),
+            t1 as(
             select distinct auth_user.id as user_id,auth_user.first_name,auth_user.last_name,
                 auth_user.date_joined as date_joined,
                 auth_user.last_login as last_login,
@@ -75,6 +132,7 @@ transform_data = PostgresOperator(
                 C.end_date as bachelors_grad_year,
                 E.name as bachelors_degree,F.name as bachelors_field_of_study,D.grade as masters_marks,
                 D.end_date as masters_grad_year,M.name as masters_degree,MF.name as masters_field_of_study,
+                lead_type_table.lead_type,
                 row_number() over(partition by auth_user.id order by date_joined) as rank
                 
                 from auth_user left join users_userprofile on users_userprofile.user_id = auth_user.id 
@@ -88,10 +146,11 @@ transform_data = PostgresOperator(
                 left join education_fieldofstudy F on C.field_of_study_id = F.id 
                 left join education_degree M on D.degree_id = M.id  
                 left join education_fieldofstudy MF on D.field_of_study_id = MF.id
+                left join lead_type_table on lead_type_table.user_id = auth_user.id
                 )
                 select 
                     distinct user_id,first_name,last_name,date_joined,last_login,username,email,phone,current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,
-                    tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study
+                    tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type
                 from t1
                     where rank =1 and user_id is not null;
         ''',
@@ -123,8 +182,8 @@ def extract_data_to_nested(**kwargs):
                     'INSERT INTO users_info (user_id,first_name,last_name,date_joined,last_login,username,email,phone,'
                     'current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,'
                     'tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,'
-                    'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study) '
-                    'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
+                    'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type) '
+                    'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
                     'on conflict (user_id) do update set first_name=EXCLUDED.first_name,'
                     'last_name=EXCLUDED.last_name,last_login=EXCLUDED.last_login,'
                     'username=EXCLUDED.username,email=EXCLUDED.email,phone=EXCLUDED.phone,'
@@ -135,7 +194,8 @@ def extract_data_to_nested(**kwargs):
                     'bachelors_marks=EXCLUDED.bachelors_marks,bachelors_grad_year=EXCLUDED.bachelors_grad_year,'
                     'bachelors_degree=EXCLUDED.bachelors_degree,bachelors_field_of_study=EXCLUDED.bachelors_field_of_study,'
                     'masters_marks=EXCLUDED.masters_marks,masters_grad_year=EXCLUDED.masters_grad_year,'
-                    'masters_degree=EXCLUDED.masters_degree,masters_field_of_study=EXCLUDED.masters_field_of_study ;',
+                    'masters_degree=EXCLUDED.masters_degree,masters_field_of_study=EXCLUDED.masters_field_of_study,'
+                    'lead_type=EXCLUDED.lead_type ;',
                     (
                         transform_row[0],
                         transform_row[1],
@@ -162,6 +222,7 @@ def extract_data_to_nested(**kwargs):
                         transform_row[22],
                         transform_row[23],
                         transform_row[24],
+                        transform_row[25],
                     )
             )
             pg_conn.commit()
