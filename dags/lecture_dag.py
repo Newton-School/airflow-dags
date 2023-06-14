@@ -29,8 +29,8 @@ def extract_data_to_nested(**kwargs):
                 'INSERT INTO lectures (lecture_id,lecture_title,course_id,child_video_session,created_by_id,created_at,start_timestamp,end_timestamp,'
                 'hash,mandatory,video_session_using,instructor_user_id,lecture_slot_id,is_topic_tree_independent,lecture_slot_status,'
                 'lecture_slot_is_deleted,lecture_slot_created_at,lecture_slot_created_by_id,'
-                'lecture_slot_deleted_by_id,lecture_slot_modified_at,automated_content_release_triggered) '
-                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'lecture_slot_deleted_by_id,lecture_slot_modified_at,automated_content_release_triggered,lecture_type) '
+                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (lecture_id) do update set mandatory =EXCLUDED.mandatory,'
                 'lecture_title =EXCLUDED.lecture_title,'
                 'child_video_session =EXCLUDED.child_video_session,'
@@ -43,7 +43,8 @@ def extract_data_to_nested(**kwargs):
                 'lecture_slot_modified_at=EXCLUDED.lecture_slot_modified_at,'
                 'instructor_user_id =EXCLUDED.instructor_user_id,'
                 'lecture_slot_id =EXCLUDED.lecture_slot_id,'
-                'automated_content_release_triggered=EXCLUDED.automated_content_release_triggered ;',
+                'automated_content_release_triggered=EXCLUDED.automated_content_release_triggered,'
+                'lecture_type=EXCLUDED.lecture_type ;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -66,6 +67,7 @@ def extract_data_to_nested(**kwargs):
                     transform_row[18],
                     transform_row[19],
                     transform_row[20],
+                    transform_row[21],
                  )
         )
     pg_conn.commit()
@@ -103,7 +105,8 @@ create_table = PostgresOperator(
             lecture_slot_created_by_id bigint,
             lecture_slot_deleted_by_id bigint,
             lecture_slot_modified_at timestamp,
-            automated_content_release_triggered boolean
+            automated_content_release_triggered boolean,
+            lecture_type varchar(256)
         );
     ''',
     dag=dag
@@ -133,9 +136,11 @@ transform_data = PostgresOperator(
             video_sessions_lectureslot.created_by_id as lecture_slot_created_by_id,
             video_sessions_lectureslot.deleted_by_id as lecture_slot_deleted_by_id,
             cast(video_sessions_lectureslot.modified_at as varchar) as lecture_slot_modified_at,
-            video_sessions_lectureslot.automated_content_release_triggered
+            video_sessions_lectureslot.automated_content_release_triggered,
+            technologies_label.name as lecture_type
             from video_sessions_lecture
             left join video_sessions_lectureslot on video_sessions_lectureslot.lecture_id = video_sessions_lecture.id
+            left join technologies_label on technologies_label.id = video_sessions_lectureslot.label_id
     ;
         ''',
     dag=dag
