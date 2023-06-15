@@ -319,7 +319,8 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
             all_assignment_questions as 
                (Select aqm.assignment_id,
                        count(distinct aqm.question_id) as assignment_question_count
-                from assignment_question_mapping aqm and (aqm.assignment_id between %d and %d)
+                from assignment_question_mapping aqm 
+                where (aqm.assignment_id between %d and %d)
                 group by 1
                ),
             module_raw as (
