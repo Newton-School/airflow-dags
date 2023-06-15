@@ -193,7 +193,8 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
             all_assignment_questions as 
                (Select aqm.assignment_id,
                        count(distinct aqm.question_id) as assignment_question_count
-                from assignment_question_mapping aqm and (aqm.assignment_id between %d and %d)
+                from assignment_question_mapping aqm
+                where (aqm.assignment_id between %d and %d)
                 group by 1
                ),
             module_raw as (
