@@ -10,7 +10,6 @@ default_args = {
     'start_date': datetime(2023, 3, 16),
 }
 
-
 def extract_data_to_nested(**kwargs):
     def clean_input(data_type, data_value):
         if data_type == 'string':
@@ -158,4 +157,5 @@ extract_python_data = PythonOperator(
     provide_context=True,
     dag=dag
 )
+
 create_table >> transform_data >> extract_python_data
