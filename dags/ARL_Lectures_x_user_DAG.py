@@ -27,16 +27,16 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO arl_lectures_x_users (table_unique_key,user_id,course_id,'
-            'lecture_id, lecture_title,inst_user_id,template_name,'
-            'lecture_date,inst_total_time, total_overlapping_time,'
-            'overall_lectures_watched,live_lectures_attended,recorded_lectures_watched)'
+            'INSERT INTO arl_lectures_x_users (table_unique_key, user_id, course_id,'
+            'lecture_id, lecture_title, inst_user_id, template_name,'
+            'lecture_date, inst_total_time, total_overlapping_time,'
+            'overall_lectures_watched, live_lectures_attended, recorded_lectures_watched)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set lecture_title = EXCLUDED.lecture_title,'
-            'inst_total_time=EXCLUDED.inst_total_time,'
+            'inst_user_id = EXCLUDED.inst_user_id,'
             'template_name=EXCLUDED.template_name,'
             'lecture_date=EXCLUDED.lecture_date,'
-            'inst_total_time = EXCLUDED.inst_total_time,'
+            'inst_total_time=EXCLUDED.inst_total_time,'
             'total_overlapping_time=EXCLUDED.total_overlapping_time,'
             'overall_lectures_watched=EXCLUDED.overall_lectures_watched,'
             'live_lectures_attended = EXCLUDED.live_lectures_attended,'
