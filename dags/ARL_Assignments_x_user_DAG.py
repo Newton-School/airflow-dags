@@ -27,15 +27,16 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO arl_assignments_x_users (table_unique_key,user_id,assignment_id,course_id,'
+            'INSERT INTO arl_assignments_x_users (table_unique_key,user_id,assignment_id,'
+            'assignment_title, assignment_release_date,course_id,'
             'total_assignment_questions,module_name,opened_questions,history_based_opened_questions,'
             'attempted_questions,history_based_attempted_questions,completed_questions,'
             'history_based_completed_questions,questions_with_plag_score_99,'
             'history_based_questions_with_plag_score_99,questions_with_plag_score_95,'
             'history_based_questions_with_plag_score_95,questions_with_plag_score_90,'
             'history_based_questions_with_plag_score_90)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set '
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (table_unique_key) do update set assignment_title = EXCLUDED.assignment_title,'
             'total_assignment_questions=EXCLUDED.total_assignment_questions,'
             'module_name=EXCLUDED.module_name,opened_questions=EXCLUDED.opened_questions,'
             'history_based_opened_questions=EXCLUDED.history_based_opened_questions,'
@@ -68,6 +69,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[15],
                 transform_row[16],
                 transform_row[17],
+                transform_row[18],
+                transform_row[19],
             )
         )
     pg_conn.commit()
@@ -89,6 +92,8 @@ create_table = PostgresOperator(
             table_unique_key double precision not null PRIMARY KEY,
             user_id bigint,
             assignment_id int,
+            assignment_title varchar(1028),
+            assignment_release_date DATE,
             course_id int,
             total_assignment_questions int,
             module_name varchar(256),
@@ -116,6 +121,8 @@ transform_data = PostgresOperator(
             user_details as
                 (select aqum.user_id,
                        aqum.assignment_id,
+                       a.title as assignment_title,
+                       date(a.start_timestamp) as assignment_release_date,
                        c.course_id,
                        c.course_name,
                        count(distinct aqum.id) as opened_questions,
@@ -125,17 +132,18 @@ transform_data = PostgresOperator(
                        count(distinct aqum.id) filter(where plagiarism_score >= 0.95) as questions_with_plag_score_95,
                        count(distinct aqum.id) filter(where plagiarism_score >= 0.99) as questions_with_plag_score_99
                     from assignment_question_user_mapping aqum
-                    left join assignments a 
+                    left join assignments a
                        on a.assignment_id = aqum.assignment_id 
                     left join courses c 
                        on c.course_id  = a.course_id
                     left join course_user_mapping on course_user_mapping.course_id = c.course_id and course_user_mapping.status in (5,8,9) and course_user_mapping.label_id is null
                     where a.original_assignment_type = 1
-                    group by 1,2,3,4
-                       ),
+                    group by 1,2,3,4,5,6),
             history_based_user_details as 
                 (select aqum.user_id,
                        aqum.assignment_id,
+                       a.title as assignment_title,
+                       date(a.start_timestamp) as assignment_release_date,
                        c.course_id,
                        c.course_name,
                        count(distinct aqum.id) as opened_questions,
@@ -162,8 +170,7 @@ transform_data = PostgresOperator(
                     left join courses c 
                        on c.course_id  = a.course_id
                     where a.original_assignment_type = 1
-                    group by 1,2,3,4
-            ),
+                    group by 1,2,3,4,5,6),
             all_assignment_questions as 
                (Select aqm.assignment_id,
                        count(distinct aqm.question_id) as assignment_question_count
@@ -182,6 +189,8 @@ transform_data = PostgresOperator(
              select concat(user_details.user_id,'0',user_details.assignment_id,module_raw.topic_template_id,user_details.course_id) as table_unique_key,
                     user_details.user_id,
                     user_details.assignment_id,
+                    user_details.assignment_title,
+                    user_details.assignment_release_date,
                     user_details.course_id,
                     all_assignment_questions.assignment_question_count as total_assignment_questions,
                     module_raw.module_name,
