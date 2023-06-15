@@ -192,7 +192,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                 from assignment_question_user_mapping aqum
                 join assignments a 
                    on a.assignment_id = aqum.assignment_id and a.original_assignment_type in (3,4)
-                    and (a.id between %d and %d)
+                    and (a.assignment_id between %d and %d)
                 left join assignment_question aq 
                    on aq.assignment_question_id  = aqum.question_id 
                 left join courses c 
@@ -225,7 +225,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                 from assignment_question_user_mapping aqum
                 join assignments a 
                    on a.assignment_id = aqum.assignment_id and a.original_assignment_type in (3,4)
-                    and (a.id between %d and %d)
+                    and (a.assignment_id between %d and %d)
                 left join assignment_question aq 
                    on aq.assignment_question_id  = aqum.question_id 
                  join (select distinct
@@ -288,7 +288,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                           on aqum.question_id = aq.assignment_question_id
                          join assignments a 
                            on a.assignment_id = aqum.assignment_id and a.original_assignment_type in (3,4)
-                            and (a.id between %d and %d)
+                            and (a.assignment_id between %d and %d)
                          join (select distinct
                                 wud.course_user_mapping_id,
                                 wud.user_id ,
@@ -342,7 +342,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                 on user_details.assignment_id = history_based_user_details.assignment_id and user_details.user_id = history_based_user_details.user_id and user_details.course_id = history_based_user_details.course_id
              left join history_based_marks
                 on history_based_marks.assignment_id = user_details.assignment_id and history_based_marks.user_id = user_details.user_id) query_rows;
-            ''' % (start_assignment_id, end_assignment_id,start_assignment_id, end_assignment_id,start_assignment_id, end_assignment_id),
+            ''' % (start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id,start_assignment_id, end_assignment_id),
     )
 
 
