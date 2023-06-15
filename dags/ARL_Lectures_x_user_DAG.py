@@ -27,15 +27,20 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO arl_lectures_x_users (table_unique_key,user_id,course_id,inst_user_id,template_name,'
-            'lecture_date,'
-            'total_lectures,overall_lectures_watched,live_lectures_attended,inst_total_time,total_overlapping_time)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set template_name=EXCLUDED.template_name,'
+            'INSERT INTO arl_lectures_x_users (table_unique_key,user_id,course_id,'
+            'lecture_id, lecture_title,inst_user_id,template_name,'
+            'lecture_date,inst_total_time, total_overlapping_time,'
+            'overall_lectures_watched,live_lectures_attended,recorded_lectures_watched)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (table_unique_key) do update set lecture_title = EXCLUDED.lecture_title,'
+            'inst_total_time=EXCLUDED.inst_total_time,'
+            'template_name=EXCLUDED.template_name,'
             'lecture_date=EXCLUDED.lecture_date,'
-            'total_lectures=EXCLUDED.total_lectures,overall_lectures_watched=EXCLUDED.overall_lectures_watched,'
-            'live_lectures_attended=EXCLUDED.live_lectures_attended,inst_total_time=EXCLUDED.inst_total_time,'
-            'total_overlapping_time=EXCLUDED.total_overlapping_time;',
+            'inst_total_time = EXCLUDED.inst_total_time,'
+            'total_overlapping_time=EXCLUDED.total_overlapping_time,'
+            'overall_lectures_watched=EXCLUDED.overall_lectures_watched,'
+            'live_lectures_attended = EXCLUDED.live_lectures_attended,'
+            'recorded_lectures_watched = EXCLUDED.recorded_lectures_watched;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -48,6 +53,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[8],
                 transform_row[9],
                 transform_row[10],
+                transform_row[11],
+                transform_row[12]
             )
         )
     pg_conn.commit()
@@ -69,14 +76,17 @@ create_table = PostgresOperator(
             table_unique_key double precision not null PRIMARY KEY,
             user_id bigint,
             course_id int,
+            lecture_id bigint,
+            lecture_title varchar(1028),
             inst_user_id bigint,
             template_name varchar(256),
             lecture_date DATE,
-            total_lectures int,
+            inst_total_time real,
+            total_overlapping_time real,
             overall_lectures_watched int,
             live_lectures_attended int,
-            inst_total_time real,
-            total_overlapping_time real
+            recorded_lectures_watched int
+            
         );
     ''',
     dag=dag
@@ -85,7 +95,7 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
-    sql='''with user_details_raw as 
+    sql='''with user_details as 
                 (select 
                     cum.user_id,
                     cum.course_user_mapping_id,
@@ -93,10 +103,11 @@ transform_data = PostgresOperator(
                     t.template_name,
                     t.topic_template_id,
                     l.lecture_id,
+                    l.lecture_title,
                     date(l.start_timestamp) as lecture_date,
-                    count(distinct l.lecture_id) as total_lectures,
                     count(distinct l.lecture_id) filter (where lectures_info.lecture_id is not null) as overall_lectures_watched,
                     count(distinct l.lecture_id) filter (where llcur2.lecture_id is not null) as live_lectures_attended,
+                    count(distinct l.lecture_id) filter (where rlcur2.lecture_id is not null) as recorded_lectures_watched,
                     sum(distinct llcur2.overlapping_time_in_mins) filter (where llcur2.lecture_id is not null and report_type = 4) as total_overlapping_time
                 from
                     lectures l 
@@ -107,6 +118,8 @@ transform_data = PostgresOperator(
                     on cum.course_id = c.course_id and cum.status in (5,8,9) and cum.label_id is null
                 left join live_lectures_course_user_reports llcur2 
                     on llcur2.lecture_id = l.lecture_id and cum.course_user_mapping_id = llcur2.course_user_mapping_id 
+                left join recorded_lectures_course_user_reports rlcur2 
+                	on rlcur2.lecture_id = l.lecture_id and cum.course_user_mapping_id = rlcur2.course_user_mapping_id 
                 left join 
                     (select 
                         lecture_id,
@@ -129,31 +142,17 @@ transform_data = PostgresOperator(
                  join topics t 
                     on t.topic_id = ltm.topic_id and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
                 
-                group by 1,2,3,4,5,6,7),
-                
-            user_details as 
-                (select 
-                    user_id,
-                    course_id,
-                    topic_template_id,
-                    template_name,
-                    lecture_date,
-                    sum(total_lectures) as lectures_conducted,
-                    sum(overall_lectures_watched) as overall_lectures_watched,
-                    sum(live_lectures_attended) as live_lectures_attended,
-                    sum(total_overlapping_time) as total_overlapping_time
-                from
-                    user_details_raw
-                group by 1,2,3,4,5),
+                group by 1,2,3,4,5,6,7,8),
             
             inst_details as 
                 (select
                     c.course_id,
                     t.template_name,
+                    l.lecture_id,
+                    l.lecture_title,
                     cum.user_id as inst_user_id,
                     lim.inst_course_user_mapping_id,
                     date(l.start_timestamp) as lecture_date,
-                    count(distinct l.lecture_id) as total_lectures,
                     floor(sum(distinct llcur2.inst_total_time_in_mins))  as inst_total_time
                 from
                     lectures l 
@@ -170,24 +169,27 @@ transform_data = PostgresOperator(
                     on lim.lecture_id = l.lecture_id 
                 join course_user_mapping cum 
                     on cum.course_user_mapping_id = lim.inst_course_user_mapping_id and c.course_id = cum.course_id 
-                group by 1,2,3,4,5)
+                group by 1,2,3,4,5,6,7)
+                
             select 
                 distinct concat(user_details.user_id,user_details.topic_template_id,user_details.course_id,inst_details.inst_user_id,extract(day from user_details.lecture_date),extract(month from user_details.lecture_date),extract(year from user_details.lecture_date)) as table_unique_key,
                 user_details.user_id,
                 user_details.course_id,
+                user_details.lecture_id,
+                user_details.lecture_title,
                 inst_details.inst_user_id,
                 user_details.template_name,
                 user_details.lecture_date,
-                inst_details.total_lectures,
+                inst_details.inst_total_time,
+                user_details.total_overlapping_time,
                 user_details.overall_lectures_watched,
                 user_details.live_lectures_attended,
-                inst_details.inst_total_time,
-                user_details.total_overlapping_time
+                user_details.recorded_lectures_watched
             from
                 user_details
             join inst_details
-                on inst_details.course_id = user_details.course_id and user_details.template_name = inst_details.template_name 
-                and user_details.lecture_date = inst_details.lecture_date;
+            	on user_details.lecture_id = inst_details.lecture_id
+            order by 4 desc, 2;
         ''',
     dag=dag
 )
