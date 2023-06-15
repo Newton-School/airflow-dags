@@ -28,13 +28,15 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO arl_mocks_x_user (table_unique_key,student_user_id,expert_user_id,course_id,'
+            'one_to_one_id, one_to_one_title,'
             'one_to_one_date,one_to_one_type,topic_pool_id,topic_pool_title,difficulty_level,'
             'scheduled,pending_confirmation,interviewer_declined,confirmation,'
             'student_cancellation,interviewer_cancellation,conducted,cleared,'
             'final_call_no,final_call_maybe,student_no_show,interviewer_no_show)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set difficulty_level=EXCLUDED.difficulty_level,'
-            ' scheduled=EXCLUDED.scheduled,'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (table_unique_key) do update set one_to_one_title = EXCLUDED.one_to_one_title,'
+            'difficulty_level=EXCLUDED.difficulty_level,'
+            'scheduled=EXCLUDED.scheduled,'
             'pending_confirmation=EXCLUDED.pending_confirmation,interviewer_declined=EXCLUDED.interviewer_declined,'
             'confirmation=EXCLUDED.confirmation,student_cancellation=EXCLUDED.student_cancellation,'
             'interviewer_cancellation=EXCLUDED.interviewer_cancellation,conducted=EXCLUDED.conducted,'
@@ -62,6 +64,9 @@ def extract_data_to_nested(**kwargs):
                 transform_row[18],
                 transform_row[19],
                 transform_row[20],
+                transform_row[21],
+                transform_row[22]
+
             )
         )
     pg_conn.commit()
@@ -84,6 +89,8 @@ create_table = PostgresOperator(
             student_user_id bigint,
             expert_user_id bigint,
             course_id int,
+            one_to_one_id bigint,
+            one_to_one_title varchar(256),
             one_to_one_date Date,
             one_to_one_type varchar(64),
             topic_pool_id int,
@@ -110,30 +117,34 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
     sql='''select
-            distinct cast(concat(one_to_one.student_user_id,one_to_one.course_id,one_to_one.expert_user_id,EXTRACT(month FROM date(one_to_one.one_to_one_start_timestamp)),EXTRACT(year FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.one_to_one_type,one_to_one_topic_mapping.topic_pool_id,EXTRACT(day FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.difficulty_level) as varchar) as table_unique_key,
+            distinct cast(concat(one_to_one.student_user_id,one_to_one.course_id,one_to_one.expert_user_id,one_to_one.one_to_one_id, EXTRACT(month FROM date(one_to_one.one_to_one_start_timestamp)),EXTRACT(year FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.one_to_one_type,one_to_one_topic_mapping.topic_pool_id,EXTRACT(day FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.difficulty_level) as varchar) as table_unique_key,
             one_to_one.student_user_id,
             one_to_one.expert_user_id,
             one_to_one.course_id,
+            one_to_one.one_to_one_id,
+            one_to_one.title as session_title,
             date(one_to_one.one_to_one_start_timestamp) as one_to_one_date,
             case
-            when one_to_one.one_to_one_type = 1 then 'Mock Technical Interview'
-            when one_to_one.one_to_one_type = 2 then 'Mock HR Interview'
-            when one_to_one.one_to_one_type = 3 then 'Mock Project'
-            when one_to_one.one_to_one_type = 4 then 'Mock DSA'
-            when one_to_one.one_to_one_type = 5 then 'Mock Full Stack'
-            when one_to_one.one_to_one_type = 6 then 'Entrance Interview'
-            when one_to_one.one_to_one_type = 7 then 'Mentor Catch Up'
-            when one_to_one.one_to_one_type = 8 then 'Interview Coaching'
-            when one_to_one.one_to_one_type = 9 then 'Mock Data Science'
-            when one_to_one.one_to_one_type = 10 then 'General Interview' end as one_to_one_type,
+	            when one_to_one.one_to_one_type = 1 then 'Mock Technical Interview'
+	            when one_to_one.one_to_one_type = 2 then 'Mock HR Interview'
+	            when one_to_one.one_to_one_type = 3 then 'Mock Project'
+	            when one_to_one.one_to_one_type = 4 then 'Mock DSA'
+	            when one_to_one.one_to_one_type = 5 then 'Mock Full Stack'
+	            when one_to_one.one_to_one_type = 6 then 'Entrance Interview'
+	            when one_to_one.one_to_one_type = 7 then 'Mentor Catch Up'
+	            when one_to_one.one_to_one_type = 8 then 'Interview Coaching'
+	            when one_to_one.one_to_one_type = 9 then 'Mock Data Science'
+	            when one_to_one.one_to_one_type = 10 then 'General Interview'
+            end as one_to_one_type,
             one_to_one_topic_mapping.topic_pool_id,
             topic_pool_mapping.topic_pool_title,
             case 
-            when one_to_one.difficulty_level = 1 then 'Beginner'
-            when one_to_one.difficulty_level = 2 then 'Easy'
-            when one_to_one.difficulty_level = 3 then 'Medium'
-            when one_to_one.difficulty_level = 4 then 'Hard'
-            when one_to_one.difficulty_level = 5 then 'Challenge' else null end as difficulty_level,
+	            when one_to_one.difficulty_level = 1 then 'Beginner'
+	            when one_to_one.difficulty_level = 2 then 'Easy'
+	            when one_to_one.difficulty_level = 3 then 'Medium'
+	            when one_to_one.difficulty_level = 4 then 'Hard'
+	            when one_to_one.difficulty_level = 5 then 'Challenge' else null 
+	        end as difficulty_level,
             count(distinct one_to_one.one_to_one_id) as scheduled,
             count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 1) as pending_confirmation,
             count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 3) as interviewer_declined,
@@ -146,10 +157,13 @@ transform_data = PostgresOperator(
             count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 3) as final_call_maybe,
             count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and (one_to_one.cancel_reason like 'Insufficient time spent by booked by user%' or one_to_one.cancel_reason like 'Insufficient overlap time')) as student_no_show,
             count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and one_to_one.cancel_reason like 'Insufficient time spent by booked with user%') as interviewer_no_show
-            from one_to_one
-            left join one_to_one_topic_mapping on one_to_one_topic_mapping.one_to_one_id = one_to_one.one_to_one_id
-            left join topic_pool_mapping on topic_pool_mapping.topic_pool_id = one_to_one_topic_mapping.topic_pool_id
-            group by 1,2,3,4,5,6,7,8,9;
+            from 
+            	one_to_one
+            left join one_to_one_topic_mapping 
+            	on one_to_one_topic_mapping.one_to_one_id = one_to_one.one_to_one_id
+            left join topic_pool_mapping 
+            	on topic_pool_mapping.topic_pool_id = one_to_one_topic_mapping.topic_pool_id
+            group by 1,2,3,4,5,6,7,8,9,10,11;
         ''',
     dag=dag
 )
