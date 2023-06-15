@@ -25,13 +25,13 @@ total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 5)
 total_number_of_extraction_cps_dags = Variable.get("total_number_of_extraction_cps_dags", 10)
 
 dag = DAG(
-    'contest_arl_dag',
+    'ARL_contests_x_user_2.0',
     default_args=default_args,
     concurrency=4,
     max_active_tasks=6,
     max_active_runs=6,
-    description='Analytical reporting layer dag for contests data',
-    schedule_interval='0 21 * * *',
+    description='An Analytics Reporting Layer DAG for contests x user',
+    schedule_interval='45 0 * * *',
     catchup=False
 )
 
@@ -39,7 +39,7 @@ dag = DAG(
 create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE IF NOT EXISTS arl_coding_contest_x_user (
+    sql='''CREATE TABLE IF NOT EXISTS arl_contests_x_users_2 (
             id serial,
             table_unique_key double precision not null PRIMARY KEY,
             user_id bigint,
@@ -157,7 +157,6 @@ def extract_data_to_nested(**kwargs):
                 transform_row[27],
                 transform_row[28],
                 transform_row[29]
-
             )
         )
         pg_conn.commit()
@@ -167,11 +166,11 @@ def extract_data_to_nested(**kwargs):
 
 def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignment_id):
     return PostgresOperator(
-        task_id='number_of_rows_per_arl_contest_sub_dag',
+        task_id='number_of_rows_per_assignment_sub_dag',
         postgres_conn_id='postgres_result_db',
         dag=dag,
-        sql=''' select count(table_unique_key) from
-        (with user_details as
+        sql='''  select count(table_unique_key) from(
+        with user_details as
             (select aqum.user_id,
                    aqum.assignment_id,
                    a.title as contest_title,
@@ -193,7 +192,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                 from assignment_question_user_mapping aqum
                 join assignments a 
                    on a.assignment_id = aqum.assignment_id and a.original_assignment_type in (3,4)
-                        and (a.id between %d and %d)
+                    and (a.id between %d and %d)
                 left join assignment_question aq 
                    on aq.assignment_question_id  = aqum.question_id 
                 left join courses c 
@@ -226,7 +225,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                 from assignment_question_user_mapping aqum
                 join assignments a 
                    on a.assignment_id = aqum.assignment_id and a.original_assignment_type in (3,4)
-                        and (a.id between %d and %d)
+                    and (a.id between %d and %d)
                 left join assignment_question aq 
                    on aq.assignment_question_id  = aqum.question_id 
                  join (select distinct
@@ -289,7 +288,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                           on aqum.question_id = aq.assignment_question_id
                          join assignments a 
                            on a.assignment_id = aqum.assignment_id and a.original_assignment_type in (3,4)
-                                and (a.id between %d and %d)
+                            and (a.id between %d and %d)
                          join (select distinct
                                 wud.course_user_mapping_id,
                                 wud.user_id ,
@@ -342,9 +341,8 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
              left join history_based_user_details
                 on user_details.assignment_id = history_based_user_details.assignment_id and user_details.user_id = history_based_user_details.user_id and user_details.course_id = history_based_user_details.course_id
              left join history_based_marks
-                on history_based_marks.assignment_id = user_details.assignment_id and history_based_marks.user_id = user_details.user_id
-        ) query_rows;
-            ''' % (start_assignment_id, end_assignment_id),
+                on history_based_marks.assignment_id = user_details.assignment_id and history_based_marks.user_id = user_details.user_id) query_rows;
+            ''' % (start_assignment_id, end_assignment_id,start_assignment_id, end_assignment_id,start_assignment_id, end_assignment_id),
     )
 
 
@@ -354,7 +352,7 @@ def limit_offset_generator_func(**kwargs):
     current_assignment_sub_dag_id = kwargs['current_assignment_sub_dag_id']
     current_cps_sub_dag_id = kwargs['current_cps_sub_dag_id']
     count_cps_rows = ti.xcom_pull(
-        task_ids=f'transforming_data_{current_assignment_sub_dag_id}.number_of_rows_per_arl_contest_sub_dag')
+        task_ids=f'transforming_data_{current_assignment_sub_dag_id}.number_of_rows_per_assignment_sub_dag')
     print(count_cps_rows)
     total_count_rows = count_cps_rows[0][0]
     return {
@@ -396,7 +394,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                 from assignment_question_user_mapping aqum
                 join assignments a 
                    on a.assignment_id = aqum.assignment_id and a.original_assignment_type in (3,4)
-                        and (a.id between %d and %d)
+                   and (a.assignment_id between %d and %d)
                 left join assignment_question aq 
                    on aq.assignment_question_id  = aqum.question_id 
                 left join courses c 
@@ -429,7 +427,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                 from assignment_question_user_mapping aqum
                 join assignments a 
                    on a.assignment_id = aqum.assignment_id and a.original_assignment_type in (3,4)
-                        and (a.id between %d and %d)
+                    and (a.assignment_id between %d and %d)
                 left join assignment_question aq 
                    on aq.assignment_question_id  = aqum.question_id 
                  join (select distinct
@@ -492,7 +490,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                           on aqum.question_id = aq.assignment_question_id
                          join assignments a 
                            on a.assignment_id = aqum.assignment_id and a.original_assignment_type in (3,4)
-                                and (a.id between %d and %d)
+                           and (a.assignment_id between %d and %d)
                          join (select distinct
                                 wud.course_user_mapping_id,
                                 wud.user_id ,
@@ -545,12 +543,8 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
              left join history_based_user_details
                 on user_details.assignment_id = history_based_user_details.assignment_id and user_details.user_id = history_based_user_details.user_id and user_details.course_id = history_based_user_details.course_id
              left join history_based_marks
-                on history_based_marks.assignment_id = user_details.assignment_id and history_based_marks.user_id = user_details.user_id
-        limit {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').limit }} 
-        offset {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').offset }}
-        ;
-            ''' % (start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id)
-
+                on history_based_marks.assignment_id = user_details.assignment_id and history_based_marks.user_id = user_details.user_id;
+            ''' % (start_assignment_id, end_assignment_id,start_assignment_id, end_assignment_id,start_assignment_id, end_assignment_id),
     )
 
 
@@ -595,4 +589,3 @@ for assignment_sub_dag_id in range(int(total_number_of_sub_dags)):
             number_of_rows_per_assignment_sub_dag >> cps_sub_dag
 
     create_table >> assignment_sub_dag_task_group
-
