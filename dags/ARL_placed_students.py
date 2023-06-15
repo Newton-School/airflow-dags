@@ -112,7 +112,7 @@ create_table = PostgresOperator(
             final_mentor varchar(200),
             week DATE,
             gender varchar(20),
-            pccumid bigint,
+            pccumid bigint not null PRIMARY KEY,
             referred_by  varchar(100),
             placement_role_id int,
             company_type varchar(100)
