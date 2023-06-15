@@ -31,7 +31,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='An Analytics Reporting Layer DAG for contests x user',
-    schedule_interval='45 0 * * *',
+    schedule_interval='20 1 * * *',
     catchup=False
 )
 
