@@ -27,7 +27,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO arl_coding_contest_x_user (table_unique_key,user_id,contest_id,course_id,module_name,'
+            'INSERT INTO arl_coding_contest_x_user (table_unique_key,user_id,contest_id,contest_title,course_id,module_name,'
             'contest_release_date,total_contest_questions,opened_questions,history_based_opened_questions,'
             'attempted_questions,history_based_attempted_questions,completed_questions,'
             'history_based_completed_questions,beginner_and_easy_completed_questions,'
@@ -38,8 +38,9 @@ def extract_data_to_nested(**kwargs):
             'history_based_hard_completed_questions,challenge_completed_questions,'
             'history_based_challenge_completed_questions,hard_and_challenge_completed_questions,'
             'history_based_hard_and_challenge_completed_questions,marks_obtained,history_based_marks_obtained)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set module_name=EXCLUDED.module_name,'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (table_unique_key) do update set contest_title = EXCLUDED.contest_title,'
+            'module_name=EXCLUDED.module_name,'
             'contest_release_date=EXCLUDED.contest_release_date,'
             'total_contest_questions=EXCLUDED.total_contest_questions,'
             'opened_questions=EXCLUDED.opened_questions,'
@@ -93,6 +94,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[26],
                 transform_row[27],
                 transform_row[28],
+                transform_row[29]
+
             )
         )
     pg_conn.commit()
@@ -114,6 +117,7 @@ create_table = PostgresOperator(
             table_unique_key double precision not null PRIMARY KEY,
             user_id bigint,
             contest_id int,
+            contest_title varchar(1028),
             course_id int,
             module_name varchar(256),
             contest_release_date DATE,
@@ -151,6 +155,7 @@ transform_data = PostgresOperator(
     sql='''with user_details as
             (select aqum.user_id,
                    aqum.assignment_id,
+                   a.title as contest_title,
                    c.course_id,
                    c.course_name,
                    t.topic_template_id,
@@ -178,11 +183,12 @@ transform_data = PostgresOperator(
                 left join topics t
                    on t.topic_id = atm.topic_id and topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
                 left join course_user_mapping on course_user_mapping.course_id = c.course_id and course_user_mapping.status in (5,8,9) and course_user_mapping.label_id is null
-                group by 1,2,3,4,5,6,7
+                group by 1,2,3,4,5,6,7,8
                    ),
             history_based_user_details as 
                   (select aqum.user_id,
                    aqum.assignment_id,
+                   a.title as contest_title,
                    c.course_id,
                    c.course_name,
                    t.template_name as module_name,
@@ -220,7 +226,7 @@ transform_data = PostgresOperator(
                    on atm.assignment_id = aqum.assignment_id 
                 left join topics t
                    on t.topic_id = atm.topic_id and topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
-                group by 1,2,3,4,5,6
+                group by 1,2,3,4,5,6,7
                   ),
             all_assignment_questions as 
                (Select aqm.assignment_id,
@@ -279,6 +285,7 @@ transform_data = PostgresOperator(
              select distinct concat(user_details.user_id,'0',user_details.assignment_id,user_details.topic_template_id,user_details.course_id) as table_unique_key, 
                     user_details.user_id,
                     user_details.assignment_id as contest_id,
+                    user_details.contest_title,
                     user_details.course_id,
                     user_details.module_name,
                     user_details.assignment_release_date as contest_release_date,
