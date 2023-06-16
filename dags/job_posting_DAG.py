@@ -31,7 +31,7 @@ def extract_data_to_nested(**kwargs):
             'relevancy_score,job_description_url,job_description_raw_text,job_description_url_without_job_id,'
             '_airbyte_ab_id,_airbyte_emitted_at,_airbyte_normalized_at,_airbyte_job_openings_hashid,'
             '_airbyte_unique_key,number_of_openings)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update setskills=EXCLUDED.skills,company=EXCLUDED.company,'
             'max_ctc=EXCLUDED.max_ctc,min_ctc=EXCLUDED.min_ctc,job_role=EXCLUDED.job_role,'
             'job_type=EXCLUDED.job_type,job_title=EXCLUDED.job_title,department=EXCLUDED.department,'
@@ -69,6 +69,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[21],
                 transform_row[22],
                 transform_row[23],
+                transform_row[24],
             )
         )
     pg_conn.commit()
