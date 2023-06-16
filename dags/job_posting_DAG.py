@@ -26,20 +26,19 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO job_postings (table_unique_key,other_skills,company,max_ctc,min_ctc,job_role,job_type,job_title,'
+            'INSERT INTO job_postings (other_skills,company,max_ctc,min_ctc,job_role,job_type,job_title,'
             'department,job_source,is_duplicate,job_location,preferred_skills,max_experience,min_experience,'
             'relevancy_score,job_description_url,job_description_raw_text,job_description_url_without_job_id,'
             '_airbyte_ab_id,_airbyte_emitted_at,_airbyte_normalized_at,_airbyte_job_openings_hashid,'
             '_airbyte_unique_key,number_of_openings)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set other_skills=EXCLUDED.other_skills,company=EXCLUDED.company,'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (job_description_url_without_job_id) do update set other_skills=EXCLUDED.other_skills,company=EXCLUDED.company,'
             'max_ctc=EXCLUDED.max_ctc,min_ctc=EXCLUDED.min_ctc,job_role=EXCLUDED.job_role,'
             'job_type=EXCLUDED.job_type,job_title=EXCLUDED.job_title,department=EXCLUDED.department,'
             'job_source=EXCLUDED.job_source,is_duplicate=EXCLUDED.is_duplicate,job_location=EXCLUDED.job_location,'
             'preferred_skills=EXCLUDED.preferred_skills,max_experience=EXCLUDED.max_experience,'
             'min_experience=EXCLUDED.min_experience,relevancy_score=EXCLUDED.relevancy_score,'
             'job_description_url=EXCLUDED.job_description_url,job_description_raw_text=EXCLUDED.job_description_raw_text,'
-            'job_description_url_without_job_id=EXCLUDED.job_description_url_without_job_id,'
             '_airbyte_ab_id=EXCLUDED._airbyte_ab_id,_airbyte_emitted_at=EXCLUDED._airbyte_emitted_at,'
             '_airbyte_normalized_at=EXCLUDED._airbyte_normalized_at,'
             '_airbyte_job_openings_hashid=EXCLUDED._airbyte_job_openings_hashid,'
@@ -69,7 +68,6 @@ def extract_data_to_nested(**kwargs):
                 transform_row[21],
                 transform_row[22],
                 transform_row[23],
-                transform_row[24],
             )
         )
     pg_conn.commit()
@@ -88,15 +86,14 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS job_postings (
             id serial,
-            table_unique_key varchar(200) not null PRIMARY KEY,
             other_skills jsonb,
-            company varchar(200),
+            company varchar(1000),
             max_ctc real,
             min_ctc real,
-            job_role varchar(200),
-            job_type varchar(200),
-            job_title varchar(200), 
-            department varchar(200),
+            job_role varchar(1000),
+            job_type varchar(1000),
+            job_title varchar(1000), 
+            department varchar(1000),
             job_source varchar(50),
             is_duplicate boolean,
             job_location  varchar(200),
@@ -106,7 +103,7 @@ create_table = PostgresOperator(
             relevancy_score real,
             job_description_url  varchar(500),
             job_description_raw_text varchar(35000),
-            job_description_url_without_job_id varchar(400),
+            job_description_url_without_job_id varchar(1000) not null PRIMARY KEY,,
             _airbyte_ab_id varchar(50),
             _airbyte_emitted_at DATE,
             _airbyte_normalized_at DATE,
@@ -122,7 +119,7 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_job_posting',
     sql='''select
-            distinct concat(_airbyte_unique_key,_airbyte_job_openings_hashid,_airbyte_ab_id) as table_unique_key,
+            distinct
             skills -> 'otherskills' as other_skills,
             job_openings.company,
             job_openings.max_ctc,
