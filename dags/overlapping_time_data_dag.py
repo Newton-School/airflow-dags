@@ -14,7 +14,7 @@ default_args = {
 
 def extract_data_to_nested(**kwargs):
     # Fetch data from the query
-    pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
+    pg_hook = PostgresHook(postgres_conn_id='postgres_read_replica')
     pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
 
