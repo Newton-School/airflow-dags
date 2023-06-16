@@ -96,7 +96,7 @@ create_table = PostgresOperator(
             department varchar(1000),
             job_source varchar(50),
             is_duplicate boolean,
-            job_location  varchar(200),
+            job_location  varchar(1000),
             preferred_skills jsonb,
             max_experience real,
             min_experience real,
@@ -104,11 +104,11 @@ create_table = PostgresOperator(
             job_description_url  varchar(500),
             job_description_raw_text varchar(35000),
             job_description_url_without_job_id varchar(1000) not null PRIMARY KEY,
-            _airbyte_ab_id varchar(50),
+            _airbyte_ab_id varchar(1000),
             _airbyte_emitted_at DATE,
             _airbyte_normalized_at DATE,
-            _airbyte_job_openings_hashid varchar(200),
-            _airbyte_unique_key varchar(200),
+            _airbyte_job_openings_hashid varchar(1000),
+            _airbyte_unique_key varchar(1000),
             number_of_openings real
         );
     ''',
