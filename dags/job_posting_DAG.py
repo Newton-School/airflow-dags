@@ -103,7 +103,7 @@ create_table = PostgresOperator(
             relevancy_score real,
             job_description_url  varchar(500),
             job_description_raw_text varchar(35000),
-            job_description_url_without_job_id varchar(1000) not null PRIMARY KEY,,
+            job_description_url_without_job_id varchar(1000) not null PRIMARY KEY,
             _airbyte_ab_id varchar(50),
             _airbyte_emitted_at DATE,
             _airbyte_normalized_at DATE,
