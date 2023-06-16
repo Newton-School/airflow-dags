@@ -89,7 +89,7 @@ create_table = PostgresOperator(
             other_skills jsonb,
             company varchar(1000),
             max_ctc varchar(200),
-            min_ctc real,
+            min_ctc varchar(200),
             job_role varchar(1000),
             job_type varchar(1000),
             job_title varchar(1000), 
