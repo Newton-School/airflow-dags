@@ -144,8 +144,7 @@ transform_data = PostgresOperator(
             job_openings._airbyte_job_openings_hashid,
             job_openings._airbyte_unique_key,
             raw_response -> 'vacancy' as number_of_openings
-            from job_openings
-            limit 100000;
+            from job_openings;
         ''',
     dag=dag
 )
