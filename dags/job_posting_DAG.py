@@ -26,17 +26,17 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO job_postings (table_unique_key,skills,company,max_ctc,min_ctc,job_role,job_type,job_title,'
-            'department,job_source,is_duplicate,job_location,raw_response,max_experience,min_experience,'
+            'INSERT INTO job_postings (table_unique_key,other_skills,company,max_ctc,min_ctc,job_role,job_type,job_title,'
+            'department,job_source,is_duplicate,job_location,preferred_skills,max_experience,min_experience,'
             'relevancy_score,job_description_url,job_description_raw_text,job_description_url_without_job_id,'
             '_airbyte_ab_id,_airbyte_emitted_at,_airbyte_normalized_at,_airbyte_job_openings_hashid,'
             '_airbyte_unique_key,number_of_openings)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set skills=EXCLUDED.skills,company=EXCLUDED.company,'
+            'on conflict (table_unique_key) do update set other_skills=EXCLUDED.other_skills,company=EXCLUDED.company,'
             'max_ctc=EXCLUDED.max_ctc,min_ctc=EXCLUDED.min_ctc,job_role=EXCLUDED.job_role,'
             'job_type=EXCLUDED.job_type,job_title=EXCLUDED.job_title,department=EXCLUDED.department,'
             'job_source=EXCLUDED.job_source,is_duplicate=EXCLUDED.is_duplicate,job_location=EXCLUDED.job_location,'
-            'raw_response=EXCLUDED.raw_response,max_experience=EXCLUDED.max_experience,'
+            'preferred_skills=EXCLUDED.preferred_skills,max_experience=EXCLUDED.max_experience,'
             'min_experience=EXCLUDED.min_experience,relevancy_score=EXCLUDED.relevancy_score,'
             'job_description_url=EXCLUDED.job_description_url,job_description_raw_text=EXCLUDED.job_description_raw_text,'
             'job_description_url_without_job_id=EXCLUDED.job_description_url_without_job_id,'
@@ -89,7 +89,7 @@ create_table = PostgresOperator(
     sql='''CREATE TABLE IF NOT EXISTS job_postings (
             id serial,
             table_unique_key varchar(200) not null PRIMARY KEY,
-            skills JSONB,
+            other_skills jsonb,
             company varchar(200),
             max_ctc real,
             min_ctc real,
@@ -100,7 +100,7 @@ create_table = PostgresOperator(
             job_source varchar(50),
             is_duplicate boolean,
             job_location  varchar(200),
-            raw_response JSONB,
+            preferred_skills jsonb,
             max_experience int,
             min_experience int,
             relevancy_score int,
@@ -123,7 +123,7 @@ transform_data = PostgresOperator(
     postgres_conn_id='postgres_job_posting',
     sql='''select
             distinct concat(_airbyte_unique_key,_airbyte_job_openings_hashid,_airbyte_ab_id) as table_unique_key,
-            job_openings.skills,
+            skills -> 'otherskills' as other_skills,
             job_openings.company,
             job_openings.max_ctc,
             job_openings.min_ctc,
@@ -134,7 +134,7 @@ transform_data = PostgresOperator(
             job_openings.job_source,
             job_openings.is_duplicate,
             job_openings.job_location,
-            job_openings.raw_response,
+            skills -> 'preferredskills' as preferred_skills,
             job_openings.max_experience,
             job_openings.min_experience,
             job_openings.relevancy_score,
