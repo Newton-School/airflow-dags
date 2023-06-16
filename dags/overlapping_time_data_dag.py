@@ -110,8 +110,7 @@ select
 from
     vsl_cur_raw
 left join inst_details
-    on inst_details.lecture_id = vsl_cur_raw.lecture_id and inst_details.inst_cum_id = vsl_cur_raw.course_user_mapping_id
-order by 2 desc, 6, 4;
+    on inst_details.lecture_id = vsl_cur_raw.lecture_id and inst_details.inst_cum_id = vsl_cur_raw.course_user_mapping_id;
     """)
 
     rows = pg_cursor.fetchall()
