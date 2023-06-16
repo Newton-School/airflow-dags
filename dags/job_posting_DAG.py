@@ -88,7 +88,7 @@ create_table = PostgresOperator(
             id serial,
             other_skills jsonb,
             company varchar(1000),
-            max_ctc real,
+            max_ctc varchar(200),
             min_ctc real,
             job_role varchar(1000),
             job_type varchar(1000),
@@ -122,7 +122,7 @@ transform_data = PostgresOperator(
             distinct
             skills -> 'otherskills' as other_skills,
             job_openings.company,
-            job_openings.max_ctc,
+            cast(job_openings.max_ctc as varchar) as max_ctc,
             job_openings.min_ctc,
             job_openings.job_role,
             job_openings.job_type,
