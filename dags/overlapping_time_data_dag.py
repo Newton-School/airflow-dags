@@ -98,8 +98,6 @@ inst_details as
         lecture_inst_mapping)
     
 select
-    
-    cast(concat(vsl_cur_raw.lecture_id, extract('minute' from vsl_cur_raw.join_time), vsl_cur_raw.course_user_mapping_id, extract('second' from vsl_cur_raw.join_time)) as double precision) as table_unique_key,
     vsl_cur_raw.lecture_id,
     vsl_cur_raw.course_user_mapping_id,
     vsl_cur_raw.join_time,
@@ -166,7 +164,7 @@ def insert_overlapping_time(**kwargs):
     for _, row in df.iterrows():
         pg_cursor.execute(
             'INSERT INTO live_lectures_engagement_time (lecture_id, course_user_mapping_id, join_time, leave_time, user_type, overlapping_time_seconds, overlapping_time_minutes) '
-            'VALUES (%s, %s, %s, %s, %s, %s, %s)',
+            'VALUES (%s, %s, %s, %s, %s, %s, %s);',
             (
                 row['lecture_id'],
                 row['course_user_mapping_id'],
@@ -178,7 +176,7 @@ def insert_overlapping_time(**kwargs):
             )
         )
 
-    conn.commit()
+    pg_conn.commit()
 
 
 dag = DAG(
