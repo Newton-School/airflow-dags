@@ -191,6 +191,7 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql="""
     CREATE TABLE IF NOT EXISTS live_lectures_engagement_time (
+        id serial not null PRIMARY KEY
         lecture_id bigint,
         course_user_mapping_id bigint,
         join_time timestamp,
