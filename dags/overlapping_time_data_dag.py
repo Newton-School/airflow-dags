@@ -120,6 +120,14 @@ order by 2 desc, 6, 4;
 
     column_names = ['lecture_id', 'course_user_mapping_id', 'join_time', 'leave_time', 'user_type']
     df = pd.DataFrame(rows, columns=column_names)
+
+    # datatype conversion
+    df['join_time'] = pd.to_datetime(df['join_time'])
+    df['leave_time'] = pd.to_datetime(df['leave_time'])
+
+    # Sorting the dataframe
+    df.sort_values(['lecture_id', 'course_user_mapping_id', 'join_time'], inplace=True)
+
     df['overlapping_time_seconds'] = 0
     df['overlapping_time_minutes'] = 0
     for i, row in df.iterrows():
