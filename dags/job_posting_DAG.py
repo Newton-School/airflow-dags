@@ -101,9 +101,9 @@ create_table = PostgresOperator(
             is_duplicate boolean,
             job_location  varchar(200),
             preferred_skills jsonb,
-            max_experience int,
-            min_experience int,
-            relevancy_score int,
+            max_experience real,
+            min_experience real,
+            relevancy_score real,
             job_description_url  varchar(500),
             job_description_raw_text varchar(35000),
             job_description_url_without_job_id varchar(400),
@@ -112,7 +112,7 @@ create_table = PostgresOperator(
             _airbyte_normalized_at DATE,
             _airbyte_job_openings_hashid varchar(200),
             _airbyte_unique_key varchar(200),
-            number_of_openings int
+            number_of_openings real
         );
     ''',
     dag=dag
