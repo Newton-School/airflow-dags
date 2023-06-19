@@ -89,7 +89,7 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS job_postings (
             id serial,
-            other_skills jsonb,
+            other_skills json,
             company varchar(1000),
             max_ctc varchar(200),
             min_ctc varchar(200),
@@ -100,7 +100,7 @@ create_table = PostgresOperator(
             job_source varchar(50),
             is_duplicate boolean,
             job_location  varchar(1000),
-            preferred_skills jsonb,
+            preferred_skills json,
             max_experience varchar(100),
             min_experience varchar(100),
             relevancy_score real,
