@@ -27,8 +27,8 @@ total_number_of_extraction_cps_dags = Variable.get("total_number_of_extraction_c
 dag = DAG(
     'ARL_contests_x_user_2.0',
     default_args=default_args,
-    concurrency=4,
-    max_active_tasks=6,
+    concurrency=2,
+    max_active_tasks=2,
     max_active_runs=6,
     description='An Analytics Reporting Layer DAG for contests x user',
     schedule_interval='20 1 * * *',
@@ -43,7 +43,7 @@ create_table = PostgresOperator(
             id serial,
             table_unique_key double precision not null PRIMARY KEY,
             user_id bigint,
-            contest_id int,
+            contest_id bigint,
             contest_title varchar(1028),
             course_id int,
             module_name varchar(256),
@@ -89,17 +89,36 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor = pg_conn.cursor()
         pg_cursor.execute(
-            'INSERT INTO arl_coding_contest_x_user (table_unique_key,user_id,contest_id,contest_title,course_id,module_name,'
-            'contest_release_date,total_contest_questions,opened_questions,history_based_opened_questions,'
-            'attempted_questions,history_based_attempted_questions,completed_questions,'
-            'history_based_completed_questions,beginner_and_easy_completed_questions,'
-            'history_based_beginner_and_easy_completed_questions,beginner_completed_questions,'
-            'history_based_beginner_completed_questions,easy_completed_questions,'
-            'history_based_easy_completed_questions,medium_completed_questions,'
-            'history_based_medium_completed_questions,hard_completed_questions,'
-            'history_based_hard_completed_questions,challenge_completed_questions,'
-            'history_based_challenge_completed_questions,hard_and_challenge_completed_questions,'
-            'history_based_hard_and_challenge_completed_questions,marks_obtained,history_based_marks_obtained)'
+            'INSERT INTO arl_contests_x_users_2 (table_unique_key,'
+            'user_id,'
+            'contest_id,'
+            'contest_title,'
+            'course_id,'
+            'module_name,'
+            'contest_release_date,'
+            'total_contest_questions,'
+            'opened_questions,'
+            'history_based_opened_questions,'
+            'attempted_questions,'
+            'history_based_attempted_questions,'
+            'completed_questions,'
+            'history_based_completed_questions,'
+            'beginner_and_easy_completed_questions,'
+            'history_based_beginner_and_easy_completed_questions,'
+            'beginner_completed_questions,'
+            'history_based_beginner_completed_questions,'
+            'easy_completed_questions,'
+            'history_based_easy_completed_questions,'
+            'medium_completed_questions,'
+            'history_based_medium_completed_questions,'
+            'hard_completed_questions,'
+            'history_based_hard_completed_questions,'
+            'challenge_completed_questions,'
+            'history_based_challenge_completed_questions,'
+            'hard_and_challenge_completed_questions,'
+            'history_based_hard_and_challenge_completed_questions,'
+            'marks_obtained,'
+            'history_based_marks_obtained)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set contest_title = EXCLUDED.contest_title,'
             'module_name=EXCLUDED.module_name,'
@@ -252,6 +271,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                (Select aqm.assignment_id,
                        count(distinct aqm.question_id) as assignment_question_count
                 from assignment_question_mapping aqm
+                where (aqm.assignment_id between %d and %d)
                 group by 1
                ),
             marks as (select assignment_id,
@@ -268,7 +288,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                            case when cheated = 'true' then 1 else 0 end as _cheated       
                          from assignment_question_user_mapping aqum
                          left join assignment_question aq 
-                          on aqum.question_id = aq.assignment_question_id
+                          on aqum.question_id = aq.assignment_question_id and (aqum.assignment_id between %d and %d)
                           ) as sq
                         ),
             history_based_marks as (select assignment_id,
@@ -342,7 +362,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                 on user_details.assignment_id = history_based_user_details.assignment_id and user_details.user_id = history_based_user_details.user_id and user_details.course_id = history_based_user_details.course_id
              left join history_based_marks
                 on history_based_marks.assignment_id = user_details.assignment_id and history_based_marks.user_id = user_details.user_id) query_rows;
-            ''' % (start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id,start_assignment_id, end_assignment_id),
+            ''' % (start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id),
     )
 
 
@@ -454,6 +474,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                (Select aqm.assignment_id,
                        count(distinct aqm.question_id) as assignment_question_count
                 from assignment_question_mapping aqm
+                where (aqm.assignment_id between %d and %d)
                 group by 1
                ),
             marks as (select assignment_id,
@@ -470,7 +491,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                            case when cheated = 'true' then 1 else 0 end as _cheated       
                          from assignment_question_user_mapping aqum
                          left join assignment_question aq 
-                          on aqum.question_id = aq.assignment_question_id
+                          on aqum.question_id = aq.assignment_question_id  and (aqum.assignment_id between %d and %d)
                           ) as sq
                         ),
             history_based_marks as (select assignment_id,
@@ -544,7 +565,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                 on user_details.assignment_id = history_based_user_details.assignment_id and user_details.user_id = history_based_user_details.user_id and user_details.course_id = history_based_user_details.course_id
              left join history_based_marks
                 on history_based_marks.assignment_id = user_details.assignment_id and history_based_marks.user_id = user_details.user_id;
-            ''' % (start_assignment_id, end_assignment_id,start_assignment_id, end_assignment_id,start_assignment_id, end_assignment_id),
+            ''' % (start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id, start_assignment_id, end_assignment_id),
     )
 
 
