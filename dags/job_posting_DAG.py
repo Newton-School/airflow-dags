@@ -26,8 +26,6 @@ def extract_data_to_nested(**kwargs):
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
-        other_skills_json = json.dumps(transform_row[0])
-        preferred_skills_json = json.dumps(transform_row[11])
         pg_cursor.execute(
             'INSERT INTO job_postings (other_skills,company,max_ctc,min_ctc,job_role,job_type,job_title,'
             'department,job_source,is_duplicate,job_location,preferred_skills,max_experience,min_experience,'
@@ -47,7 +45,7 @@ def extract_data_to_nested(**kwargs):
             '_airbyte_job_openings_hashid=EXCLUDED._airbyte_job_openings_hashid,'
             '_airbyte_unique_key=EXCLUDED._airbyte_unique_key,number_of_openings=EXCLUDED.number_of_openings ;',
             (
-                other_skills_json,
+                transform_row[0],
                 transform_row[1],
                 transform_row[2],
                 transform_row[3],
@@ -58,7 +56,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[8],
                 transform_row[9],
                 transform_row[10],
-                preferred_skills_json,
+                transform_row[11],
                 transform_row[12],
                 transform_row[13],
                 transform_row[14],
@@ -89,7 +87,7 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS job_postings (
             id serial,
-            other_skills json,
+            other_skills text[],
             company varchar(1000),
             max_ctc varchar(200),
             min_ctc varchar(200),
@@ -100,7 +98,7 @@ create_table = PostgresOperator(
             job_source varchar(50),
             is_duplicate boolean,
             job_location  varchar(1000),
-            preferred_skills json,
+            preferred_skills text[],
             max_experience varchar(100),
             min_experience varchar(100),
             relevancy_score real,
@@ -123,7 +121,7 @@ transform_data = PostgresOperator(
     postgres_conn_id='postgres_job_posting',
     sql='''select
             distinct
-            skills -> 'otherskills' as other_skills,
+            skills -> 'otherSkills' as other_skills,
             job_openings.company,
             cast(job_openings.max_ctc as varchar) as max_ctc,
             job_openings.min_ctc,
@@ -134,7 +132,7 @@ transform_data = PostgresOperator(
             job_openings.job_source,
             job_openings.is_duplicate,
             job_openings.job_location,
-            skills -> 'preferredskills' as preferred_skills,
+            skills -> 'preferredSkills' as preferred_skills,
             job_openings.max_experience,
             job_openings.min_experience,
             job_openings.relevancy_score,
