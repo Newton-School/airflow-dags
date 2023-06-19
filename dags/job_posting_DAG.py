@@ -3,6 +3,7 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from datetime import datetime
+import json
 
 default_args = {
     'owner': 'airflow',
@@ -44,7 +45,7 @@ def extract_data_to_nested(**kwargs):
             '_airbyte_job_openings_hashid=EXCLUDED._airbyte_job_openings_hashid,'
             '_airbyte_unique_key=EXCLUDED._airbyte_unique_key,number_of_openings=EXCLUDED.number_of_openings ;',
             (
-                transform_row[0],
+                other_skills_json,
                 transform_row[1],
                 transform_row[2],
                 transform_row[3],
@@ -55,7 +56,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[8],
                 transform_row[9],
                 transform_row[10],
-                transform_row[11],
+                preferred_skills_json,
                 transform_row[12],
                 transform_row[13],
                 transform_row[14],
