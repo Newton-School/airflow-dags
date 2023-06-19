@@ -26,6 +26,8 @@ def extract_data_to_nested(**kwargs):
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
+        other_skills_json = json.dumps(transform_row[0])
+        preferred_skills_json = json.dumps(transform_row[11])
         pg_cursor.execute(
             'INSERT INTO job_postings (other_skills,company,max_ctc,min_ctc,job_role,job_type,job_title,'
             'department,job_source,is_duplicate,job_location,preferred_skills,max_experience,min_experience,'
