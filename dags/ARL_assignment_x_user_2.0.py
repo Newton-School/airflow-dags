@@ -27,8 +27,8 @@ total_number_of_extraction_cps_dags = Variable.get("total_number_of_extraction_c
 dag = DAG(
     'ARL_Assignments_x_user_2.0',
     default_args=default_args,
-    concurrency=4,
-    max_active_tasks=6,
+    concurrency=2,
+    max_active_tasks=2,
     max_active_runs=6,
     description='An Analytics Reporting Layer DAG for Assignments x user',
     schedule_interval='45 0 * * *',
