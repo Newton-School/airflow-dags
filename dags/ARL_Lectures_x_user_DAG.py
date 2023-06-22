@@ -40,7 +40,8 @@ def extract_data_to_nested(**kwargs):
             'total_overlapping_time=EXCLUDED.total_overlapping_time,'
             'overall_lectures_watched=EXCLUDED.overall_lectures_watched,'
             'live_lectures_attended = EXCLUDED.live_lectures_attended,'
-            'recorded_lectures_watched = EXCLUDED.recorded_lectures_watched;',
+            'recorded_lectures_watched = EXCLUDED.recorded_lectures_watched,'
+            'mandatory = EXCLUDED.mandatory;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -54,7 +55,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[9],
                 transform_row[10],
                 transform_row[11],
-                transform_row[12]
+                transform_row[12],
+                transform_row[13]
             )
         )
     pg_conn.commit()
@@ -85,7 +87,8 @@ create_table = PostgresOperator(
             total_overlapping_time real,
             overall_lectures_watched int,
             live_lectures_attended int,
-            recorded_lectures_watched int
+            recorded_lectures_watched int,
+            mandatory boolean
             
         );
     ''',
@@ -104,6 +107,7 @@ transform_data = PostgresOperator(
                     t.topic_template_id,
                     l.lecture_id,
                     l.lecture_title,
+                    l.mandatory,
                     date(l.start_timestamp) as lecture_date,
                     count(distinct l.lecture_id) filter (where lectures_info.lecture_id is not null) as overall_lectures_watched,
                     count(distinct l.lecture_id) filter (where llcur2.lecture_id is not null) as live_lectures_attended,
@@ -142,7 +146,7 @@ transform_data = PostgresOperator(
                  join topics t 
                     on t.topic_id = ltm.topic_id and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
                 
-                group by 1,2,3,4,5,6,7,8),
+                group by 1,2,3,4,5,6,7,8,9),
             
             inst_details as 
                 (select
@@ -150,6 +154,7 @@ transform_data = PostgresOperator(
                     t.template_name,
                     l.lecture_id,
                     l.lecture_title,
+                    l.mandatory,
                     cum.user_id as inst_user_id,
                     lim.inst_course_user_mapping_id,
                     date(l.start_timestamp) as lecture_date,
@@ -169,7 +174,7 @@ transform_data = PostgresOperator(
                     on lim.lecture_id = l.lecture_id 
                 join course_user_mapping cum 
                     on cum.course_user_mapping_id = lim.inst_course_user_mapping_id and c.course_id = cum.course_id 
-                group by 1,2,3,4,5,6,7)
+                group by 1,2,3,4,5,6,7,8)
                 
             select 
                 distinct concat(user_details.user_id,user_details.topic_template_id,user_details.course_id,inst_details.inst_user_id,extract(day from user_details.lecture_date),extract(month from user_details.lecture_date),extract(year from user_details.lecture_date)) as table_unique_key,
@@ -177,6 +182,7 @@ transform_data = PostgresOperator(
                 user_details.course_id,
                 user_details.lecture_id,
                 user_details.lecture_title,
+                user_details.mandatory,
                 inst_details.inst_user_id,
                 user_details.template_name,
                 user_details.lecture_date,
