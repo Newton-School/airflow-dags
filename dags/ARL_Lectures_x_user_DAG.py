@@ -182,7 +182,6 @@ transform_data = PostgresOperator(
                 user_details.course_id,
                 user_details.lecture_id,
                 user_details.lecture_title,
-                user_details.mandatory,
                 inst_details.inst_user_id,
                 user_details.template_name,
                 user_details.lecture_date,
@@ -190,7 +189,8 @@ transform_data = PostgresOperator(
                 user_details.total_overlapping_time,
                 user_details.overall_lectures_watched,
                 user_details.live_lectures_attended,
-                user_details.recorded_lectures_watched
+                user_details.recorded_lectures_watched,
+                user_details.mandatory
             from
                 user_details
             join inst_details
