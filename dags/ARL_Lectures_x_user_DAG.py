@@ -117,7 +117,6 @@ transform_data = PostgresOperator(
                     lectures l 
                 join courses c 
                     on c.course_id = l.course_id and c.course_structure_id  in (1,6,8,11,12,13,14,18,19,20,22,23,26)
-                        and l.mandatory = true
                 join course_user_mapping cum 
                     on cum.course_id = c.course_id and cum.status in (5,8,9) and cum.label_id is null
                 left join live_lectures_course_user_reports llcur2 
