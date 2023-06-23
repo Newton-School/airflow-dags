@@ -28,7 +28,7 @@ def extract_data_to_nested(**kwargs):
         pg_cursor.execute(
                 'INSERT INTO lecture_topic_mapping (lecture_topic_node_mapping_id,completed,lecture_slot_id,lecture_id,topic_node_id,topic_id,lecture_topic_mapping_id,topic_marked_at) '
                 'VALUES (%s,%s,%s,%s,%s,%s,%s,%s)'
-                'on conflict (lecture_topic_mapping_id) do update set completed = EXCLUDED.completed,'
+                'on conflict (lecture_topic_node_mapping_id) do update set completed = EXCLUDED.completed,'
                 'lecture_slot_id= EXCLUDED.lecture_slot_id,'
                 'lecture_id=EXCLUDED.lecture_id,'
                 'topic_node_id=EXCLUDED.topic_node_id,'
