@@ -1,11 +1,19 @@
 from airflow import DAG
+# from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.models import Variable
+from airflow.utils.task_group import TaskGroup
 from datetime import datetime
+
+from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 
 default_args = {
     'owner': 'airflow',
+    'max_active_tasks': 6,
+    'max_active_runs': 6,
+    'concurrency': 4,
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
@@ -28,7 +36,7 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO arl_assessments (assessment_id,course_id,assessment_release_date,'
-            'assessment_type,assessment_sub_type,max_marks,total_questions,total_mcqs_marked,'
+            'assessment_type,assessment_sub_type,lecture_id,max_marks,total_questions,total_mcqs_marked,'
             'history_based_total_mcqs_marked,total_correct_mcqs,history_based_total_correct_mcqs,'
             'students_opened,history_based_students_opened,users_opened_on_time,'
             'history_based_users_opened_on_time,users_opened_late,'
@@ -45,14 +53,20 @@ def extract_data_to_nested(**kwargs):
             'history_based_users_with_marks_btw_50_and_75,users_with_marks_btw_75_and_100,'
             'history_based_users_with_marks_btw_75_and_100,users_with_full_marks,'
             'history_based_users_with_full_marks)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (assessment_id) do update set '
-            'assessment_type=EXCLUDED.assessment_type,assessment_sub_type=EXCLUDED.assessment_sub_type,'
-            'assessment_release_date=EXCLUDED.assessment_release_date,max_marks=EXCLUDED.max_marks,'
-            'total_questions=EXCLUDED.total_questions,total_mcqs_marked=EXCLUDED.total_mcqs_marked,'
-            'total_correct_mcqs=EXCLUDED.total_correct_mcqs,students_opened=EXCLUDED.students_opened,'
-            'users_opened_on_time=EXCLUDED.users_opened_on_time,users_opened_late=EXCLUDED.users_opened_late,'
-            'students_submitted=EXCLUDED.students_submitted,users_submitted_on_time=EXCLUDED.users_submitted_on_time,'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (assessment_id) do update set assessment_release_date=EXCLUDED.assessment_release_date,'
+            'assessment_type=EXCLUDED.assessment_type,'
+            'assessment_sub_type=EXCLUDED.assessment_sub_type,'
+            'lecture_id = EXCLUDED.lecture_id,'
+            'max_marks=EXCLUDED.max_marks,'
+            'total_questions=EXCLUDED.total_questions,'
+            'total_mcqs_marked=EXCLUDED.total_mcqs_marked,'
+            'total_correct_mcqs=EXCLUDED.total_correct_mcqs,'
+            'students_opened=EXCLUDED.students_opened,'
+            'users_opened_on_time=EXCLUDED.users_opened_on_time,'
+            'users_opened_late=EXCLUDED.users_opened_late,'
+            'students_submitted=EXCLUDED.students_submitted,'
+            'users_submitted_on_time=EXCLUDED.users_submitted_on_time,'
             'users_submitted_late=EXCLUDED.users_submitted_late,'
             'overall_avg_assessment_percent=EXCLUDED.overall_avg_assessment_percent,'
             'students_above_avg_percent=EXCLUDED.students_above_avg_percent,'
@@ -126,6 +140,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[40],
                 transform_row[41],
                 transform_row[42],
+                transform_row[43]
+
             )
         )
     pg_conn.commit()
@@ -134,6 +150,9 @@ def extract_data_to_nested(**kwargs):
 dag = DAG(
     'ARL_Assessments_DAG',
     default_args=default_args,
+    concurrency=4,
+    max_active_tasks=6,
+    max_active_runs=6,
     description='An Analytics Reporting Layer DAG for Assessments',
     schedule_interval='35 0 * * *',
     catchup=False
@@ -143,11 +162,13 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS arl_assessments (
+            id serial,
             assessment_id int not null PRIMARY KEY,
             course_id int,
             assessment_release_date DATE,
             assessment_type varchar(64),
             assessment_sub_type varchar(32),
+            lecture_id bigint,
             max_marks int,
             total_questions int,
             total_mcqs_marked int,
@@ -195,11 +216,12 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
     sql='''with student_all_raw as
-            (select 
+            (select
                 course_user_mapping.user_id,
                 assessments.course_id,
                 assessments.assessment_id,
                 assessments.title as assessment_title,
+                assessments.lecture_id,
                 case
                     when assessments.assessment_type = 1 then 'Normal Assessment'
                     when assessments.assessment_type = 2 then 'Filtering Assessment'
@@ -246,7 +268,7 @@ transform_data = PostgresOperator(
                 on course_user_mapping.course_id = assessments.course_id and status in (5,8,9) and label_id is null and lower(course_user_mapping.unit_type) like 'learning'
             left join assessment_question_user_mapping
                 on assessment_question_user_mapping.assessment_id = assessments.assessment_id and assessment_question_user_mapping.course_user_mapping_id = course_user_mapping.course_user_mapping_id
-            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
+            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17
             order by 8 desc),
             
         overall_avg_marks as 
@@ -383,6 +405,7 @@ transform_data = PostgresOperator(
             student_all_raw.assessment_release_date,
             student_all_raw.assessment_type,
             student_all_raw.assessment_sub_type,
+            student_all_raw.lecture_id,
             student_all_raw.max_marks,
             student_all_raw.question_count as total_questions,
             sum(questions_marked) as total_mcqs_marked,
@@ -430,7 +453,7 @@ transform_data = PostgresOperator(
             on overall_avg_marks.assessment_id = student_all_raw.assessment_id
         left join history_based_assessments_data
             on history_based_assessments_data.assessment_id = student_all_raw.assessment_id
-        group by 1,2,3,4,5,6,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43;
+        group by 1,2,3,4,5,6,7,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44;
         ''',
     dag=dag
 )
