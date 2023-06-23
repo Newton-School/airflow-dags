@@ -1,11 +1,19 @@
 from airflow import DAG
+# from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.models import Variable
+from airflow.utils.task_group import TaskGroup
 from datetime import datetime
+
+from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 
 default_args = {
     'owner': 'airflow',
+    'max_active_tasks': 6,
+    'max_active_runs': 6,
+    'concurrency': 4,
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
@@ -30,7 +38,7 @@ def extract_data_to_nested(**kwargs):
 
             'INSERT INTO assessments (assessment_id,created_at,hash,'
             'start_timestamp,end_timestamp,title,course_id,hidden,is_proctored_exam,'
-            'max_marks,clearing_marks,max_attempts,assessment_type,lecture_slot_id,'
+            'max_marks,max_attempts,assessment_type,lecture_slot_id,lecture_id,'
             'was_competitive,random_multiple_choice_questions,sub_type,preserve_question_sequence,'
             'assessment_mapping_type,question_count)'
             
@@ -42,10 +50,10 @@ def extract_data_to_nested(**kwargs):
             'hidden = EXCLUDED.hidden,'
             'is_proctored_exam = EXCLUDED.is_proctored_exam,'
             'max_marks = EXCLUDED.max_marks,'
-            'clearing_marks = EXCLUDED.clearing_marks,'
             'max_attempts = EXCLUDED.max_attempts,'
             'assessment_type = EXCLUDED.assessment_type,'
             'lecture_slot_id = EXCLUDED.lecture_slot_id,'
+            'lecture_id = EXCLUDED.lecture_id,'
             'was_competitive = EXCLUDED.was_competitive,'
             'random_multiple_choice_questions = EXCLUDED.random_multiple_choice_questions,'
             'sub_type = EXCLUDED.sub_type,'
@@ -81,6 +89,9 @@ def extract_data_to_nested(**kwargs):
 dag = DAG(
     'assessment_table_dag',
     default_args=default_args,
+    concurrency=4,
+    max_active_tasks=6,
+    max_active_runs=6,
     description='Assessments all details and question release count per assessment',
     schedule_interval='30 20 * * *',
     catchup=False
@@ -96,14 +107,14 @@ create_table = PostgresOperator(
             start_timestamp timestamp,
             end_timestamp timestamp,
             title varchar(256),
-            course_id bigint,
+            course_id int,
             hidden boolean,
             is_proctored_exam boolean,
             max_marks int,
-            clearing_marks int,
             max_attempts int,
             assessment_type int,
             lecture_slot_id bigint,
+            lecture_id bigint,
             was_competitive boolean,
             random_multiple_choice_questions boolean,
             sub_type int,
@@ -130,10 +141,10 @@ transform_data = PostgresOperator(
         assessments_assessment.hidden,
         assessments_assessment.is_proctored_exam,
         assessments_assessment.max_marks,
-        assessments_assessment.clearing_marks,
         assessments_assessment.max_attempts,
         assessments_assessment.assessment_type,
         assessments_assessment.lecture_slot_id,
+        video_sessions_lectureslot.lecture_id,
         assessments_assessment.was_competitive,
         assessments_assessment.random_multiple_choice_questions,
         assessments_assessment.sub_type,
@@ -141,6 +152,8 @@ transform_data = PostgresOperator(
         
     from
         assessments_assessment
+    left join video_sessions_lectureslot
+        on video_sessions_lectureslot.id = assessments_assessment.lecture_slot_id
     order by 1 desc),
 
 question_count as 
@@ -183,17 +196,29 @@ question_count as
                     on assessments_assessmenttopicmapping.assessment_id = assessments_assessment.id
                 join assessments_assessmenttopiclevelnumbermapping
                     on assessments_assessmenttopiclevelnumbermapping.assessment_topic_mapping_id = assessments_assessmenttopicmapping.id
-            group by 1,2)) all_assessments_data)
+            group by 1,2)) all_assessments_data),
 
+/*this query is required to ensure uniqueness at assessment_id level; while fetching data at assessment_id with question_count CTE; same assessment_id(s) have mapping(s) with label_mapped assessments and topic_mapped assessments
+and query resolves that, probably!*/
+   
+drop_query as
+    (select
+        assessment_id, 
+        count(assessment_mapping_type) as check_value
+    from
+        question_count 
+    group by 1 
+    order by 2 desc, 1 desc)
 
-select 
+select
     assessment_details.*,
     question_count.assessment_mapping_type,
     question_count.question_count
 from
     assessment_details
 left join question_count
-    on assessment_details.assessment_id = question_count.assessment_id;
+    on assessment_details.assessment_id = question_count.assessment_id
+where assessment_details.assessment_id not in (select distinct assessment_id from drop_query where check_value > 1);
         ''',
     dag=dag
 )
