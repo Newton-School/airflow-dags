@@ -108,7 +108,7 @@ create_table = PostgresOperator(
             proctored_contest_rating int,
             quiz_rating int,
             plagiarised_assignment_rating int,
-            plagiarised_contest_rating int
+            plagiarised_contest_rating int,
             plagiarised_proctored_contest_rating int
         );
     ''',
