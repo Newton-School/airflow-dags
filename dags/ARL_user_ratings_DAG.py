@@ -153,10 +153,10 @@ from
         max(b.module_cutoff) as module_cutoff,
         (max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) as required_rating,
         CASE
-            WHEN ((max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0.9 THEN 'A'
-            WHEN ((max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0.6 AND ((max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) < 0.9 THEN 'B'
-            WHEN ((max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0.3 AND ((max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) < 0.6 THEN 'C'
-            WHEN ((max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0 AND ((max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) < 0.3 THEN 'D'
+            WHEN (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0.9 THEN 'A'
+            WHEN (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0.6 AND (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) < 0.9 THEN 'B'
+            WHEN (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0.3 AND (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) < 0.6 THEN 'C'
+            WHEN (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0 AND (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) < 0.3 THEN 'D'
         END AS grade_obtained,
         max(assignment_rating) as assignment_rating,
         max(contest_rating) as contest_rating,
