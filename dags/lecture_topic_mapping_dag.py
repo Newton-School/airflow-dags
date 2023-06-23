@@ -26,10 +26,15 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO lecture_topic_mapping (lecture_topic_mapping_id,completed,lecture_slot_id,lecture_id,topic_node_id,created_at,topic_id) '
-                'VALUES (%s,%s,%s,%s,%s,%s,%s)'
-                'on conflict (lecture_topic_mapping_id) do update set completed = EXCLUDED.completed,lecture_slot_id= EXCLUDED.lecture_slot_id,'
-                'lecture_id=EXCLUDED.lecture_id,topic_node_id=EXCLUDED.topic_node_id, topic_id=EXCLUDED.topic_id ;',
+                'INSERT INTO lecture_topic_mapping (lecture_topic_node_mapping_id,completed,lecture_slot_id,lecture_id,topic_node_id,topic_id,lecture_topic_mapping_id,topic_marked_at) '
+                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s)'
+                'on conflict (lecture_topic_mapping_id) do update set completed = EXCLUDED.completed,'
+                'lecture_slot_id= EXCLUDED.lecture_slot_id,'
+                'lecture_id=EXCLUDED.lecture_id,'
+                'topic_node_id=EXCLUDED.topic_node_id,'
+                'topic_id=EXCLUDED.topic_id,'
+                'lecture_topic_mapping_id=EXCLUDED.lecture_topic_mapping_id,'
+                'topic_marked_at = EXCLUDED.topic_marked_at;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -38,6 +43,7 @@ def extract_data_to_nested(**kwargs):
                     transform_row[4],
                     transform_row[5],
                     transform_row[6],
+                    transform_row[7]
                  )
         )
     pg_conn.commit()
@@ -55,13 +61,15 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS lecture_topic_mapping (
-            lecture_topic_mapping_id bigint not null PRIMARY KEY,
+            id serial,
+            lecture_topic_node_mapping_id bigint not null PRIMARY KEY,
             completed boolean,
             lecture_slot_id bigint,
             lecture_id bigint,
             topic_node_id bigint,
-            created_at timestamp,
-            topic_id bigint
+            topic_id bigint,
+            lecture_topic_mapping_id bigint,
+            topic_marked_at timestamp
         );
     ''',
     dag=dag
@@ -71,16 +79,22 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
     sql='''select
-            video_sessions_lectureslottopicnodemapping.id as lecture_topic_mapping_id,
-            video_sessions_lectureslottopicnodemapping.completed,
-            video_sessions_lectureslottopicnodemapping.lecture_slot_id,
-            video_sessions_lectureslot.lecture_id,
-            video_sessions_lectureslottopicnodemapping.topic_node_id,
-            cast(video_sessions_lectureslottopicnodemapping.created_at as varchar) as created_at,
-            technologies_topicnode.topic_id
-            from video_sessions_lectureslottopicnodemapping
-            left join technologies_topicnode on technologies_topicnode.id = video_sessions_lectureslottopicnodemapping.topic_node_id
-            left join video_sessions_lectureslot on video_sessions_lectureslot.id = video_sessions_lectureslottopicnodemapping.lecture_slot_id
+    video_sessions_lectureslottopicnodemapping.id as lecture_topic_node_mapping_id,
+    video_sessions_lectureslottopicnodemapping.completed,
+    video_sessions_lectureslottopicnodemapping.lecture_slot_id,
+    video_sessions_lectureslot.lecture_id,
+    video_sessions_lectureslottopicnodemapping.topic_node_id,
+    technologies_topicnode.topic_id,
+    video_sessions_lecturetopicmapping.id as lecture_topic_mapping_id,
+    video_sessions_lecturetopicmapping.created_at as topic_marked_at
+from
+    video_sessions_lectureslottopicnodemapping
+left join technologies_topicnode
+    on technologies_topicnode.id = video_sessions_lectureslottopicnodemapping.topic_node_id
+left join video_sessions_lectureslot
+    on video_sessions_lectureslot.id = video_sessions_lectureslottopicnodemapping.lecture_slot_id
+left join video_sessions_lecturetopicmapping
+    on video_sessions_lecturetopicmapping.lecture_id = video_sessions_lectureslot.lecture_id and video_sessions_lecturetopicmapping.topic_id = technologies_topicnode.topic_id
     ;
         ''',
     dag=dag
