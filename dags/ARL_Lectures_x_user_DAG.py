@@ -1,11 +1,19 @@
 from airflow import DAG
+# from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.models import Variable
+from airflow.utils.task_group import TaskGroup
 from datetime import datetime
+
+from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 
 default_args = {
     'owner': 'airflow',
+    'max_active_tasks': 6,
+    'max_active_runs': 6,
+    'concurrency': 4,
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
@@ -65,6 +73,9 @@ def extract_data_to_nested(**kwargs):
 dag = DAG(
     'ARL_Lectures_x_Users',
     default_args=default_args,
+    concurrency=4,
+    max_active_tasks=6,
+    max_active_runs=6,
     description='An Analytics Reporting Layer DAG for Lectures x user level',
     schedule_interval='45 1 * * *',
     catchup=False
@@ -100,8 +111,8 @@ transform_data = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''with user_details as 
                 (select 
-                    cum.user_id,
-                    cum.course_user_mapping_id,
+                    wud.user_id,
+                    wud.course_user_mapping_id,
                     c.course_id,
                     t.template_name,
                     t.topic_template_id,
@@ -117,12 +128,13 @@ transform_data = PostgresOperator(
                     lectures l 
                 join courses c 
                     on c.course_id = l.course_id and c.course_structure_id  in (1,6,8,11,12,13,14,18,19,20,22,23,26)
-                join course_user_mapping cum 
-                    on cum.course_id = c.course_id and cum.status in (5,8,9) and cum.label_id is null
+                left join weekly_user_details wud 
+                	on wud.course_id = c.course_id and date(wud.week_view) = date(date_trunc('week',l.start_timestamp)) 
+                		and wud.status in (5,8,9) and wud.label_mapping_id is null
                 left join live_lectures_course_user_reports llcur2 
-                    on llcur2.lecture_id = l.lecture_id and cum.course_user_mapping_id = llcur2.course_user_mapping_id 
+                    on llcur2.lecture_id = l.lecture_id and wud.course_user_mapping_id = llcur2.course_user_mapping_id 
                 left join recorded_lectures_course_user_reports rlcur2 
-                	on rlcur2.lecture_id = l.lecture_id and cum.course_user_mapping_id = rlcur2.course_user_mapping_id 
+                	on rlcur2.lecture_id = l.lecture_id and wud.course_user_mapping_id = rlcur2.course_user_mapping_id 
                 left join 
                     (select 
                         lecture_id,
@@ -139,10 +151,10 @@ transform_data = PostgresOperator(
                         'recorded' as lecture_type
                     from
                         recorded_lectures_course_user_reports rlcur) as lectures_info
-                        on lectures_info.lecture_id = l.lecture_id and cum.course_user_mapping_id = lectures_info.course_user_mapping_id
-                 join lecture_topic_mapping ltm 
+                        on lectures_info.lecture_id = l.lecture_id and wud.course_user_mapping_id = lectures_info.course_user_mapping_id
+                 left join lecture_topic_mapping ltm 
                     on ltm.lecture_id = llcur2.lecture_id and ltm.completed = true
-                 join topics t 
+                 left join topics t 
                     on t.topic_id = ltm.topic_id and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
                 
                 group by 1,2,3,4,5,6,7,8,9),
@@ -162,21 +174,20 @@ transform_data = PostgresOperator(
                     lectures l 
                 join courses c 
                     on c.course_id = l.course_id and c.course_structure_id  in (1,6,8,11,12,13,14,18,19,20,22,23,26)
-                        
-                join live_lectures_course_user_reports llcur2 
+                left join live_lectures_course_user_reports llcur2 
                     on llcur2.lecture_id = l.lecture_id
-                join lecture_topic_mapping ltm 
+                left join lecture_topic_mapping ltm 
                     on ltm.lecture_id = llcur2.lecture_id and ltm.completed = true
-                join topics t 
+                left join topics t 
                     on t.topic_id = ltm.topic_id and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
-                join lecture_instructor_mapping lim 
+                left join lecture_instructor_mapping lim 
                     on lim.lecture_id = l.lecture_id 
-                join course_user_mapping cum 
+                left join course_user_mapping cum 
                     on cum.course_user_mapping_id = lim.inst_course_user_mapping_id and c.course_id = cum.course_id 
                 group by 1,2,3,4,5,6,7,8)
                 
             select 
-                distinct concat(user_details.user_id,user_details.topic_template_id,user_details.course_id,inst_details.inst_user_id,extract(day from user_details.lecture_date),extract(month from user_details.lecture_date),extract(year from user_details.lecture_date)) as table_unique_key,
+                distinct concat(user_details.user_id,user_details.lecture_id,user_details.topic_template_id,user_details.course_id,inst_details.inst_user_id/*,extract(day from user_details.lecture_date),extract(month from user_details.lecture_date),extract(year from user_details.lecture_date)*/) as table_unique_key,
                 user_details.user_id,
                 user_details.course_id,
                 user_details.lecture_id,
@@ -192,9 +203,8 @@ transform_data = PostgresOperator(
                 user_details.mandatory
             from
                 user_details
-            join inst_details
-            	on user_details.lecture_id = inst_details.lecture_id
-            order by 4 desc, 2;
+            left join inst_details
+            	on user_details.lecture_id = inst_details.lecture_id;
         ''',
     dag=dag
 )
