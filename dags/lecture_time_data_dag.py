@@ -228,14 +228,14 @@ def insert_preprocessed_data(**kwargs):
 
     for _, row in df_cleaned.iterrows():
         pg_cursor.execute(
-            'INSERT INTO lecture_engagement_time (lecture_id, course_user_mapping_id, join_time, leave_time, user_type, overlapping_time_seconds, overlapping_time_minutes) '
+            'INSERT INTO lecture_engagement_time (lecture_id, course_user_mapping_id, user_type, join_time, leave_time, overlapping_time_seconds, overlapping_time_minutes) '
             'VALUES (%s, %s, %s, %s, %s, %s, %s);',
             (
                 row['lecture_id'],
                 row['course_user_mapping_id'],
+                row['user_type'],
                 row['join_time'],
                 row['leave_time'],
-                row['user_type'],
                 row['overlapping_time_seconds'],
                 row['overlapping_time_minutes']
             )
