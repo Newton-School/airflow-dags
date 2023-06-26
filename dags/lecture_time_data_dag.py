@@ -205,8 +205,8 @@ order by 1 desc, 5, 2;
                     overlapping_time_seconds = calculate_student_instructor_overlapping_time(student_join_time,
                                                                                              student_leave_time,
                                                                                              instructor_times)
-                    student_dataframe.at[original_index, 'overlapping_time_seconds'] = overlapping_time_seconds
-                    student_dataframe.at[original_index, 'overlapping_time_minutes'] = overlapping_time_seconds / 60
+                    student_dataframe.at[original_index, 'overlapping_time_seconds'] = int(overlapping_time_seconds)
+                    student_dataframe.at[original_index, 'overlapping_time_minutes'] = round(overlapping_time_seconds /60 ,2)
 
                 new_df = pd.concat([new_df, student_dataframe])
 
@@ -265,7 +265,7 @@ create_table = PostgresOperator(
         join_time timestamp,
         leave_time timestamp,
         user_type varchar(32),
-        overlapping_time_seconds real,
+        overlapping_time_seconds int,
         overlapping_time_minutes real
     )
     """,

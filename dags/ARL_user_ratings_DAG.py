@@ -26,15 +26,18 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO arl_user_ratings (table_unique_key,student_id,course_id,course_name,topic_pool_id,'
+            'INSERT INTO arl_user_ratings (table_unique_key,student_id,course_id,'
+            'course_user_mapping_status, label_mapping_status, course_name,topic_pool_id,'
             'template_name,rating,plagiarised_rating,mock_rating,module_cutoff,'
             'required_rating,grade_obtained,assignment_rating,contest_rating,'
             'milestone_rating,proctored_contest_rating,quiz_rating,plagiarised_assignment_rating,'
             'plagiarised_contest_rating,plagiarised_proctored_contest_rating)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set student_id = EXCLUDED.student_id,'
             'course_id = EXCLUDED.course_id,'
             'course_name = EXCLUDED.course_name,'
+            'course_user_mapping_status = EXCLUDED.course_user_mapping_status,'
+            'label_mapping_status = EXCLUDED.label_mapping_status,'
             'topic_pool_id = EXCLUDED.topic_pool_id,'
             'template_name = EXCLUDED.template_name,'
             'rating = EXCLUDED.rating,'
@@ -71,7 +74,9 @@ def extract_data_to_nested(**kwargs):
                 transform_row[16],
                 transform_row[17],
                 transform_row[18],
-                transform_row[19]
+                transform_row[19],
+                transform_row[20],
+                transform_row[21]
             )
         )
     pg_conn.commit()
@@ -93,6 +98,8 @@ create_table = PostgresOperator(
             table_unique_key double precision not null PRIMARY KEY,
             student_id bigint,
             course_id bigint,
+            course_user_mapping_status int,
+            label_mapping_status varchar(32),
             course_name varchar(128),
             topic_pool_id int,
             template_name varchar(128),
@@ -119,11 +126,17 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
     sql='''
-    select 
-        cast(concat(course_id, topic_pool_id, student_id, /*courses.course_id,*/ rating, topic_pool_id, mock_rating, plagiarised_rating) as double precision) as table_unique_key,
+    select
+        cast(concat(course_id, topic_pool_id, student_id, rating, course_user_mapping_status, topic_pool_id) as double precision) as table_unique_key,
         student_id,
         course_id,
         course_name,
+        course_user_mapping_status,
+        case 
+        	when label_id is not null and course_user_mapping_status in (5,8,9) then 'Label Marked Student'
+    		when label_id is null and course_user_mapping_status in (5,8,9) then 'Enrolled Student'
+    		else 'Other'
+        end as label_mapping_status,
         topic_pool_id,
         template_name,
         rating,
@@ -145,6 +158,8 @@ from
         b.student_id,
         courses.course_id, 
         courses.course_name,
+        cum.status as course_user_mapping_status,
+        cum.label_id,
         topic_pool_id,
         template_name,
         max(b.rating) as rating,
@@ -153,57 +168,57 @@ from
         max(b.module_cutoff) as module_cutoff,
         (max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) as required_rating,
         CASE
-            WHEN (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0.9 THEN 'A'
-            WHEN (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0.6 AND (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) < 0.9 THEN 'B'
-            WHEN (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0.3 AND (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) < 0.6 THEN 'C'
-            WHEN (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0 AND (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) < 0.3 THEN 'D'
-        END AS grade_obtained,
-        max(assignment_rating) as assignment_rating,
-        max(contest_rating) as contest_rating,
-        max(milestone_rating) as milestone_rating,
-        max(proctored_contest_rating) as proctored_contest_rating,
-        max(quiz_rating) as quiz_rating,
-        max(plagiarised_assignment_rating) as plagiarised_assignment_rating,
-        max(plagiarised_contest_rating) as plagiarised_contest_rating,
-        max(plagiarised_proctored_contest_rating) as plagiarised_proctored_contest_rating
-        
+        WHEN (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0.9 THEN 'A'
+        WHEN (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0.6 AND (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) < 0.9 THEN 'B'
+        WHEN (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0.3 AND (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) < 0.6 THEN 'C'
+        WHEN (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) >= 0 AND (1.0*(max(b.rating) - max(b.plagiarised_rating) - max(b.mock_rating)) / max(b.module_cutoff)) < 0.3 THEN 'D'
+    END AS grade_obtained,
+    max(assignment_rating) as assignment_rating,
+    max(contest_rating) as contest_rating,
+    max(milestone_rating) as milestone_rating,
+    max(proctored_contest_rating) as proctored_contest_rating,
+    max(quiz_rating) as quiz_rating,
+    max(plagiarised_assignment_rating) as plagiarised_assignment_rating,
+    max(plagiarised_contest_rating) as plagiarised_contest_rating,
+    max(plagiarised_proctored_contest_rating) as plagiarised_proctored_contest_rating
+    
+FROM 
+    (SELECT 
+        ur.student_id,
+        ur.created_at,
+        ur.topic_pool_id,
+        ur.template_name,
+        CASE
+            WHEN template_name LIKE 'LINEAR DSA 1' THEN 550
+            WHEN template_name LIKE 'LINEAR DSA 2' THEN 150
+            WHEN template_name LIKE 'Frontend Track - HTML,CSS' THEN 275
+            WHEN template_name LIKE 'Backend Track -> Node, Express, Mongo, SQL, System Design' THEN 250
+            WHEN template_name LIKE 'React' THEN 250
+            WHEN template_name LIKE 'JS' THEN 250
+            WHEN template_name LIKE 'NON-LINEAR DSA 1' THEN 100
+            WHEN template_name LIKE 'NON-LINEAR DSA 2' THEN 100
+            WHEN template_name LIKE 'NON-LINEAR DSA 3' THEN 100
+            ELSE 0
+        END AS module_cutoff,
+        ur.rating,
+        ur.assignment_rating,
+        ur.contest_rating,
+        ur.milestone_rating,
+        ur.mock_rating,
+        ur.proctored_contest_rating,
+        ur.quiz_rating,
+        ur.plagiarised_assignment_rating,
+        ur.plagiarised_contest_rating,
+        ur.plagiarised_proctored_contest_rating,
+        ur.plagiarised_rating
     FROM 
-        (SELECT 
-            ur.student_id,
-            ur.created_at,
-            ur.topic_pool_id,
-            ur.template_name,
-            CASE
-                WHEN template_name LIKE 'LINEAR DSA 1' THEN 550
-                WHEN template_name LIKE 'LINEAR DSA 2' THEN 150
-                WHEN template_name LIKE 'Frontend Track - HTML,CSS' THEN 275
-                WHEN template_name LIKE 'Backend Track -> Node, Express, Mongo, SQL, System Design' THEN 250
-                WHEN template_name LIKE 'React' THEN 250
-                WHEN template_name LIKE 'JS' THEN 250
-                WHEN template_name LIKE 'NON-LINEAR DSA 1' THEN 100
-                WHEN template_name LIKE 'NON-LINEAR DSA 2' THEN 100
-                WHEN template_name LIKE 'NON-LINEAR DSA 3' THEN 100
-                ELSE 0
-            END AS module_cutoff,
-            ur.rating,
-            ur.assignment_rating,
-            ur.contest_rating,
-            ur.milestone_rating,
-            ur.mock_rating,
-            ur.proctored_contest_rating,
-            ur.quiz_rating,
-            ur.plagiarised_assignment_rating,
-            ur.plagiarised_contest_rating,
-            ur.plagiarised_proctored_contest_rating,
-            ur.plagiarised_rating
-        FROM 
-            user_ratings ur) AS b
-    left JOIN course_user_mapping cum 
-        ON b.student_id = cum.user_id
-    join courses
-        on courses.course_id = cum.course_id and courses.unit_type is not null
-    where module_cutoff <> 0
-    group by 1,2,3,4,5) all_combined;
+        user_ratings ur) AS b
+left JOIN course_user_mapping cum
+    ON b.student_id = cum.user_id
+join courses
+    on courses.course_id = cum.course_id and courses.unit_type is not null
+where module_cutoff <> 0
+group by 1,2,3,4,5,6,7) all_combined;
         ''',
     dag=dag
 )
