@@ -26,8 +26,8 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO arl_user_ratings (table_unique_key,student_id,course_id,'
-            'course_user_mapping_status, label_mapping_status, course_name,topic_pool_id,'
+            'INSERT INTO arl_user_ratings (table_unique_key,student_id,course_id,course_name,'
+            'course_user_mapping_status, label_mapping_status ,topic_pool_id,'
             'template_name,rating,plagiarised_rating,mock_rating,module_cutoff,'
             'required_rating,grade_obtained,assignment_rating,contest_rating,'
             'milestone_rating,proctored_contest_rating,quiz_rating,plagiarised_assignment_rating,'
