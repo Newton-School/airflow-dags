@@ -32,9 +32,9 @@ def extract_data_to_nested(**kwargs):
             'placement_role_title,number_of_rounds,number_of_openings,'
             'user_id,course_id,referral_set,referred_at,placed_at,'
             'round_type,round_start_date,round_end_date,round,no_show,'
-            'round_status,company_status,company_course_user_mapping_id,'
+            'round_status,company_status,company_status_prod,company_course_user_mapping_id,'
             'company_course_user_mapping_progress_id)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set company_name=EXCLUDED.company_name,'
             'company_type=EXCLUDED.company_type,key_account_manager=EXCLUDED.key_account_manager,'
             'sales_poc=EXCLUDED.sales_poc,job_title=EXCLUDED.job_title,'
@@ -43,7 +43,7 @@ def extract_data_to_nested(**kwargs):
             'placed_at=EXCLUDED.placed_at,round_type=EXCLUDED.round_type,'
             'round_start_date=EXCLUDED.round_start_date,round_end_date=EXCLUDED.round_end_date,'
             'round=EXCLUDED.round,no_show=EXCLUDED.no_show,round_status=EXCLUDED.round_status,'
-            'company_status=EXCLUDED.company_status,'
+            'company_status=EXCLUDED.company_status,company_status_prod=EXCLUDED.company_status_prod,'
             'company_course_user_mapping_progress_id=EXCLUDED.company_course_user_mapping_progress_id ;',
             (
                 transform_row[0],
@@ -71,6 +71,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[22],
                 transform_row[23],
                 transform_row[24],
+                transform_row[25],
             )
         )
     pg_conn.commit()
@@ -112,6 +113,7 @@ create_table = PostgresOperator(
             no_show boolean,
             round_status varchar(16),
             company_status varchar(40),
+            company_status_prod varchar(40),
             company_course_user_mapping_id bigint,
             company_course_user_mapping_progress_id bigint
         );
@@ -219,6 +221,34 @@ transform_data = PostgresOperator(
             when placements_company_user_mapping.status = 24 and placements_round_progress.status = 4 then 'Moved to next Round'
             when placements_company_user_mapping.status = 24 then 'Placed in Another Company' 
             end as company_status,
+            
+            case 
+            when placements_company_user_mapping.status = 1 then 'In Process'
+            when placements_company_user_mapping.status = 2 then 'Company Rejected'
+            when placements_company_user_mapping.status = 3 then 'Candidate Selected'
+            when placements_company_user_mapping.status = 4 then 'Offer Letter Received'
+            when placements_company_user_mapping.status = 5 then 'Offer Letter Accepted'
+            when placements_company_user_mapping.status = 6 then 'Candidate Denied'
+            when placements_company_user_mapping.status = 7 then 'On Hold'
+            when placements_company_user_mapping.status = 8 then 'To be Shortlisted'
+            when placements_company_user_mapping.status = 9 then 'Shortlisted'
+            when placements_company_user_mapping.status = 10 then 'Shorlist Rejected'
+            when placements_company_user_mapping.status = 11 then 'Accepted another offer' 
+            when placements_company_user_mapping.status = 12 then 'Applied'
+            when placements_company_user_mapping.status = 13 then 'Application Rejected'
+            when placements_company_user_mapping.status = 14 then 'Application Shortlisted'
+            when placements_company_user_mapping.status = 15 then 'Candidate Withdrew'
+            when placements_company_user_mapping.status = 16 then 'Candidate Resigned'
+            when placements_company_user_mapping.status = 17 then 'Candidate Laid off'
+            when placements_company_user_mapping.status = 18 then 'Offer Confirmation Pending by Candidate'
+            when placements_company_user_mapping.status = 19 then 'Offer Confirmed by Candidate'
+            when placements_company_user_mapping.status = 20 then 'Candidate Joined Company'
+            when placements_company_user_mapping.status = 21 then 'Offer Cancelled by Company'
+            when placements_company_user_mapping.status = 22 then 'Process Stopped'
+            when placements_company_user_mapping.status = 23 then 'Company Shortlisted' 
+            when placements_company_user_mapping.status = 24 then 'Placed in Another Company' 
+            end as company_status_prod,
+            
             placements_company_user_mapping.company_course_user_mapping_id,
             placements_round_progress.company_course_user_mapping_progress_id
             
