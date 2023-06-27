@@ -30,8 +30,8 @@ def extract_data_to_nested(**kwargs):
             'INSERT INTO arl_placed_students (Offer_type,Placement_id,user_id,phone_number,Full_name,'
             'username,Email,ISA,Date_of_placement,Joining_date,CTC,Company,company_id,Job_Role,course_name,'
             'Status,institute,degree,field,kam,sales_Manager,final_mentor,week,gender,pccumid,referred_by,'
-            'placement_role_id,company_type) '
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'placement_role_id,company_type,referred_at) '
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (pccumid) do update set Offer_type=EXCLUDED.Offer_type,'
             'Placement_id=EXCLUDED.Placement_id,user_id=EXCLUDED.user_id,phone_number=EXCLUDED.phone_number,'
             'Full_name=EXCLUDED.Full_name,username=EXCLUDED.username,Email=EXCLUDED.Email,ISA=EXCLUDED.ISA,'
@@ -40,7 +40,7 @@ def extract_data_to_nested(**kwargs):
             'course_name=EXCLUDED.course_name,Status=EXCLUDED.Status,institute=EXCLUDED.institute,degree=EXCLUDED.degree,'
             'field=EXCLUDED.field,kam=EXCLUDED.kam,sales_Manager=EXCLUDED.sales_Manager,final_mentor=EXCLUDED.final_mentor,'
             'week=EXCLUDED.week,gender=EXCLUDED.gender,referred_by=EXCLUDED.referred_by,'
-            'placement_role_id=EXCLUDED.placement_role_id,company_type=EXCLUDED.company_type;',
+            'placement_role_id=EXCLUDED.placement_role_id,company_type=EXCLUDED.company_type,referred_at=EXCLUDED.referred_at;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -70,6 +70,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[25],
                 transform_row[26],
                 transform_row[27],
+                transform_row[28],
 
             )
         )
@@ -115,7 +116,8 @@ create_table = PostgresOperator(
             pccumid bigint not null PRIMARY KEY,
             referred_by  varchar(100),
             placement_role_id int,
-            company_type varchar(100)
+            company_type varchar(100),
+            referred_at TIMESTAMP
         );
     ''',
     dag=dag
@@ -375,7 +377,8 @@ transform_data = PostgresOperator(
             final.aid as pccumid,
             final.referred_by,
             final.placement_role_id,
-            "Startup/Enterprise" as company_type
+            "Startup/Enterprise" as company_type,
+            placements_companycourseusermapping.referred_at
             from final
             join placements_companycourseusermapping on placements_companycourseusermapping.id = final.aid
             left join gender on gender.user_id = final.user_id
