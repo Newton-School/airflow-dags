@@ -356,15 +356,15 @@ transform_data = PostgresOperator(
                     placements_company_user_mapping.referral_set,
                     date(placements_company_user_mapping.referred_at) as referred_at,
                     date(placements_company_user_mapping.placed_at) as placed_at,
-                    'Referrals'  as round_type,
+                    'Referral'  as round_type,
                     cast(null as date) as round_start_date,
                     cast(null as date) as round_end_date,
-                    'Referrals'  as round,
+                    'Referral'  as round,
                     placements_round_progress.no_show,
                     
-                   'Referrals'  as round_status,
+                   'Referral'  as round_status,
                     
-                    'Referrals' as company_status,
+                    'Referral' as company_status,
                     
                     case 
                     when placements_company_user_mapping.status = 1 then 'In Process'
