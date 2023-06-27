@@ -33,8 +33,8 @@ def extract_data_to_nested(**kwargs):
             'user_id,course_id,referral_set,referred_at,placed_at,'
             'round_type,round_start_date,round_end_date,round,no_show,'
             'round_status,company_status,company_status_prod,company_course_user_mapping_id,'
-            'company_course_user_mapping_progress_id)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'company_course_user_mapping_progress_id,placed_status)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set company_name=EXCLUDED.company_name,'
             'company_type=EXCLUDED.company_type,key_account_manager=EXCLUDED.key_account_manager,'
             'sales_poc=EXCLUDED.sales_poc,job_title=EXCLUDED.job_title,'
@@ -44,7 +44,8 @@ def extract_data_to_nested(**kwargs):
             'round_start_date=EXCLUDED.round_start_date,round_end_date=EXCLUDED.round_end_date,'
             'round=EXCLUDED.round,no_show=EXCLUDED.no_show,round_status=EXCLUDED.round_status,'
             'company_status=EXCLUDED.company_status,company_status_prod=EXCLUDED.company_status_prod,'
-            'company_course_user_mapping_progress_id=EXCLUDED.company_course_user_mapping_progress_id ;',
+            'company_course_user_mapping_progress_id=EXCLUDED.company_course_user_mapping_progress_id,'
+            'placed_status=EXCLUDED.placed_status ;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -72,6 +73,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[23],
                 transform_row[24],
                 transform_row[25],
+                transform_row[26],
             )
         )
     pg_conn.commit()
@@ -115,7 +117,8 @@ create_table = PostgresOperator(
             company_status varchar(40),
             company_status_prod varchar(40),
             company_course_user_mapping_id bigint,
-            company_course_user_mapping_progress_id bigint
+            company_course_user_mapping_progress_id bigint,
+            placed_status varchar(10)
         );
     ''',
     dag=dag
@@ -250,7 +253,9 @@ transform_data = PostgresOperator(
             end as company_status_prod,
             
             placements_company_user_mapping.company_course_user_mapping_id,
-            placements_round_progress.company_course_user_mapping_progress_id
+            placements_round_progress.company_course_user_mapping_progress_id,
+            case when placements_company_user_mapping.status in (3,4,6,11,18,21,5,16,17,19,20,25) and placed_at is not null then 'Placed'
+            else 'Unplaced' end as placed_status
             
             
             
