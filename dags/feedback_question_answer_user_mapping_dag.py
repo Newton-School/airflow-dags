@@ -1,15 +1,22 @@
 from airflow import DAG
+# from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.models import Variable
+from airflow.utils.task_group import TaskGroup
 from datetime import datetime
+
+from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 
 default_args = {
     'owner': 'airflow',
+    'max_active_tasks': 2,
+    'max_active_runs': 6,
+    'concurrency': 2,
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
-
 
 def extract_data_to_nested(**kwargs):
     def clean_input(data_type, data_value):
@@ -30,8 +37,9 @@ def extract_data_to_nested(**kwargs):
             'INSERT INTO feedback_form_all_responses (table_unique_key,'
             'fuqam_id,m2m_id,feedback_form_user_mapping_id,feedback_form_user_mapping_hash,user_id,feedback_form_id,'
             'course_id,feedback_question_id, created_at, completed_at,'
-            'entity_content_type_id,entity_object_id,feedback_answer)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'entity_content_type_id,entity_object_id,feedback_answer_id,'
+            'feedback_form_user_question_answer_mapping_id,feedback_answer)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set feedback_form_user_mapping_id = EXCLUDED.feedback_form_user_mapping_id,'
             'fuqam_id = EXCLUDED.fuqam_id,'
             'm2m_id = EXCLUDED.m2m_id,'
@@ -44,6 +52,8 @@ def extract_data_to_nested(**kwargs):
             'completed_at = EXCLUDED.completed_at,'
             'entity_content_type_id = EXCLUDED.entity_content_type_id,'
             'entity_object_id = EXCLUDED.entity_object_id,'
+            'feedback_answer_id = EXCLUDED.feedback_answer_id,'
+            'feedback_form_user_question_answer_mapping_id = EXCLUDED.feedback_form_user_question_answer_mapping_id,'
             'feedback_answer = EXCLUDED.feedback_answer;',
             (
                 transform_row[0],
@@ -59,7 +69,9 @@ def extract_data_to_nested(**kwargs):
                 transform_row[10],
                 transform_row[11],
                 transform_row[12],
-                transform_row[13]
+                transform_row[13],
+                transform_row[14],
+                transform_row[15]
             )
         )
     pg_conn.commit()
@@ -68,10 +80,12 @@ def extract_data_to_nested(**kwargs):
 dag = DAG(
     'feedback_question_answer_user_mapping_dag',
     default_args=default_args,
+    concurrency=2,
+    max_active_tasks=2,
+    max_active_runs=6,
     description='per user per feedback question response ',
     schedule_interval='45 21 * * *',
-    catchup=False,
-    max_active_runs=1
+    catchup=False
 )
 
 create_table = PostgresOperator(
@@ -91,6 +105,8 @@ create_table = PostgresOperator(
             completed_at timestamp,
             entity_content_type_id int,
             entity_object_id bigint,
+            feedback_answer_id bigint,
+            feedback_form_user_question_answer_mapping_id bigint,
             feedback_answer varchar(60000)
     );
     ''',
@@ -115,8 +131,9 @@ transform_data = PostgresOperator(
         feedback_feedbackformusermapping.completed_at,
         feedback_feedbackformusermapping.entity_content_type_id,
         feedback_feedbackformusermapping.entity_object_id,
-        
-        case 
+        feedback_feedbackanswer.id as feedback_answer_id,
+        feedback_feedbackformuserquestionanswermapping.id as feedback_form_user_question_answer_mapping_id,
+        case
             when feedback_feedbackanswer.text is null then feedback_feedbackformuserquestionanswermapping.other_answer
             else feedback_feedbackanswer.text 
         end as feedback_answer
@@ -146,9 +163,8 @@ select
         (case 
             when m2m_id is null then concat(feedback_form_user_mapping_id,1,fuqam_id)
             else concat(feedback_form_user_mapping_id,2,m2m_id) 
-        end) 
-    
-    as double precision) as table_unique_key,
+        end) as double precision
+    ) as table_unique_key,
     raw.*
 from
     raw;
