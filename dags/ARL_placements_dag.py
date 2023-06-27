@@ -127,144 +127,299 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
-    sql='''select
-            distinct concat(placements_company_user_mapping.company_course_user_mapping_id,placements_job_openings.job_opening_id,placements_round_progress.company_course_user_mapping_progress_id) as table_unique_key,
-            placements_company.company_id,
-            placements_company.company_name,
-            placements_company.company_type,
-            case when key_account_manager_1 is null then key_account_manager_2 else key_account_manager_1 end as key_account_manager,
-            case when sales_poc_1 is null then sales_poc_2 else sales_poc_1 end as sales_poc,
-            placements_job_openings.job_opening_id,
-            placements_job_openings.job_title,
-            placements_job_openings.placement_role_title,
-            placements_job_openings.number_of_rounds,
-            placements_job_openings.number_of_openings,
-            course_user_mapping.user_id,
-            course_user_mapping.course_id,
-            placements_company_user_mapping.referral_set,
-            date(placements_company_user_mapping.referred_at) as referred_at,
-            date(placements_company_user_mapping.placed_at) as placed_at,
-            case
-            when placements_round_progress.round_type = 1 then 'Resume'
-            when placements_round_progress.round_type = 2 then 'Tech Interview'
-            when placements_round_progress.round_type = 3 then 'HR'
-            when placements_round_progress.round_type = 4 then 'Assignment'
-            when placements_round_progress.round_type = 5 then 'Test' 
-            when placements_round_progress.round_type = 6 then 'Technical Telephonic Round' 
-            when placements_round_progress.round_type = 7 then 'HR Telephonic Round'
-            end as round_type,
-            date(placements_round_progress.start_timestamp) as round_start_date,
-            date(placements_round_progress.end_timestamp) as round_end_date,
-            case 
-            when placements_round_progress.round_1 = true then 'Round 1'
-            when placements_round_progress.round_2 = true then 'Round 2'
-            when placements_round_progress.round_3 = true then 'Round 3'
-            when placements_round_progress.round_4 = true then 'Round 4'
-            when placements_round_progress.pre_final_round = true then 'Pre-Final Round'
-            when placements_round_progress.final_round = true then 'Final Round' else null end as round,
-            placements_round_progress.no_show,
-            
-            case
-            when placements_round_progress.status = 1 then 'To be scheduled'
-            when placements_round_progress.status = 2 then 'Scheduled'
-            when placements_round_progress.status = 3 then 'Completed'
-            when placements_round_progress.status = 4 then 'Cleared'
-            when placements_round_progress.status = 5 then 'Not Cleared'
-            when placements_round_progress.status = 6 then 'Dropped'
-            when placements_round_progress.status = 7 then 'Re Scheduled'
-            when placements_round_progress.status = 8 then 'Not Completed' end as round_status,
-            
-            case 
-            when placements_company_user_mapping.status = 1 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 1 then 'In Process'
-            when placements_company_user_mapping.status = 2 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 2 then 'Company Rejected'
-            when placements_company_user_mapping.status = 3 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 3 then 'Candidate Selected'
-            when placements_company_user_mapping.status = 4 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 4 then 'Offer Letter Received'
-            when placements_company_user_mapping.status = 5 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 5 then 'Offer Letter Accepted'
-            when placements_company_user_mapping.status = 6 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 6 then 'Candidate Denied'
-            when placements_company_user_mapping.status = 7 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 7 then 'On Hold'
-            when placements_company_user_mapping.status = 8 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 8 then 'To be Shortlisted'
-            when placements_company_user_mapping.status = 9 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 9 then 'Shortlisted'
-            when placements_company_user_mapping.status = 10 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 10 then 'Shorlist Rejected'
-            when placements_company_user_mapping.status = 11 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 11 then 'Accepted another offer' 
-            when placements_company_user_mapping.status = 12 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 12 then 'Applied'
-            when placements_company_user_mapping.status = 13 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 13 then 'Application Rejected'
-            when placements_company_user_mapping.status = 14 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 14 then 'Application Shortlisted'
-            when placements_company_user_mapping.status = 15 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 15 then 'Candidate Withdrew'
-            when placements_company_user_mapping.status = 16 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 16 then 'Candidate Resigned'
-            when placements_company_user_mapping.status = 17 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 17 then 'Candidate Laid off'
-            when placements_company_user_mapping.status = 18 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 18 then 'Offer Confirmation Pending by Candidate'
-            when placements_company_user_mapping.status = 19 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 19 then 'Offer Confirmed by Candidate'
-            when placements_company_user_mapping.status = 20 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 20 then 'Candidate Joined Company'
-            when placements_company_user_mapping.status = 21 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 21 then 'Offer Cancelled by Company'
-            when placements_company_user_mapping.status = 22 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 22 then 'Process Stopped'
-            when placements_company_user_mapping.status = 23 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 23 then 'Company Shortlisted' 
-            when placements_company_user_mapping.status = 24 and placements_round_progress.status = 4 then 'Moved to next Round'
-            when placements_company_user_mapping.status = 24 then 'Placed in Another Company' 
-            end as company_status,
-            
-            case 
-            when placements_company_user_mapping.status = 1 then 'In Process'
-            when placements_company_user_mapping.status = 2 then 'Company Rejected'
-            when placements_company_user_mapping.status = 3 then 'Candidate Selected'
-            when placements_company_user_mapping.status = 4 then 'Offer Letter Received'
-            when placements_company_user_mapping.status = 5 then 'Offer Letter Accepted'
-            when placements_company_user_mapping.status = 6 then 'Candidate Denied'
-            when placements_company_user_mapping.status = 7 then 'On Hold'
-            when placements_company_user_mapping.status = 8 then 'To be Shortlisted'
-            when placements_company_user_mapping.status = 9 then 'Shortlisted'
-            when placements_company_user_mapping.status = 10 then 'Shorlist Rejected'
-            when placements_company_user_mapping.status = 11 then 'Accepted another offer' 
-            when placements_company_user_mapping.status = 12 then 'Applied'
-            when placements_company_user_mapping.status = 13 then 'Application Rejected'
-            when placements_company_user_mapping.status = 14 then 'Application Shortlisted'
-            when placements_company_user_mapping.status = 15 then 'Candidate Withdrew'
-            when placements_company_user_mapping.status = 16 then 'Candidate Resigned'
-            when placements_company_user_mapping.status = 17 then 'Candidate Laid off'
-            when placements_company_user_mapping.status = 18 then 'Offer Confirmation Pending by Candidate'
-            when placements_company_user_mapping.status = 19 then 'Offer Confirmed by Candidate'
-            when placements_company_user_mapping.status = 20 then 'Candidate Joined Company'
-            when placements_company_user_mapping.status = 21 then 'Offer Cancelled by Company'
-            when placements_company_user_mapping.status = 22 then 'Process Stopped'
-            when placements_company_user_mapping.status = 23 then 'Company Shortlisted' 
-            when placements_company_user_mapping.status = 24 then 'Placed in Another Company' 
-            end as company_status_prod,
-            
-            placements_company_user_mapping.company_course_user_mapping_id,
-            placements_round_progress.company_course_user_mapping_progress_id,
-            case when placements_company_user_mapping.status in (3,4,6,11,18,21,5,16,17,19,20,25) and placed_at is not null then 'Placed'
-            else 'Unplaced' end as placed_status
-            
-            
-            
-            from placements_company_user_mapping
-            left join placements_job_openings on placements_job_openings.job_opening_id = placements_company_user_mapping.job_opening_id
-            left join placements_company on placements_company.company_id = placements_job_openings.company_id
-            left join course_user_mapping on course_user_mapping.course_user_mapping_id = placements_company_user_mapping.course_user_mapping_id
-            left join placements_round_progress on placements_round_progress.company_course_user_mapping_id = placements_company_user_mapping.company_course_user_mapping_id
-            order by 2,placements_company_user_mapping.company_course_user_mapping_id,placements_round_progress.company_course_user_mapping_progress_id;
+    sql='''with a as(
+        select
+                    distinct concat(placements_company_user_mapping.company_course_user_mapping_id,placements_job_openings.job_opening_id,placements_round_progress.company_course_user_mapping_progress_id) as table_unique_key,
+                    placements_company.company_id,
+                    placements_company.company_name,
+                    placements_company.company_type,
+                    case when key_account_manager_1 is null then key_account_manager_2 else key_account_manager_1 end as key_account_manager,
+                    case when sales_poc_1 is null then sales_poc_2 else sales_poc_1 end as sales_poc,
+                    placements_job_openings.job_opening_id,
+                    placements_job_openings.job_title,
+                    placements_job_openings.placement_role_title,
+                    placements_job_openings.number_of_rounds,
+                    placements_job_openings.number_of_openings,
+                    course_user_mapping.user_id,
+                    course_user_mapping.course_id,
+                    placements_company_user_mapping.referral_set,
+                    date(placements_company_user_mapping.referred_at) as referred_at,
+                    date(placements_company_user_mapping.placed_at) as placed_at,
+                    case
+                    when placements_round_progress.round_type = 1 then 'Resume'
+                    when placements_round_progress.round_type = 2 then 'Tech Interview'
+                    when placements_round_progress.round_type = 3 then 'HR'
+                    when placements_round_progress.round_type = 4 then 'Assignment'
+                    when placements_round_progress.round_type = 5 then 'Test' 
+                    when placements_round_progress.round_type = 6 then 'Technical Telephonic Round' 
+                    when placements_round_progress.round_type = 7 then 'HR Telephonic Round'
+                    end as round_type,
+                    date(placements_round_progress.start_timestamp) as round_start_date,
+                    date(placements_round_progress.end_timestamp) as round_end_date,
+                    case 
+                    when placements_round_progress.round_1 = true then 'Round 1'
+                    when placements_round_progress.round_2 = true then 'Round 2'
+                    when placements_round_progress.round_3 = true then 'Round 3'
+                    when placements_round_progress.round_4 = true then 'Round 4'
+                    when placements_round_progress.pre_final_round = true then 'Pre-Final Round'
+                    when placements_round_progress.final_round = true then 'Final Round' else null end as round,
+                    placements_round_progress.no_show,
+                    
+                    case
+                    when placements_round_progress.status = 1 then 'To be scheduled'
+                    when placements_round_progress.status = 2 then 'Scheduled'
+                    when placements_round_progress.status = 3 then 'Completed'
+                    when placements_round_progress.status = 4 then 'Cleared'
+                    when placements_round_progress.status = 5 then 'Not Cleared'
+                    when placements_round_progress.status = 6 then 'Dropped'
+                    when placements_round_progress.status = 7 then 'Re Scheduled'
+                    when placements_round_progress.status = 8 then 'Not Completed' end as round_status,
+                    
+                    case 
+                    when placements_company_user_mapping.status = 1 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 1 then 'In Process'
+                    when placements_company_user_mapping.status = 2 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 2 then 'Company Rejected'
+                    when placements_company_user_mapping.status = 3 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 3 then 'Candidate Selected'
+                    when placements_company_user_mapping.status = 4 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 4 then 'Offer Letter Received'
+                    when placements_company_user_mapping.status = 5 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 5 then 'Offer Letter Accepted'
+                    when placements_company_user_mapping.status = 6 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 6 then 'Candidate Denied'
+                    when placements_company_user_mapping.status = 7 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 7 then 'On Hold'
+                    when placements_company_user_mapping.status = 8 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 8 then 'To be Shortlisted'
+                    when placements_company_user_mapping.status = 9 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 9 then 'Shortlisted'
+                    when placements_company_user_mapping.status = 10 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 10 then 'Shorlist Rejected'
+                    when placements_company_user_mapping.status = 11 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 11 then 'Accepted another offer' 
+                    when placements_company_user_mapping.status = 12 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 12 then 'Applied'
+                    when placements_company_user_mapping.status = 13 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 13 then 'Application Rejected'
+                    when placements_company_user_mapping.status = 14 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 14 then 'Application Shortlisted'
+                    when placements_company_user_mapping.status = 15 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 15 then 'Candidate Withdrew'
+                    when placements_company_user_mapping.status = 16 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 16 then 'Candidate Resigned'
+                    when placements_company_user_mapping.status = 17 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 17 then 'Candidate Laid off'
+                    when placements_company_user_mapping.status = 18 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 18 then 'Offer Confirmation Pending by Candidate'
+                    when placements_company_user_mapping.status = 19 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 19 then 'Offer Confirmed by Candidate'
+                    when placements_company_user_mapping.status = 20 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 20 then 'Candidate Joined Company'
+                    when placements_company_user_mapping.status = 21 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 21 then 'Offer Cancelled by Company'
+                    when placements_company_user_mapping.status = 22 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 22 then 'Process Stopped'
+                    when placements_company_user_mapping.status = 23 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 23 then 'Company Shortlisted' 
+                    when placements_company_user_mapping.status = 24 and placements_round_progress.status = 4 then 'Moved to next Round'
+                    when placements_company_user_mapping.status = 24 then 'Placed in Another Company' 
+                    end as company_status,
+                    
+                    case 
+                    when placements_company_user_mapping.status = 1 then 'In Process'
+                    when placements_company_user_mapping.status = 2 then 'Company Rejected'
+                    when placements_company_user_mapping.status = 3 then 'Candidate Selected'
+                    when placements_company_user_mapping.status = 4 then 'Offer Letter Received'
+                    when placements_company_user_mapping.status = 5 then 'Offer Letter Accepted'
+                    when placements_company_user_mapping.status = 6 then 'Candidate Denied'
+                    when placements_company_user_mapping.status = 7 then 'On Hold'
+                    when placements_company_user_mapping.status = 8 then 'To be Shortlisted'
+                    when placements_company_user_mapping.status = 9 then 'Shortlisted'
+                    when placements_company_user_mapping.status = 10 then 'Shorlist Rejected'
+                    when placements_company_user_mapping.status = 11 then 'Accepted another offer' 
+                    when placements_company_user_mapping.status = 12 then 'Applied'
+                    when placements_company_user_mapping.status = 13 then 'Application Rejected'
+                    when placements_company_user_mapping.status = 14 then 'Application Shortlisted'
+                    when placements_company_user_mapping.status = 15 then 'Candidate Withdrew'
+                    when placements_company_user_mapping.status = 16 then 'Candidate Resigned'
+                    when placements_company_user_mapping.status = 17 then 'Candidate Laid off'
+                    when placements_company_user_mapping.status = 18 then 'Offer Confirmation Pending by Candidate'
+                    when placements_company_user_mapping.status = 19 then 'Offer Confirmed by Candidate'
+                    when placements_company_user_mapping.status = 20 then 'Candidate Joined Company'
+                    when placements_company_user_mapping.status = 21 then 'Offer Cancelled by Company'
+                    when placements_company_user_mapping.status = 22 then 'Process Stopped'
+                    when placements_company_user_mapping.status = 23 then 'Company Shortlisted' 
+                    when placements_company_user_mapping.status = 24 then 'Placed in Another Company' 
+                    end as company_status_prod,
+                    
+                    placements_company_user_mapping.company_course_user_mapping_id,
+                    placements_round_progress.company_course_user_mapping_progress_id,
+                    case when placements_company_user_mapping.status in (3,4,6,11,18,21,5,16,17,19,20,25) and placed_at is not null then 'Placed'
+                    else 'Unplaced' end as placed_status
+                    
+                    
+                    
+                    from placements_company_user_mapping
+                    left join placements_job_openings on placements_job_openings.job_opening_id = placements_company_user_mapping.job_opening_id
+                    left join placements_company on placements_company.company_id = placements_job_openings.company_id
+                    left join course_user_mapping on course_user_mapping.course_user_mapping_id = placements_company_user_mapping.course_user_mapping_id
+                    left join placements_round_progress on placements_round_progress.company_course_user_mapping_id = placements_company_user_mapping.company_course_user_mapping_id
+                    order by 2,placements_company_user_mapping.company_course_user_mapping_id,placements_round_progress.company_course_user_mapping_progress_id
+        ),
+        b as(
+        select
+                    distinct concat(placements_company_user_mapping.company_course_user_mapping_id,placements_job_openings.job_opening_id) as table_unique_key,
+                    placements_company.company_id,
+                    placements_company.company_name,
+                    placements_company.company_type,
+                    case when key_account_manager_1 is null then key_account_manager_2 else key_account_manager_1 end as key_account_manager,
+                    case when sales_poc_1 is null then sales_poc_2 else sales_poc_1 end as sales_poc,
+                    placements_job_openings.job_opening_id,
+                    placements_job_openings.job_title,
+                    placements_job_openings.placement_role_title,
+                    placements_job_openings.number_of_rounds,
+                    placements_job_openings.number_of_openings,
+                    course_user_mapping.user_id,
+                    course_user_mapping.course_id,
+                    placements_company_user_mapping.referral_set,
+                    date(placements_company_user_mapping.referred_at) as referred_at,
+                    date(placements_company_user_mapping.placed_at) as placed_at,
+                    'Placed'  as round_type,
+                    cast(null as date) as round_start_date,
+                    cast(null as date) as round_end_date,
+                    'Placed'  as round,
+                    placements_round_progress.no_show,
+                    
+                   'Placed'  as round_status,
+                    
+                    'Placed' as company_status,
+                    
+                    case 
+                    when placements_company_user_mapping.status = 1 then 'In Process'
+                    when placements_company_user_mapping.status = 2 then 'Company Rejected'
+                    when placements_company_user_mapping.status = 3 then 'Candidate Selected'
+                    when placements_company_user_mapping.status = 4 then 'Offer Letter Received'
+                    when placements_company_user_mapping.status = 5 then 'Offer Letter Accepted'
+                    when placements_company_user_mapping.status = 6 then 'Candidate Denied'
+                    when placements_company_user_mapping.status = 7 then 'On Hold'
+                    when placements_company_user_mapping.status = 8 then 'To be Shortlisted'
+                    when placements_company_user_mapping.status = 9 then 'Shortlisted'
+                    when placements_company_user_mapping.status = 10 then 'Shorlist Rejected'
+                    when placements_company_user_mapping.status = 11 then 'Accepted another offer' 
+                    when placements_company_user_mapping.status = 12 then 'Applied'
+                    when placements_company_user_mapping.status = 13 then 'Application Rejected'
+                    when placements_company_user_mapping.status = 14 then 'Application Shortlisted'
+                    when placements_company_user_mapping.status = 15 then 'Candidate Withdrew'
+                    when placements_company_user_mapping.status = 16 then 'Candidate Resigned'
+                    when placements_company_user_mapping.status = 17 then 'Candidate Laid off'
+                    when placements_company_user_mapping.status = 18 then 'Offer Confirmation Pending by Candidate'
+                    when placements_company_user_mapping.status = 19 then 'Offer Confirmed by Candidate'
+                    when placements_company_user_mapping.status = 20 then 'Candidate Joined Company'
+                    when placements_company_user_mapping.status = 21 then 'Offer Cancelled by Company'
+                    when placements_company_user_mapping.status = 22 then 'Process Stopped'
+                    when placements_company_user_mapping.status = 23 then 'Company Shortlisted' 
+                    when placements_company_user_mapping.status = 24 then 'Placed in Another Company' 
+                    end as company_status_prod,
+                    
+                    placements_company_user_mapping.company_course_user_mapping_id,
+                    cast(null as int) as company_course_user_mapping_progress_id,
+                    -- placements_round_progress.company_course_user_mapping_progress_id,
+                    case when placements_company_user_mapping.status in (3,4,6,11,18,21,5,16,17,19,20,25) and placed_at is not null then 'Placed'
+                    else 'Unplaced' end as placed_status
+                    
+                    
+                    
+                    from placements_company_user_mapping
+                    left join placements_job_openings on placements_job_openings.job_opening_id = placements_company_user_mapping.job_opening_id
+                    left join placements_company on placements_company.company_id = placements_job_openings.company_id
+                    left join course_user_mapping on course_user_mapping.course_user_mapping_id = placements_company_user_mapping.course_user_mapping_id
+                    left join placements_round_progress on placements_round_progress.company_course_user_mapping_id = placements_company_user_mapping.company_course_user_mapping_id
+                    where placements_company_user_mapping.status in (3,4,6,11,18,21,5,16,17,19,20,25) and placed_at is not null
+                    order by 2,placements_company_user_mapping.company_course_user_mapping_id
+        ),
+        c as(
+        select
+                    distinct concat(placements_company_user_mapping.company_course_user_mapping_id,placements_job_openings.job_opening_id) as table_unique_key,
+                    placements_company.company_id,
+                    placements_company.company_name,
+                    placements_company.company_type,
+                    case when key_account_manager_1 is null then key_account_manager_2 else key_account_manager_1 end as key_account_manager,
+                    case when sales_poc_1 is null then sales_poc_2 else sales_poc_1 end as sales_poc,
+                    placements_job_openings.job_opening_id,
+                    placements_job_openings.job_title,
+                    placements_job_openings.placement_role_title,
+                    placements_job_openings.number_of_rounds,
+                    placements_job_openings.number_of_openings,
+                    course_user_mapping.user_id,
+                    course_user_mapping.course_id,
+                    placements_company_user_mapping.referral_set,
+                    date(placements_company_user_mapping.referred_at) as referred_at,
+                    date(placements_company_user_mapping.placed_at) as placed_at,
+                    'Referrals'  as round_type,
+                    cast(null as date) as round_start_date,
+                    cast(null as date) as round_end_date,
+                    'Referrals'  as round,
+                    placements_round_progress.no_show,
+                    
+                   'Referrals'  as round_status,
+                    
+                    'Referrals' as company_status,
+                    
+                    case 
+                    when placements_company_user_mapping.status = 1 then 'In Process'
+                    when placements_company_user_mapping.status = 2 then 'Company Rejected'
+                    when placements_company_user_mapping.status = 3 then 'Candidate Selected'
+                    when placements_company_user_mapping.status = 4 then 'Offer Letter Received'
+                    when placements_company_user_mapping.status = 5 then 'Offer Letter Accepted'
+                    when placements_company_user_mapping.status = 6 then 'Candidate Denied'
+                    when placements_company_user_mapping.status = 7 then 'On Hold'
+                    when placements_company_user_mapping.status = 8 then 'To be Shortlisted'
+                    when placements_company_user_mapping.status = 9 then 'Shortlisted'
+                    when placements_company_user_mapping.status = 10 then 'Shorlist Rejected'
+                    when placements_company_user_mapping.status = 11 then 'Accepted another offer' 
+                    when placements_company_user_mapping.status = 12 then 'Applied'
+                    when placements_company_user_mapping.status = 13 then 'Application Rejected'
+                    when placements_company_user_mapping.status = 14 then 'Application Shortlisted'
+                    when placements_company_user_mapping.status = 15 then 'Candidate Withdrew'
+                    when placements_company_user_mapping.status = 16 then 'Candidate Resigned'
+                    when placements_company_user_mapping.status = 17 then 'Candidate Laid off'
+                    when placements_company_user_mapping.status = 18 then 'Offer Confirmation Pending by Candidate'
+                    when placements_company_user_mapping.status = 19 then 'Offer Confirmed by Candidate'
+                    when placements_company_user_mapping.status = 20 then 'Candidate Joined Company'
+                    when placements_company_user_mapping.status = 21 then 'Offer Cancelled by Company'
+                    when placements_company_user_mapping.status = 22 then 'Process Stopped'
+                    when placements_company_user_mapping.status = 23 then 'Company Shortlisted' 
+                    when placements_company_user_mapping.status = 24 then 'Placed in Another Company' 
+                    end as company_status_prod,
+                    
+                    placements_company_user_mapping.company_course_user_mapping_id,
+                    cast(null as int) as company_course_user_mapping_progress_id,
+                    -- placements_round_progress.company_course_user_mapping_progress_id,
+                    case when placements_company_user_mapping.status in (3,4,6,11,18,21,5,16,17,19,20,25) and placed_at is not null then 'Placed'
+                    else 'Unplaced' end as placed_status
+                    
+                    
+                    
+                    from placements_company_user_mapping
+                    left join placements_job_openings on placements_job_openings.job_opening_id = placements_company_user_mapping.job_opening_id
+                    left join placements_company on placements_company.company_id = placements_job_openings.company_id
+                    left join course_user_mapping on course_user_mapping.course_user_mapping_id = placements_company_user_mapping.course_user_mapping_id
+                    left join placements_round_progress on placements_round_progress.company_course_user_mapping_id = placements_company_user_mapping.company_course_user_mapping_id
+                    where referred_at is not null
+                    order by 2,placements_company_user_mapping.company_course_user_mapping_id
+        
+        ),
+        d as(
+        select * from a
+        union all 
+        select * from b
+        union all 
+        select * from c
+        )
+        select 
+        table_unique_key,company_id,company_name,company_type,key_account_manager,sales_poc,job_opening_id,job_title,placement_role_title,number_of_rounds,number_of_openings,user_id,course_id,referral_set,referred_at,placed_at,round_type,round_start_date,round_end_date,round,no_show,round_status,company_status,company_status_prod,company_course_user_mapping_id,company_course_user_mapping_progress_id,placed_status
+        from d;
         ''',
     dag=dag
 )
