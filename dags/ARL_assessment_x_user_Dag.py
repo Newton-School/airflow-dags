@@ -113,7 +113,7 @@ transform_data = PostgresOperator(
             assessments.course_id,
             assessments.assessment_id,
             assessments.title as assessment_title,
-            
+
             case
                 when assessments.assessment_type = 1 then 'Normal Assessment'
                 when assessments.assessment_type = 2 then 'Filtering Assessment'
@@ -121,30 +121,30 @@ transform_data = PostgresOperator(
                 when assessments.assessment_type = 4 then 'Duration Assessment'
                 when assessments.assessment_type = 5 then 'Poll Assessment'
             end as assessment_type,
-            
+
             case 
                 when assessments.sub_type = 1 then 'General'
                 when assessments.sub_type = 2 then 'In-Class'
                 when assessments.sub_type = 3 then 'Post-Class'
                 when assessments.sub_type = 4 then 'Classroom-Quiz'
             end as assessment_sub_type,
-            
+
             date(assessments.start_timestamp) as assessment_release_date,
             date(assessment_question_user_mapping.assessment_started_at) as assessment_open_date,
             date(assessment_question_user_mapping.assessment_completed_at) as assessment_submission_date,
-        
+
             case 
                 when assessment_question_user_mapping.assessment_started_at <= assessments.end_timestamp then 'Attempted On Time'
                 when assessment_question_user_mapping.assessment_started_at > assessments.end_timestamp then 'Late Attempt'
                 when assessment_question_user_mapping.assessment_started_at is null then 'Not Attempted'
             end as assessment_attempt_status,
-        
+
             case 
                 when assessment_late_completed = false then 'On Time Submission'
                 when assessment_late_completed = true then 'Late Submission'
                 when assessment_late_completed is null then 'Not Submitted'
             end as assessment_submission_status,
-            
+
             assessments.question_count,
             count(distinct mcq_id) filter (where option_marked_at is not null) as questions_marked,
             count(distinct mcq_id) filter (where (marked_choice - correct_choice) = 0) as questions_correct,
