@@ -48,7 +48,7 @@ create_table = PostgresOperator(
         course_user_mapping_id bigint,
         assessment_completed boolean,
         assessment_completed_at timestamp,
-        user_assessment_level_hash varchar(32),
+        user_assessment_level_hash varchar(256),
         assessment_late_completed boolean,
         marks_obtained int,
         assessment_started_at timestamp,
@@ -58,7 +58,7 @@ create_table = PostgresOperator(
         option_marked_at timestamp,
         marked_choice int,
         correct_choice int,
-        user_question_level_hash varchar(32)
+        user_question_level_hash varchar(256)
         );
     ''',
     dag=dag
