@@ -36,6 +36,7 @@ def extract_data_to_nested(**kwargs):
         pg_cursor.execute(
             'INSERT INTO arl_assignment_reported_question (table_unique_key, user_id,'
             'course_id,'
+            'status,'
             'assignment_id,'
             'assignment_release_date,'
             'assignment_release_date_week,'
@@ -51,9 +52,10 @@ def extract_data_to_nested(**kwargs):
             'required_topics_not_taught,'
             'expected_output_is_inaccurate,'
             'test_cases_missing_or_wrong)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set user_id = EXCLUDED.user_id,'
             'course_id = EXCLUDED.course_id,'
+            'status = EXCLUDED.status,'
             'assignment_id = EXCLUDED.assignment_id,'
             'assignment_release_date = EXCLUDED.assignment_release_date,'
             'assignment_release_date_week = EXCLUDED.assignment_release_date_week,'
@@ -87,7 +89,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[14],
                 transform_row[15],
                 transform_row[16],
-                transform_row[17]
+                transform_row[17],
+                transform_row[18]
 
             )
         )
@@ -113,6 +116,7 @@ create_table = PostgresOperator(
             table_unique_key varchar(1028) not null PRIMARY KEY,
             user_id bigint,
             course_id int,
+            status int,
             assignment_id bigint,
             assignment_release_date date,
             assignment_release_date_week timestamp,
@@ -195,6 +199,7 @@ select
 	concat(extract('month' from question_report_date), extract('day' from question_report_date), assignments.assignment_id, feedback_raw.user_id,'1' ,assignment_question_id, course_user_mapping.course_id) as table_unique_key,
 	feedback_raw.user_id,
 	course_user_mapping.course_id,
+	course_user_mapping.status,
 	assignments.assignment_id,
 	question_release_date.assignment_release_date,
 	date_trunc('week', question_release_date.assignment_release_date) as assignment_release_date_week,
@@ -220,7 +225,7 @@ left join question_release_date
 	on assignments.assignment_id = question_release_date.assignment_id 
 		and feedback_raw.assignment_question_id = question_release_date.question_id 
 			and course_user_mapping.course_id = question_release_date.course_id
-group by 1,2,3,4,5,6,7,8,9,10,11,12;
+group by 1,2,3,4,5,6,7,8,9,10,11,12,13;
         ''',
     dag=dag
 )

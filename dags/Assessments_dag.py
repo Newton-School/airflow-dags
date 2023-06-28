@@ -119,7 +119,7 @@ create_table = PostgresOperator(
             random_multiple_choice_questions boolean,
             sub_type int,
             preserve_question_sequence boolean,
-            assessment_mapping_type varchar(32),
+            assessment_mapping_type varchar(64),
             question_count int
         );
     ''',
