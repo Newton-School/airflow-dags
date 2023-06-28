@@ -212,9 +212,9 @@ select
 	max(test_cases_missing_or_wrong) as test_cases_missing_or_wrong
 from
 	feedback_raw
-join course_user_mapping
+left join course_user_mapping
 	on course_user_mapping.user_id = feedback_raw.user_id
-join assignments
+left join assignments
 	on assignments.course_id = course_user_mapping.course_id
 left join question_release_date
 	on assignments.assignment_id = question_release_date.assignment_id 
