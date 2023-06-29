@@ -166,6 +166,7 @@ from
     vsl_cur_raw
 left join inst_details
     on inst_details.lecture_id = vsl_cur_raw.lecture_id and inst_details.inst_cum_id = vsl_cur_raw.course_user_mapping_id
+where vsl_cur_raw.lecture_id = 28065
 order by 1 desc, 5, 2;
     """)
 
@@ -207,6 +208,7 @@ order by 1 desc, 5, 2;
                                                                                              instructor_times)
                     student_dataframe.at[original_index, 'overlapping_time_seconds'] = round(overlapping_time_seconds,0)
                     student_dataframe.at[original_index, 'overlapping_time_minutes'] = round(overlapping_time_seconds /60,2)
+                    print("student_dataframe", student_dataframe)
 
                 new_df = pd.concat([new_df, student_dataframe])
 
@@ -227,6 +229,7 @@ def insert_preprocessed_data(**kwargs):
     df_cleaned = ti.xcom_pull(task_ids='fetch_data_and_preprocess', key='preprocessed_data_df')
 
     for _, row in df_cleaned.iterrows():
+        print("Insert Pre Processed Data", row)
         pg_cursor.execute(
             'INSERT INTO lecture_engagement_time (lecture_id, course_user_mapping_id, user_type, join_time, leave_time, overlapping_time_seconds, overlapping_time_minutes) '
             'VALUES (%s, %s, %s, %s, %s, %s, %s);',
