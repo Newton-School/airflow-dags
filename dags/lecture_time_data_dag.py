@@ -67,9 +67,7 @@ def calculate_student_instructor_overlapping_time(student_join_time, student_lea
             overlap_time = max(overlap_end - overlap_start, pd.Timedelta(0))  # Ensure positive time difference
             overlapping_time += (overlap_end - overlap_start).total_seconds()
 
-    if math.isnan(overlapping_time):
-        print("Bhai Nan aaya hai", student_leave_time, student_join_time, instructor_join_time)
-
+    print("Bhai Nan aaya hai", student_leave_time, student_join_time, instructor_times)
     return overlapping_time
 
 
