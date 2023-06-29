@@ -36,7 +36,8 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO arl_assessments (assessment_id,course_id,assessment_release_date,'
-            'assessment_type,assessment_sub_type,lecture_id,max_marks,total_questions,total_mcqs_marked,'
+            'assessment_type,assessment_sub_type,generation_and_creation_type,'
+            'assessment_class,lecture_id,max_marks,total_questions,total_mcqs_marked,'
             'history_based_total_mcqs_marked,total_correct_mcqs,history_based_total_correct_mcqs,'
             'students_opened,history_based_students_opened,users_opened_on_time,'
             'history_based_users_opened_on_time,users_opened_late,'
@@ -53,10 +54,12 @@ def extract_data_to_nested(**kwargs):
             'history_based_users_with_marks_btw_50_and_75,users_with_marks_btw_75_and_100,'
             'history_based_users_with_marks_btw_75_and_100,users_with_full_marks,'
             'history_based_users_with_full_marks)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (assessment_id) do update set assessment_release_date=EXCLUDED.assessment_release_date,'
             'assessment_type=EXCLUDED.assessment_type,'
             'assessment_sub_type=EXCLUDED.assessment_sub_type,'
+            'generation_and_creation_type = EXCLUDED.generation_and_creation_type,'
+            'assessment_class = EXCLUDED.assessment_class,'
             'lecture_id = EXCLUDED.lecture_id,'
             'max_marks=EXCLUDED.max_marks,'
             'total_questions=EXCLUDED.total_questions,'
@@ -140,7 +143,9 @@ def extract_data_to_nested(**kwargs):
                 transform_row[40],
                 transform_row[41],
                 transform_row[42],
-                transform_row[43]
+                transform_row[43],
+                transform_row[44],
+                transform_row[45]
 
             )
         )
@@ -168,6 +173,8 @@ create_table = PostgresOperator(
             assessment_release_date DATE,
             assessment_type varchar(64),
             assessment_sub_type varchar(32),
+            generation_and_creation_type varchar(256),
+            assessment_class varchar(256),
             lecture_id bigint,
             max_marks int,
             total_questions int,
@@ -229,12 +236,31 @@ transform_data = PostgresOperator(
                     when assessments.assessment_type = 4 then 'Duration Assessment'
                     when assessments.assessment_type = 5 then 'Poll Assessment'
                 end as assessment_type,
+                
                 case 
                     when assessments.sub_type = 1 then 'General'
                     when assessments.sub_type = 2 then 'In-Class'
                     when assessments.sub_type = 3 then 'Post-Class'
-                    when assessments.sub_type = 4 then 'Classroom-Quiz'
                 end as assessment_sub_type,
+
+                case 
+                	when assessments.generation_and_creation_type = 1 then 'Fully Automated'
+                	when assessments.generation_and_creation_type = 2 then 'Manually Released'
+                	when assessments.generation_and_creation_type = 3 then 'Manually Created'
+                	when assessments.generation_and_creation_type = 4 then 'Fully Manual'
+                end as generation_and_creation_type,
+                
+                case 
+                	when (assessments.assessment_type = 1 and assessments.sub_type = 1 and assessments.generation_and_creation_type = 1) then 'General Quiz'
+	                when (assessments.assessment_type = 1 and assessments.sub_type = 2 and assessments.generation_and_creation_type = 1) then 'In-Class Automated Quiz'
+                	when (assessments.assessment_type = 1 and assessments.sub_type = 3 and assessments.generation_and_creation_type = 1) then 'Post-Class Automated Quiz'
+                	when assessments.assessment_type = 1 and assessments.generation_and_creation_type = 4 then 'Instructor Quiz'
+                	when assessments.assessment_type = 1 and assessments.generation_and_creation_type = 2 then 'Classroom Quiz'
+                	when assessments.assessment_type = 2 then 'Filtering Assessment'
+                	when assessments.assessment_type in (3,4) then 'MCQ-Contest'
+                	when assessments.assessment_type = 5 then 'Poll Assessment'
+                end as assessment_class,
+                
                 
                 date(assessments.start_timestamp) as assessment_release_date,
                 date(assessment_question_user_mapping.assessment_started_at) as assessment_open_date,
@@ -268,8 +294,8 @@ transform_data = PostgresOperator(
                 on course_user_mapping.course_id = assessments.course_id and status in (5,8,9) and label_id is null and lower(course_user_mapping.unit_type) like 'learning'
             left join assessment_question_user_mapping
                 on assessment_question_user_mapping.assessment_id = assessments.assessment_id and assessment_question_user_mapping.course_user_mapping_id = course_user_mapping.course_user_mapping_id
-            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17
-            order by 8 desc),
+            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19
+            order by 10 desc),
             
         overall_avg_marks as 
             (select 
@@ -306,6 +332,24 @@ transform_data = PostgresOperator(
                             when assessments.sub_type = 4 then 'Classroom-Quiz'
                         end as assessment_sub_type,
                         
+                        case 
+		                	when assessments.generation_and_creation_type = 1 then 'Fully Automated'
+		                	when assessments.generation_and_creation_type = 2 then 'Manually Released'
+		                	when assessments.generation_and_creation_type = 3 then 'Manually Created'
+		                	when assessments.generation_and_creation_type = 4 then 'Fully Manual'
+		                end as generation_and_creation_type,
+                
+		                case 
+		                	when (assessments.assessment_type = 1 and assessments.sub_type = 1 and assessments.generation_and_creation_type = 1) then 'General Quiz'
+			                when (assessments.assessment_type = 1 and assessments.sub_type = 2 and assessments.generation_and_creation_type = 1) then 'In-Class Automated Quiz'
+		                	when (assessments.assessment_type = 1 and assessments.sub_type = 3 and assessments.generation_and_creation_type = 1) then 'Post-Class Automated Quiz'
+		                	when assessments.assessment_type = 1 and assessments.generation_and_creation_type = 2 then 'Classroom Quiz'
+		                	when assessments.assessment_type = 1 and assessments.generation_and_creation_type = 4 then 'Instructor Quiz'
+		                	when assessments.assessment_type = 2 then 'Filtering Assessment'
+		                	when assessments.assessment_type in (3,4) then 'MCQ-Contest'
+		                	when assessments.assessment_type = 5 then 'Poll Assessment'
+		                end as assessment_class,
+		                        
                         date(assessments.start_timestamp) as assessment_release_date,
                         date(assessment_question_user_mapping.assessment_started_at) as assessment_open_date,
                         date(assessment_question_user_mapping.assessment_completed_at) as assessment_submission_date,
@@ -349,7 +393,7 @@ transform_data = PostgresOperator(
                         on course_user_mapping_new.course_id = assessments.course_id and date(date_trunc('week', assessments.start_timestamp)) = course_user_mapping_new.week_view    
                     left join assessment_question_user_mapping
                         on assessment_question_user_mapping.assessment_id = assessments.assessment_id and assessment_question_user_mapping.course_user_mapping_id = course_user_mapping_new.course_user_mapping_id
-                    group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16),
+                    group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18),
 
             overall_avg_marks as 
                 (select 
@@ -369,6 +413,8 @@ transform_data = PostgresOperator(
                 assessment_release_date,
                 assessment_type,
                 assessment_sub_type,
+                generation_and_creation_type,
+                assessment_class,
                 max_marks,
                 question_count as total_questions,
                 sum(questions_marked) as history_based_total_mcqs_marked,
@@ -396,7 +442,7 @@ transform_data = PostgresOperator(
                 history_based_assessments_data
             left join overall_avg_marks
                 on overall_avg_marks.assessment_id = history_based_assessments_data.assessment_id
-            group by 1,2,3,4,5,6,7)
+            group by 1,2,3,4,5,6,7,8,9)
            
 
         select 
@@ -405,11 +451,13 @@ transform_data = PostgresOperator(
             student_all_raw.assessment_release_date,
             student_all_raw.assessment_type,
             student_all_raw.assessment_sub_type,
+           	student_all_raw.generation_and_creation_type,
+            student_all_raw.assessment_class,
             student_all_raw.lecture_id,
             student_all_raw.max_marks,
-            student_all_raw.question_count as total_questions,
+            student_all_raw.question_count as total_questions, -- column number 10
             sum(questions_marked) as total_mcqs_marked,
-            history_based_assessments_data.history_based_total_mcqs_marked,
+            history_based_assessments_data.history_based_total_mcqs_marked, -- column number 12
             sum(questions_correct) as total_correct_mcqs,
             history_based_assessments_data.history_based_total_correct_mcqs,
             count(distinct user_id) filter (where assessment_attempt_status not like 'Not Attempted') as students_opened,
@@ -417,7 +465,7 @@ transform_data = PostgresOperator(
             count(distinct user_id) filter (where assessment_attempt_status like 'Attempted On Time') as users_opened_on_time,
             history_based_assessments_data.history_based_users_opened_on_time,
             count(distinct user_id) filter (where assessment_attempt_status like 'Late Attempt') as users_opened_late,
-            history_based_assessments_data.history_based_users_opened_late,
+            history_based_assessments_data.history_based_users_opened_late, -- column number 20
             count(distinct user_id) filter (where assessment_submission_status not like 'Not Submitted') as students_submitted,
             history_based_assessments_data.history_based_students_submitted,
             count(distinct user_id) filter (where assessment_submission_status like 'On Time Submission') as users_submitted_on_time,
@@ -430,7 +478,7 @@ transform_data = PostgresOperator(
             end as overall_avg_assessment_percent,
             history_based_assessments_data.history_based_overall_avg_assessment_percent,
             count(distinct user_id) filter (where assessment_percent >= overall_avg_assessment_percent) as students_above_avg_percent,
-            history_based_assessments_data.history_based_students_above_avg_percent,
+            history_based_assessments_data.history_based_students_above_avg_percent, -- column number 30
             count(distinct user_id) filter (where assessment_percent < overall_avg_assessment_percent) as students_below_avg_percent,
             history_based_assessments_data.history_based_students_below_avg_percent,
             percentile_cont(0.5) within group (order by marks_obtained) as median_marks,
@@ -440,10 +488,10 @@ transform_data = PostgresOperator(
             count(distinct user_id) filter (where assessment_percent > 0 and assessment_percent < 25) as "users_with_marks_btw_0_and_25",
             history_based_assessments_data."history_based_users_with_marks_btw_0_and_25",
             count(distinct user_id) filter (where assessment_percent >= 25 and assessment_percent < 50)  as "users_with_marks_btw_25_and_50",
-            history_based_assessments_data."history_based_users_with_marks_btw_25_and_50",
+            history_based_assessments_data."history_based_users_with_marks_btw_25_and_50", -- column number 40
             count(distinct user_id) filter (where assessment_percent >= 50 and assessment_percent < 75) as "users_with_marks_btw_50_and_75",
             history_based_assessments_data."history_based_users_with_marks_btw_50_and_75",
-           count(distinct user_id) filter (where assessment_percent >= 75 and assessment_percent < 100) as "users_with_marks_btw_75_and_100",
+           	count(distinct user_id) filter (where assessment_percent >= 75 and assessment_percent < 100) as "users_with_marks_btw_75_and_100",
             history_based_assessments_data."history_based_users_with_marks_btw_75_and_100",
             count(distinct user_id) filter (where assessment_percent = 100) as users_with_full_marks,
             history_based_assessments_data.history_based_users_with_full_marks
@@ -453,7 +501,7 @@ transform_data = PostgresOperator(
             on overall_avg_marks.assessment_id = student_all_raw.assessment_id
         left join history_based_assessments_data
             on history_based_assessments_data.assessment_id = student_all_raw.assessment_id
-        group by 1,2,3,4,5,6,7,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44;
+        group by 1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46;
         ''',
     dag=dag
 )
