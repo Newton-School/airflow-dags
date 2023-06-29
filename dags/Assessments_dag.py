@@ -38,11 +38,11 @@ def extract_data_to_nested(**kwargs):
 
             'INSERT INTO assessments (assessment_id,created_at,hash,'
             'start_timestamp,end_timestamp,title,course_id,hidden,is_proctored_exam,'
-            'max_marks,max_attempts,assessment_type,lecture_slot_id,lecture_id,'
+            'max_marks,max_attempts,assessment_type,generation_and_creation_type,lecture_slot_id,lecture_id,'
             'was_competitive,random_multiple_choice_questions,sub_type,preserve_question_sequence,'
             'assessment_mapping_type,question_count)'
             
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             
             'on conflict (assessment_id) do update set start_timestamp = EXCLUDED.start_timestamp,'
             'end_timestamp = EXCLUDED.end_timestamp,'
@@ -52,6 +52,7 @@ def extract_data_to_nested(**kwargs):
             'max_marks = EXCLUDED.max_marks,'
             'max_attempts = EXCLUDED.max_attempts,'
             'assessment_type = EXCLUDED.assessment_type,'
+            'generation_and_creation_type = EXCLUDED.generation_and_creation_type,'
             'lecture_slot_id = EXCLUDED.lecture_slot_id,'
             'lecture_id = EXCLUDED.lecture_id,'
             'was_competitive = EXCLUDED.was_competitive,'
@@ -80,7 +81,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[16],
                 transform_row[17],
                 transform_row[18],
-                transform_row[19]
+                transform_row[19],
+                transform_row[20]
             )
         )
     pg_conn.commit()
@@ -113,6 +115,7 @@ create_table = PostgresOperator(
             max_marks int,
             max_attempts int,
             assessment_type int,
+            generation_and_creation_type int,
             lecture_slot_id bigint,
             lecture_id bigint,
             was_competitive boolean,
@@ -143,6 +146,7 @@ transform_data = PostgresOperator(
         assessments_assessment.max_marks,
         assessments_assessment.max_attempts,
         assessments_assessment.assessment_type,
+        assessments_assessment.generation_and_creation_type, 
         assessments_assessment.lecture_slot_id,
         video_sessions_lectureslot.lecture_id,
         assessments_assessment.was_competitive,
