@@ -179,7 +179,7 @@ order by 1 desc, 5, 2;
 
     # MAIN CODE AND CALLING OF FUNCTIONS
     new_df = pd.DataFrame(rows, columns=column_names)  # copy of the original df
-    result_df = pd.DataFrame([], columns=column_names)
+    #result_df = pd.DataFrame([], columns=column_names)
     for i, row in df.groupby('lecture_id'):
         instructor_dataframe = row[row['user_type'] == 'Instructor']
         instructor_dataframe = instructor_dataframe.sort_values('join_time')
