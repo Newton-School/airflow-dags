@@ -67,7 +67,7 @@ def calculate_student_instructor_overlapping_time(student_join_time, student_lea
             overlap_time = max(overlap_end - overlap_start, pd.Timedelta(0))  # Ensure positive time difference
             overlapping_time += (overlap_end - overlap_start).total_seconds()
 
-    print("Bhai Nan aaya hai", student_leave_time, student_join_time, instructor_times)
+    #print("Bhai Nan aaya hai", student_leave_time, student_join_time, instructor_times)
     return overlapping_time
 
 
@@ -169,7 +169,6 @@ from
     vsl_cur_raw
 left join inst_details
     on inst_details.lecture_id = vsl_cur_raw.lecture_id and inst_details.inst_cum_id = vsl_cur_raw.course_user_mapping_id
-where vsl_cur_raw.lecture_id = 28065
 order by 1 desc, 5, 2;
     """)
 
@@ -180,7 +179,6 @@ order by 1 desc, 5, 2;
     # MAIN CODE AND CALLING OF FUNCTIONS
     new_df = pd.DataFrame()  # copy of the original df
     for i, row in df.groupby('lecture_id'):
-        # if i == 28500:
         instructor_dataframe = row[row['user_type'] == 'Instructor']
         instructor_dataframe = instructor_dataframe.sort_values('join_time')
         if instructor_dataframe.shape[0] == 0:
@@ -189,9 +187,7 @@ order by 1 desc, 5, 2;
         instructor_times = np.array(instructor_dataframe[['join_time', 'leave_time']].values.tolist())
         # concat_instructor_dataframe
         new_df = pd.concat([new_df, instructor_dataframe])
-        #    print(instructor_times)
         for j, row2 in row.groupby('course_user_mapping_id'):
-            # if j == 3027967:
             user_type = row2['user_type'].values[0]
             if user_type == 'User':
                 row2 = row2.sort_values('join_time')
@@ -213,8 +209,8 @@ order by 1 desc, 5, 2;
                     overlapping_time_seconds = calculate_student_instructor_overlapping_time(student_join_time,
                                                                                              student_leave_time,
                                                                                              instructor_times)
-                    student_dataframe.at[original_index, 'overlapping_time_seconds'] = overlapping_time_seconds
-                    student_dataframe.at[original_index, 'overlapping_time_minutes'] = overlapping_time_seconds / 60
+                    student_dataframe.at[original_index, 'overlapping_time_seconds'] = round(overlapping_time_seconds, 0)
+                    student_dataframe.at[original_index, 'overlapping_time_minutes'] = round(overlapping_time_seconds/60, 2)
                 new_df = pd.concat([new_df, student_dataframe])
 
     # # MAIN CODE AND CALLING OF FUNCTIONS
