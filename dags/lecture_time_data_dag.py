@@ -215,6 +215,7 @@ order by 1 desc, 5, 2;
                     student_dataframe.at[original_index, 'overlapping_time_minutes'] = round(overlapping_time_seconds /60,2)
                     print("student_dataframe", student_dataframe)
                 print("student dataframe new", student_dataframe, new_df)
+                print("new df", new_df)
                 new_df = pd.concat([new_df, student_dataframe])
 
     new_df = new_df.drop(['index'], axis=1)
