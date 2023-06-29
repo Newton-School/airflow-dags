@@ -199,6 +199,7 @@ order by 1 desc, 5, 2;
 
                     # Get the index of the row in the original dataframe (df)
                     original_index = row3.name
+                    print("original index", original_index)
 
                     # Check if the row is redundant based on its index
                     is_redundant = original_index != k
