@@ -405,7 +405,17 @@ transform_data = PostgresOperator(
         )
         select 
         table_unique_key,company_id,company_name,company_type,key_account_manager,sales_poc,job_opening_id,job_title,placement_role_title,number_of_rounds,number_of_openings,user_id,course_id,referral_set,referred_at,placed_at,round_type,round_start_date,round_end_date,round,no_show,round_status,company_status,company_status_prod,company_course_user_mapping_id,company_course_user_mapping_progress_id
-        from d;
+        from d
+        order by 
+        case when round = 'Referral' then 1
+        when round = 'Round 1' then 2
+        when round = 'Round 2' then 3
+        when round = 'Round 3' then 4
+        when round = 'Round 4' then 5
+        when round = 'Pre-Final Round' then 6
+        when round = 'Final Round' then 7
+        when round = 'Placed' then 8 end  
+        ;
         ''',
     dag=dag
 )
