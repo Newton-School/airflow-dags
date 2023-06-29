@@ -179,7 +179,7 @@ order by 1 desc, 5, 2;
 
     # MAIN CODE AND CALLING OF FUNCTIONS
     new_df = pd.DataFrame(rows, columns=column_names)  # copy of the original df
-    #result_df = pd.DataFrame([], columns=column_names)
+    result_df = pd.DataFrame([], columns=column_names)
     for i, row in df.groupby('lecture_id'):
         instructor_dataframe = row[row['user_type'] == 'Instructor']
         instructor_dataframe = instructor_dataframe.sort_values('join_time')
@@ -216,13 +216,13 @@ order by 1 desc, 5, 2;
                 new_df = pd.concat([new_df, student_dataframe])
                 # print("result df", result_df)
 
-    #result_df = result_df.drop(['index'], axis=1)
+    result_df = result_df.drop(['index'], axis=1)
     column_positioning = ['lecture_id', 'course_user_mapping_id', 'user_type', 'join_time', 'leave_time', 'overlapping_time_seconds', 'overlapping_time_minutes']
     new_df = new_df.reindex(columns=column_positioning)
-    #result_df = result_df.reindex(columns=column_positioning)
+    result_df = result_df.reindex(columns=column_positioning)
 
     ti = kwargs['ti']
-    ti.xcom_push(key='preprocessed_data_df', value=new_df)
+    ti.xcom_push(key='preprocessed_data_df', value=result_df)
 
 
 def insert_preprocessed_data(**kwargs):
