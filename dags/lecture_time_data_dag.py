@@ -210,13 +210,10 @@ order by 1 desc, 5, 2;
                     overlapping_time_seconds = calculate_student_instructor_overlapping_time(student_join_time,
                                                                                              student_leave_time,
                                                                                              instructor_times)
-                    print("overlapping time second", math.isnan(round(overlapping_time_seconds,0)), overlapping_time_seconds)
-                    student_dataframe.at[original_index, 'overlapping_time_seconds'] = round(overlapping_time_seconds,0)
-                    student_dataframe.at[original_index, 'overlapping_time_minutes'] = round(overlapping_time_seconds /60,2)
-                    print("student_dataframe", student_dataframe)
-                print("student dataframe new", student_dataframe, new_df)
-                print("new df", new_df)
+                    student_dataframe.at[original_index, 'overlapping_time_seconds'] = round(overlapping_time_seconds, 0)
+                    student_dataframe.at[original_index, 'overlapping_time_minutes'] = round(overlapping_time_seconds/60, 2)
                 new_df = pd.concat([new_df, student_dataframe])
+                print("new df", new_df)
 
     new_df = new_df.drop(['index'], axis=1)
     column_positioning = ['lecture_id', 'course_user_mapping_id', 'user_type', 'join_time', 'leave_time', 'overlapping_time_seconds', 'overlapping_time_minutes']
