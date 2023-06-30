@@ -222,7 +222,7 @@ create_table = PostgresOperator(
             twelfth_marks real,
             bachelors_marks real,
             bachelors_grad_year DATE,
-            bachelors_field_od_study varchar(128),
+            bachelors_field_of_study varchar(128),
             masters_marks real,
             masters_grad_year DATE,
             masters_degree varchar(128),
