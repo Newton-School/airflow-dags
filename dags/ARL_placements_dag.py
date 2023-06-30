@@ -33,8 +33,8 @@ def extract_data_to_nested(**kwargs):
             'user_id,course_id,referral_set,referred_at,placed_at,'
             'round_type,round_start_date,round_end_date,round,no_show,'
             'round_status,company_status,company_status_prod,company_course_user_mapping_id,'
-            'company_course_user_mapping_progress_id)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'company_course_user_mapping_progress_id,round_new)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set company_name=EXCLUDED.company_name,'
             'company_type=EXCLUDED.company_type,key_account_manager=EXCLUDED.key_account_manager,'
             'sales_poc=EXCLUDED.sales_poc,job_title=EXCLUDED.job_title,'
@@ -44,7 +44,8 @@ def extract_data_to_nested(**kwargs):
             'round_start_date=EXCLUDED.round_start_date,round_end_date=EXCLUDED.round_end_date,'
             'round=EXCLUDED.round,no_show=EXCLUDED.no_show,round_status=EXCLUDED.round_status,'
             'company_status=EXCLUDED.company_status,company_status_prod=EXCLUDED.company_status_prod,'
-            'company_course_user_mapping_progress_id=EXCLUDED.company_course_user_mapping_progress_id;',
+            'company_course_user_mapping_progress_id=EXCLUDED.company_course_user_mapping_progress_id,'
+            'round_new=EXCLUDED.round_new;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -72,6 +73,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[23],
                 transform_row[24],
                 transform_row[25],
+                transform_row[26],
             )
         )
     pg_conn.commit()
@@ -115,7 +117,8 @@ create_table = PostgresOperator(
             company_status varchar(40),
             company_status_prod varchar(40),
             company_course_user_mapping_id bigint,
-            company_course_user_mapping_progress_id bigint
+            company_course_user_mapping_progress_id bigint,
+            round_new int
         );
     ''',
     dag=dag
@@ -404,7 +407,15 @@ transform_data = PostgresOperator(
         select * from c
         )
         select 
-        table_unique_key,company_id,company_name,company_type,key_account_manager,sales_poc,job_opening_id,job_title,placement_role_title,number_of_rounds,number_of_openings,user_id,course_id,referral_set,referred_at,placed_at,round_type,round_start_date,round_end_date,round,no_show,round_status,company_status,company_status_prod,company_course_user_mapping_id,company_course_user_mapping_progress_id
+        table_unique_key,company_id,company_name,company_type,key_account_manager,sales_poc,job_opening_id,job_title,placement_role_title,number_of_rounds,number_of_openings,user_id,course_id,referral_set,referred_at,placed_at,round_type,round_start_date,round_end_date,round,no_show,round_status,company_status,company_status_prod,company_course_user_mapping_id,company_course_user_mapping_progress_id,
+        case when round = 'Referral' then 1
+        when round = 'Round 1' then 2
+        when round = 'Round 2' then 3
+        when round = 'Round 3' then 4
+        when round = 'Round 4' then 5
+        when round = 'Pre-Final Round' then 6
+        when round = 'Final Round' then 7
+        when round = 'Placed' then 8 end as round_new
         from d
         order by 
         case when round = 'Referral' then 1
