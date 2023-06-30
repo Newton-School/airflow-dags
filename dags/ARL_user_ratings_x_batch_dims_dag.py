@@ -217,7 +217,7 @@ create_table = PostgresOperator(
             mock_rating int,
             plagiarised_rating int,
             required_rating int,
-            module_percent real,
+            module_percent double precision,
             grade_obtained varchar(8),
             assignment_rating int,
             contest_rating int,
