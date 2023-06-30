@@ -108,6 +108,7 @@ def extract_data_to_nested(**kwargs):
             'plagiarised_contest_rating = EXCLUDED.plagiarised_contest_rating,'
             'plagiarised_proctored_contest_rating = EXCLUDED.plagiarised_proctored_contest_rating;',
             (
+                transform_row[0],
                 transform_row[1],
                 transform_row[2],
                 transform_row[3],
