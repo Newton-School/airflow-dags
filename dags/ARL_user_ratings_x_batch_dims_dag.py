@@ -58,7 +58,7 @@ def extract_data_to_nested(**kwargs):
             'plagiarised_assignment_rating,'
             'plagiarised_contest_rating,'
             'plagiarised_proctored_contest_rating)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set user_id = EXCLUDED.user_id,'
             'student_name = EXCLUDED.student_name,'
             'date_joined = EXCLUDED.date_joined,'
