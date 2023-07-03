@@ -57,7 +57,7 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS open_ai_coding_playground_submission_hint (
            id int not null PRIMARY KEY,
-           submission_token bigint,
+           submission_token varchar(64),
            playground_hash varchar(256),
            ai_suggestion_response varchar(10000),
            created_at TIMESTAMP,
