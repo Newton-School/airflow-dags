@@ -88,7 +88,7 @@ def fetch_data_and_preprocess(**kwargs):
 
     inserted_lecture_id = list(result_cursor.fetchall())
 
-    pg_cursor.execute(text("""
+    query = text("""
     with vsl_cur_raw as
     (select
         lecture_id,
@@ -182,7 +182,11 @@ left join inst_details
     on inst_details.lecture_id = vsl_cur_raw.lecture_id and inst_details.inst_cum_id = vsl_cur_raw.course_user_mapping_id
 where vsl_cur_raw.lecture_id not in ANY(:inserted_lecture_ids) 
 order by 1 desc, 5, 2;
-    """),inserted_lecture_ids = inserted_lecture_id)
+    """).bindparams(inserted_lecture_ids=inserted_lecture_id)
+
+    print(query)
+
+    pg_cursor.execute(query)
 
     rows = pg_cursor.fetchall()
     column_names = ['lecture_id', 'course_user_mapping_id', 'join_time', 'leave_time', 'user_type']
