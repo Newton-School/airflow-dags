@@ -3,6 +3,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from sqlalchemy import text
 from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from datetime import datetime
@@ -77,7 +78,17 @@ def fetch_data_and_preprocess(**kwargs):
     pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
 
-    pg_cursor.execute("""
+    result_hook = PostgresHook(postgres_conn_id='postgres_result_db')
+    result_conn = pg_hook.get_conn()
+    result_cursor = pg_conn.cursor()
+
+    result_cursor.execute("""
+    select distinct lecture_id from lecture_engagement_time;
+        """)
+
+    inserted_lecture_id = list(result_cursor.fetchall())
+
+    pg_cursor.execute(text("""
     with vsl_cur_raw as
     (select
         lecture_id,
@@ -169,8 +180,9 @@ from
     vsl_cur_raw
 left join inst_details
     on inst_details.lecture_id = vsl_cur_raw.lecture_id and inst_details.inst_cum_id = vsl_cur_raw.course_user_mapping_id
+where vsl_cur_raw.lecture_id not in ANY(:inserted_lecture_ids) 
 order by 1 desc, 5, 2;
-    """)
+    """),inserted_lecture_ids = inserted_lecture_id)
 
     rows = pg_cursor.fetchall()
     column_names = ['lecture_id', 'course_user_mapping_id', 'join_time', 'leave_time', 'user_type']
