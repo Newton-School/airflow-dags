@@ -22,14 +22,15 @@ default_args = {
     'start_date': datetime(2023, 3, 16),
 }
 
+
 # DATA CLEANING FUNCTION
 def remove_redundant_rows(df):
     df = df.copy()
     df = df.reset_index()  # Create a copy of the DataFrame to avoid modifying the original data
     try:
-      join_time = df.iloc[0]["join_time"]
+        join_time = df.iloc[0]["join_time"]
     except:
-      print(df)
+        print(df)
     leave_time = df.iloc[0]["leave_time"]
     primary_index = 0
 
@@ -68,7 +69,7 @@ def calculate_student_instructor_overlapping_time(student_join_time, student_lea
             overlap_time = max(overlap_end - overlap_start, pd.Timedelta(0))  # Ensure positive time difference
             overlapping_time += (overlap_end - overlap_start).total_seconds()
 
-    #print("Bhai Nan aaya hai", student_leave_time, student_join_time, instructor_times)
+    # print("Bhai Nan aaya hai", student_leave_time, student_join_time, instructor_times)
     return overlapping_time
 
 
@@ -117,7 +118,7 @@ course_inst_mapping_raw as
     left join auth_user
         on auth_user.id = trainers_instructor.user_id
     group by 1,2,3,4),
-    
+
 inst_lecture_details as
     (select 
         video_sessions_lecture.id as lecture_id,
@@ -166,7 +167,7 @@ inst_details as
         inst_cum_id
     from 
         lecture_inst_mapping)
-    
+
 select
     vsl_cur_raw.lecture_id,
     vsl_cur_raw.course_user_mapping_id,
@@ -180,7 +181,7 @@ from
     vsl_cur_raw
 left join inst_details
     on inst_details.lecture_id = vsl_cur_raw.lecture_id and inst_details.inst_cum_id = vsl_cur_raw.course_user_mapping_id
-where vsl_cur_raw.lecture_id <> ANY(%s)
+where vsl_cur_raw.lecture_id <> ANY(%s) 
 order by 1 desc, 5, 2;
     """
 
@@ -225,8 +226,10 @@ order by 1 desc, 5, 2;
                     overlapping_time_seconds = calculate_student_instructor_overlapping_time(student_join_time,
                                                                                              student_leave_time,
                                                                                              instructor_times)
-                    student_dataframe.at[original_index, 'overlapping_time_seconds'] = round(overlapping_time_seconds, 0)
-                    student_dataframe.at[original_index, 'overlapping_time_minutes'] = round(overlapping_time_seconds/60, 2)
+                    student_dataframe.at[original_index, 'overlapping_time_seconds'] = round(overlapping_time_seconds,
+                                                                                             0)
+                    student_dataframe.at[original_index, 'overlapping_time_minutes'] = round(
+                        overlapping_time_seconds / 60, 2)
                 new_df = pd.concat([new_df, student_dataframe])
 
     # # MAIN CODE AND CALLING OF FUNCTIONS
@@ -269,7 +272,8 @@ order by 1 desc, 5, 2;
     #             # print("result df", result_df)
 
     # result_df = result_df.drop(['index'], axis=1)
-    column_positioning = ['lecture_id', 'course_user_mapping_id', 'user_type', 'join_time', 'leave_time', 'overlapping_time_seconds', 'overlapping_time_minutes']
+    column_positioning = ['lecture_id', 'course_user_mapping_id', 'user_type', 'join_time', 'leave_time',
+                          'overlapping_time_seconds', 'overlapping_time_minutes']
     new_df = new_df.reindex(columns=column_positioning)
     # result_df = result_df.reindex(columns=column_positioning)
 
@@ -302,6 +306,7 @@ def insert_preprocessed_data(**kwargs):
         )
 
     pg_conn.commit()
+
 
 dag = DAG(
     'lecture_time_dag',
