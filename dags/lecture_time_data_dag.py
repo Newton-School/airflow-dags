@@ -79,8 +79,8 @@ def fetch_data_and_preprocess(**kwargs):
     pg_cursor = pg_conn.cursor()
 
     result_hook = PostgresHook(postgres_conn_id='postgres_result_db')
-    result_conn = pg_hook.get_conn()
-    result_cursor = pg_conn.cursor()
+    result_conn = result_hook.get_conn()
+    result_cursor = result_conn.cursor()
 
     result_cursor.execute("""
     select distinct lecture_id from lecture_engagement_time;
