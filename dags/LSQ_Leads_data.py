@@ -28,7 +28,7 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO lsq_leads_x_activities (prospect_id,activity_id,email_address,lead_created_on,'
-            'event_name,modified_on,prospect_stage,mid_funnel_count,mid_funnel_buckets,'
+            'event,modified_on,prospect_stage,mid_funnel_count,mid_funnel_buckets,'
             'reactivation_bucket,reactivation_date,source_intended_course,created_by_name,event_name,'
             'notable_event_description,previous_stage,current_stage,call_type,caller,duration,call_notes,'
             'previous_owner,current_owner,has_attachments,call_status,call_sub_status,call_connection_status)'
@@ -85,7 +85,7 @@ create_table = PostgresOperator(
             activity_id varchar(256) not null PRIMARY KEY,
             email_address varchar(256),
             lead_created_on TIMESTAMP,
-            event_name varchar(256),
+            event varchar(256),
             modified_on TIMESTAMP,
             prospect_stage varchar(256),
             mid_funnel_count int,
@@ -121,7 +121,7 @@ transform_data = PostgresOperator(
             l.activityid as activity_id,
             l2.emailaddress as email_address,
             l2.createdon as lead_created_on,
-            eventname as event_name,
+            eventname as event,
             l.createdon as modified_on,
             l2.prospectstage as prospect_stage,
             mx_mid_funnel_count as mid_funnel_count,
