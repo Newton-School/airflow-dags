@@ -101,6 +101,7 @@ def fetch_data_and_preprocess(**kwargs):
     from
         video_sessions_lecturecourseuserreport
     where report_type = 4
+    and date(join_time) >= '2023-07-05'
     group by 1,2,3,4,5,6),
 
 course_inst_mapping_raw as
@@ -315,7 +316,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='Live lecture ET data with overlapping time calculation and table creation/update',
-    schedule_interval='30 2 * * FRI',
+    schedule_interval='30 2 * * *',
     catchup=False
 )
 
