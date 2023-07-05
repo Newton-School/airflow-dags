@@ -32,7 +32,7 @@ def extract_data_to_nested(**kwargs):
             'reactivation_bucket,reactivation_date,source_intended_course,created_by_name,event_name,'
             'notable_event_description,previous_stage,current_stage,call_type,caller,duration,call_notes,'
             'previous_owner,current_owner,has_attachments,call_status,call_sub_status,call_connection_status)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (activity_id) do nothing;',
             (
                 transform_row[0],
@@ -62,7 +62,6 @@ def extract_data_to_nested(**kwargs):
                 transform_row[24],
                 transform_row[25],
                 transform_row[26],
-                transform_row[27],
             )
         )
     pg_conn.commit()
