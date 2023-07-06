@@ -51,7 +51,8 @@ create_table = PostgresOperator(
             all_test_case_passed boolean,
             playground_type varchar(20),
             playground_id bigint,
-            hash varchar(30),
+            playground_hash varchar(256),
+            hash varchar(256),
             latest_assignment_question_hint_mapping_id bigint,
             late_submission boolean,
             max_test_case_passed int,
@@ -82,15 +83,15 @@ def extract_data_to_nested(**kwargs):
         pg_cursor = pg_conn.cursor()
         pg_cursor.execute(
             'INSERT INTO assignment_question_user_mapping (table_unique_key,user_id,assignment_id,question_id,question_started_at,'
-            'question_completed_at,completed,all_test_case_passed,playground_type,playground_id,hash,'
+            'question_completed_at,completed,all_test_case_passed,playground_type,playground_id,playground_hash,hash,'
             'latest_assignment_question_hint_mapping_id,late_submission,max_test_case_passed,assignment_started_at,'
             'assignment_completed_at,assignment_cheated_marked_at,cheated,plagiarism_submission_id,'
             'plagiarism_score,solution_length,number_of_submissions,error_faced_count) '
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set question_started_at=EXCLUDED.question_started_at,'
             'question_completed_at = EXCLUDED.question_completed_at,'
             'completed=EXCLUDED.completed, all_test_case_passed=EXCLUDED.all_test_case_passed, '
-            'playground_type = EXCLUDED.playground_type, playground_id = EXCLUDED.playground_id,'
+            'playground_type = EXCLUDED.playground_type, playground_id = EXCLUDED.playground_id,playground_hash=EXCLUDED.playground_hash,'
             'latest_assignment_question_hint_mapping_id=EXCLUDED.latest_assignment_question_hint_mapping_id,'
             'late_submission=EXCLUDED.late_submission, max_test_case_passed=EXCLUDED.max_test_case_passed, '
             'assignment_started_at=EXCLUDED.assignment_started_at,assignment_completed_at=EXCLUDED.assignment_completed_at,'
@@ -122,6 +123,7 @@ def extract_data_to_nested(**kwargs):
                     transform_row[20],
                     transform_row[21],
                     transform_row[22],
+                    transform_row[23],
                  )
         )
         pg_conn.commit()
@@ -270,6 +272,13 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
             when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then assignments_assignmentcourseuserquestionmapping.project_playground_id
             when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then assignments_assignmentcourseuserquestionmapping.subjective_id else null end as playground_id,
             
+            case
+            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then pcp.hash
+            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then pfp.hash
+            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then pgp.hash
+            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then ppp.hash
+            else null end as playground_hash,
+            
             assignments_assignmentcourseuserquestionmapping.hash,
             assignments_assignmentcourseuserquestionmapping.latest_assignment_question_hint_mapping_id,
             assignments_assignmentcourseuserquestionmapping.late_submission,
@@ -315,6 +324,12 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
               
                 left join assignments_assignmentcourseuserquestionmapping 
                     on assignments_assignmentcourseuserquestionmapping.assignment_course_user_mapping_id = assignments_assignmentcourseusermapping.id 
+                
+                left join playgrounds_codingplayground pcp on pcp.id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
+                left join playgrounds_frontendplayground pfp on pfp.id = assignments_assignmentcourseuserquestionmapping.frontend_playground_id
+                left join playgrounds_gameplayground pgp on pgp.id = assignments_assignmentcourseuserquestionmapping.game_playground_id
+                left join playgrounds_projectplayground ppp on ppp.id = assignments_assignmentcourseuserquestionmapping.project_playground_id
+                
                         
                 left join playgrounds_codingplaygroundsubmission pcps on pcps.coding_playground_id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
                 left join playgrounds_playgroundplagiarismreport as plag_coding on plag_coding.object_id = pcps.id and plag_coding.content_type_id = 70
