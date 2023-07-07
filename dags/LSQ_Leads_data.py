@@ -229,7 +229,7 @@ transform_data = PostgresOperator(
                 
             FROM leadsquareactivity l 
             left join leadsquareleadsdata l2 on l2.prospectid = l.relatedprospectid 
-            order by l2.prospectid,l.createdon;
+            order by 1,4;
         ''',
     dag=dag
 )
