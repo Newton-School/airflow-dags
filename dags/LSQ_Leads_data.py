@@ -28,12 +28,17 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO lsq_leads_x_activities (prospect_id,activity_id,email_address,lead_created_on,'
-            'event,modified_on,prospect_stage,mid_funnel_count,mid_funnel_buckets,'
+            'event,modified_on,prospect_stage,lead_owner,lead_sub_status,lead_last_call_status,'
+            'lead_last_call_sub_status,lead_last_call_connection_status,'
+            'mid_funnel_count,mid_funnel_buckets,'
             'reactivation_bucket,reactivation_date,source_intended_course,created_by_name,event_name,'
             'notable_event_description,previous_stage,current_stage,call_type,caller,duration,call_notes,'
             'previous_owner,current_owner,has_attachments,call_status,call_sub_status,call_connection_status)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (activity_id) do nothing;',
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (activity_id) do update set lead_owner = EXCLUDED.lead_owner,'
+            'lead_sub_status=EXCLUDED.lead_sub_status,lead_last_call_status=EXCLUDED.lead_last_call_status,'
+            'lead_last_call_sub_status=EXCLUDED.lead_last_call_sub_status,'
+            'lead_last_call_connection_status=EXCLUDED.lead_last_call_connection_status;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -62,6 +67,11 @@ def extract_data_to_nested(**kwargs):
                 transform_row[24],
                 transform_row[25],
                 transform_row[26],
+                transform_row[27],
+                transform_row[28],
+                transform_row[29],
+                transform_row[30],
+                transform_row[31],
             )
         )
     pg_conn.commit()
@@ -87,6 +97,11 @@ create_table = PostgresOperator(
             event varchar(256),
             modified_on TIMESTAMP,
             prospect_stage varchar(256),
+            lead_owner varchar(256),
+            lead_sub_status varchar(256),
+            lead_last_call_status varchar(256),
+            lead_last_call_sub_status varchar(256),
+            lead_last_call_connection_status varchar(256),
             mid_funnel_count int,
             mid_funnel_buckets varchar(256),
             reactivation_bucket varchar(256),
@@ -123,6 +138,11 @@ transform_data = PostgresOperator(
             eventname as event,
             l.createdon::timestamp + INTERVAL '5 hours 30 minutes' as modified_on,
             l2.prospectstage as prospect_stage,
+            l2.owneridname as lead_owner,
+            l2.mx_substatus as lead_sub_status,
+            l2.mx_last_call_status as lead_last_call_status,
+            l2.mx_last_call_sub_status as lead_last_call_sub_status,
+            l2.mx_last_call_connection_status as lead_last_call_connection_status,
             mx_mid_funnel_count as mid_funnel_count,
             mx_mid_funnel_buckets as mid_funnel_buckets,
             mx_reactivation_bucket as reactivation_bucket,
