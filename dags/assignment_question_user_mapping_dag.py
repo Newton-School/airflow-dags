@@ -212,6 +212,11 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
               
                 left join assignments_assignmentcourseuserquestionmapping 
                     on assignments_assignmentcourseuserquestionmapping.assignment_course_user_mapping_id = assignments_assignmentcourseusermapping.id 
+                
+                left join playgrounds_codingplayground pcp on pcp.id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
+                left join playgrounds_frontendplayground pfp on pfp.id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id
+                left join playgrounds_gameplayground pgp on pgp.id = assignments_assignmentcourseuserquestionmapping.game_playground_id
+                left join playgrounds_projectplayground ppp on ppp.id = assignments_assignmentcourseuserquestionmapping.project_playground_id
                         
                 left join playgrounds_codingplaygroundsubmission pcps on pcps.coding_playground_id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
                 left join playgrounds_playgroundplagiarismreport as plag_coding on plag_coding.object_id = pcps.id and plag_coding.content_type_id = 70
