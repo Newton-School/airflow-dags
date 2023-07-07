@@ -326,7 +326,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                     on assignments_assignmentcourseuserquestionmapping.assignment_course_user_mapping_id = assignments_assignmentcourseusermapping.id 
                 
                 left join playgrounds_codingplayground pcp on pcp.id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
-                left join playgrounds_frontendplayground pfp on pfp.id = assignments_assignmentcourseuserquestionmapping.frontend_playground_id
+                left join playgrounds_frontendplayground pfp on pfp.id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id
                 left join playgrounds_gameplayground pgp on pgp.id = assignments_assignmentcourseuserquestionmapping.game_playground_id
                 left join playgrounds_projectplayground ppp on ppp.id = assignments_assignmentcourseuserquestionmapping.project_playground_id
                 
