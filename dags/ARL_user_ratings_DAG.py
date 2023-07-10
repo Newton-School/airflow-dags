@@ -200,6 +200,7 @@ transform_data = PostgresOperator(
                 when course_structure_id in (1,18) and status in (11,12) then 'ISA Cancelled Student'
                 when course_structure_id not in (1,18) and status in (30) then 'Deferred Student'
                 when course_structure_id not in (1,18) and status in (11) then 'Foreclosed Student'
+                when course_structure_id not in (1,18) and status in (12) then 'Reject by NS-Ops'
                 else 'Mapping Error'
             end as label_mapping_status,
             topic_pool_id,
