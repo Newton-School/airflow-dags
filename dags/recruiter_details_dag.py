@@ -32,8 +32,7 @@ def extract_data_to_nested(**kwargs):
             'airbyte_emitted_at,airbyte_normalized_at,airbyte_recruiter_details_hashid)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (linkedin_profile_url) do update set short_intro=EXCLUDED.short_intro,'
-            'hiring_manager_for_job_link=EXCLUDED.hiring_manager_for_job_link,company=EXCLUDED.company,'
-            ';',
+            'hiring_manager_for_job_link=EXCLUDED.hiring_manager_for_job_link,company=EXCLUDED.company;',
             (
                 transform_row[0],
                 transform_row[1],
