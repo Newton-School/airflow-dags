@@ -197,11 +197,10 @@ transform_data = PostgresOperator(
             case 
                 when label_id is null and status in (8,9) then 'Enrolled Student'
                 when label_id is not null and status in (8,9) then 'Label Marked Student'
-                when course_structure_id in (1,18) and status in (12) then 'ISA Cancelled Student'
+                when course_structure_id in (1,18) and status in (11,12) then 'ISA Cancelled Student'
                 when course_structure_id not in (1,18) and status in (30) then 'Deferred Student'
                 when course_structure_id not in (1,18) and status in (11) then 'Foreclosed Student'
                 else 'Mapping Error'
-                -- mapping error will pop up when PAP user_ids have cum.status as deferred(30) or cancelled_by_user(11) or upfront students marked as rejected_by_admin(12)
             end as label_mapping_status,
             topic_pool_id,
             template_name,
