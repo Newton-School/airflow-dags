@@ -35,7 +35,8 @@ def extract_data_to_nested(**kwargs):
             'notable_event_description,previous_stage,current_stage,call_type,caller,duration,call_notes,'
             'previous_owner,current_owner,has_attachments,call_status,call_sub_status,call_connection_status)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (activity_id) do update set lead_owner = EXCLUDED.lead_owner,'
+            'on conflict (activity_id) do update set prospect_stage=EXCLUDED.prospect_stage,'
+            'lead_owner = EXCLUDED.lead_owner,'
             'lead_sub_status=EXCLUDED.lead_sub_status,lead_last_call_status=EXCLUDED.lead_last_call_status,'
             'lead_last_call_sub_status=EXCLUDED.lead_last_call_sub_status,'
             'lead_last_call_connection_status=EXCLUDED.lead_last_call_connection_status;',
