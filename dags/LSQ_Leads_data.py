@@ -31,10 +31,10 @@ def extract_data_to_nested(**kwargs):
             'event,modified_on,prospect_stage,lead_owner,lead_sub_status,lead_last_call_status,'
             'lead_last_call_sub_status,lead_last_call_connection_status,'
             'mid_funnel_count,mid_funnel_buckets,'
-            'reactivation_bucket,reactivation_date,source_intended_course,created_by_name,event_name,'
+            'reactivation_bucket,reactivation_date,source_intended_course,intended_course,created_by_name,event_name,'
             'notable_event_description,previous_stage,current_stage,call_type,caller,duration,call_notes,'
             'previous_owner,current_owner,has_attachments,call_status,call_sub_status,call_connection_status)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (activity_id) do update set lead_owner = EXCLUDED.lead_owner,'
             'lead_sub_status=EXCLUDED.lead_sub_status,lead_last_call_status=EXCLUDED.lead_last_call_status,'
             'lead_last_call_sub_status=EXCLUDED.lead_last_call_sub_status,'
@@ -72,6 +72,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[29],
                 transform_row[30],
                 transform_row[31],
+                transform_row[32],
             )
         )
     pg_conn.commit()
@@ -107,6 +108,7 @@ create_table = PostgresOperator(
             reactivation_bucket varchar(256),
             reactivation_date TIMESTAMP,
             source_intended_course varchar(256),
+            intended_course varchar(256),
             created_by_name varchar(256),
             event_name varchar(256),
             notable_event_description varchar(3000),
@@ -147,7 +149,13 @@ transform_data = PostgresOperator(
             mx_mid_funnel_buckets as mid_funnel_buckets,
             mx_reactivation_bucket as reactivation_bucket,
             mx_reactivation_date as reactivation_date,
-            mx_source_intended_course as source_intended_course, 
+            mx_source_intended_course as source_intended_course,
+            case 
+            when lower(source_intended_course) like ('%fsd%') then 'FSD'
+            when lower(source_intended_course) like ('%full%') then 'FSD'
+            when lower(source_intended_course) like ('%data%') then 'DS'
+            when lower(source_intended_course) like ('%ds%') then 'DS'
+            when lower(source_intended_course) like '%bs%' then 'Bachelors' end as intended_course,
                 coalesce(cast((CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
                         WHERE (message->>'Key')::varchar = 'CreatedBy')
                     THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
