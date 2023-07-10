@@ -151,11 +151,11 @@ transform_data = PostgresOperator(
             mx_reactivation_date as reactivation_date,
             mx_source_intended_course as source_intended_course,
             case 
-            when lower(source_intended_course) like ('%fsd%') then 'FSD'
-            when lower(source_intended_course) like ('%full%') then 'FSD'
-            when lower(source_intended_course) like ('%data%') then 'DS'
-            when lower(source_intended_course) like ('%ds%') then 'DS'
-            when lower(source_intended_course) like '%bs%' then 'Bachelors' end as intended_course,
+            when lower(mx_source_intended_course) like ('%fsd%') then 'FSD'
+            when lower(mx_source_intended_course) like ('%full%') then 'FSD'
+            when lower(mx_source_intended_course) like ('%data%') then 'DS'
+            when lower(mx_source_intended_course) like ('%ds%') then 'DS'
+            when lower(mx_source_intended_course) like '%bs%' then 'Bachelors' end as intended_course,
                 coalesce(cast((CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
                         WHERE (message->>'Key')::varchar = 'CreatedBy')
                     THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
