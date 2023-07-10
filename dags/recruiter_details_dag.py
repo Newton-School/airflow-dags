@@ -27,11 +27,13 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO recruiter_details (airbyte_unique_key,name,company,short_intro,country_code,'
-            'contact_number,hiring_manager_for_job_link,linkedin_profile_url,airbyte_ab_id,'
+            'INSERT INTO recruiter_details (airbyte_unique_key,name,company,short_intro,'
+            'hiring_manager_for_job_link,linkedin_profile_url,airbyte_ab_id,'
             'airbyte_emitted_at,airbyte_normalized_at,airbyte_recruiter_details_hashid)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (job_description_url_without_job_id) do update set  ;',
+            'on conflict (linkedin_profile_url) do update set short_intro=EXCLUDED.short_intro,'
+            'hiring_manager_for_job_link=EXCLUDED.hiring_manager_for_job_link,company=EXCLUDED.company,'
+            ';',
             (
                 transform_row[0],
                 transform_row[1],
@@ -66,10 +68,10 @@ create_table = PostgresOperator(
             company varchar(256),
             short_intro varchar(512),
             hiring_manager_for_job_link varchar(1024),
-            linkedin_profile_url varchar(256),
+            linkedin_profile_url varchar(256) not null PRIMARY KEY,
             airbyte_ab_id varchar(36),
-            airbyte_emitted_at TIMESTAMP,
-            airbyte_normalized_at TIMESTAMP,
+            airbyte_emitted_at DATE,
+            airbyte_normalized_at DATE,
             airbyte_recruiter_details_hashid varchar(32)
         );
     ''',
@@ -80,15 +82,15 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_job_posting',
     sql='''select
-            _airbyte_unique_key as airbyte_unique_key,
+            distinct _airbyte_unique_key as airbyte_unique_key,
             name,
             company,
             short_intro,
             hiring_manager_for_job_link,
             linkedin_profile_url,
             _airbyte_ab_id as airbyte_ab_id,
-            _airbyte_emitted_at as airbyte_emitted_at,
-            _airbyte_normalized_at as airbyte_normalized_at,
+            date(_airbyte_emitted_at) as airbyte_emitted_at,
+            date(_airbyte_normalized_at) as airbyte_normalized_at,
             _airbyte_recruiter_details_hashid as airbyte_recruiter_details_hashid
             from recruiter_details;
         ''',
