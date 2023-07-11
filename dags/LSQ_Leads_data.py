@@ -27,15 +27,16 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO lsq_leads_x_activities (prospect_id,activity_id,email_address,lead_created_on,'
+            'INSERT INTO lsq_leads_x_activities (table_unique_key,prospect_id,activity_id,email_address,lead_created_on,'
             'event,modified_on,prospect_stage,lead_owner,lead_sub_status,lead_last_call_status,'
             'lead_last_call_sub_status,lead_last_call_connection_status,'
             'mid_funnel_count,mid_funnel_buckets,'
             'reactivation_bucket,reactivation_date,source_intended_course,intended_course,created_by_name,event_name,'
             'notable_event_description,previous_stage,current_stage,call_type,caller,duration,call_notes,'
             'previous_owner,current_owner,has_attachments,call_status,call_sub_status,call_connection_status)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (activity_id) do update set prospect_stage=EXCLUDED.prospect_stage,'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s'
+            ',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (table_unique_key) do update set prospect_stage=EXCLUDED.prospect_stage,'
             'lead_owner = EXCLUDED.lead_owner,'
             'lead_sub_status=EXCLUDED.lead_sub_status,lead_last_call_status=EXCLUDED.lead_last_call_status,'
             'lead_last_call_sub_status=EXCLUDED.lead_last_call_sub_status,'
@@ -74,6 +75,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[30],
                 transform_row[31],
                 transform_row[32],
+                transform_row[33],
             )
         )
     pg_conn.commit()
@@ -92,8 +94,9 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS lsq_leads_x_activities (
             id serial,
+            table_unique_key varchar(512) not null PRIMARY KEY, 
             prospect_id varchar(256),
-            activity_id varchar(256) not null PRIMARY KEY,
+            activity_id varchar(256),
             email_address varchar(256),
             lead_created_on TIMESTAMP,
             event varchar(256),
@@ -134,7 +137,9 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_lsq_leads',
     sql='''select
-            distinct l2.prospectid as prospect_id,
+            distinct 
+            concat(l2.prospectid,l.activityid) as table_unique_key,
+            l2.prospectid as prospect_id,
             l.activityid as activity_id,
             l2.emailaddress as email_address,
             l2.createdon::timestamp + INTERVAL '5 hours 30 minutes' as lead_created_on,
@@ -238,7 +243,7 @@ transform_data = PostgresOperator(
                 
             FROM leadsquareactivity l 
             left join leadsquareleadsdata l2 on l2.prospectid = l.relatedprospectid 
-            order by 1,4;
+            order by 2,5;
         ''',
     dag=dag
 )
