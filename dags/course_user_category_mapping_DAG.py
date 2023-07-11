@@ -97,7 +97,7 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
     sql='''
-        with user_level_data as 
+                with user_level_data as 
             (with all_data as
                     (with batch_module_mapping as
                         (with module_raw as
@@ -181,21 +181,34 @@ transform_data = PostgresOperator(
                     all_data
                 group by 1,2)    
             select
-                all_data.course_id,
-                all_data.course_name,
-                all_data.course_structure_class,
-                all_data.user_id,
-                all_data.course_user_mapping_status,
-                all_data.label_mapping_status,
+                cum.course_id,
+                cum.course_name,
+                c.course_structure_class,
+                cum.user_id,
+                cum.status,
+                case 
+                when cum.label_id is null and cum.status in (8,9) then 'Enrolled Student'
+                when cum.label_id is not null and cum.status in (8,9) then 'Label Marked Student'
+                when c.course_structure_id in (1,18) and cum.status in (11,12) then 'ISA Cancelled Student'
+                when c.course_structure_id not in (1,18) and cum.status in (30) then 'Deferred Student'
+                when c.course_structure_id not in (1,18) and cum.status in (11) then 'Foreclosed Student'
+                when c.course_structure_id not in (1,18) and cum.status in (12) then 'Reject by NS-Ops'
+                else 'Mapping Error'
+            end as label_mapping_status,
                 case 
                     when all_data.course_id not in (select distinct course_id from completed_module_count where comp_module_count > 0) and all_data.course_id <= 400 then 5
                     else completed_module_count.comp_module_count
                 end as completed_module_count,
                 count(distinct rating_topic_template_id) filter (where grade_obtained like 'A') as count_of_a
             from
-                all_data
+            	course_user_mapping cum 
+            join courses c 
+            	on c.course_id = cum.course_id and c.course_structure_id in (1,6,8,11,12,14,18,19,20,22,23,26)
+            		and cum.status in (8,9,11,12,30)
+            left join all_data
+            	on all_data.course_id = cum.course_id and all_data.user_id = cum.user_id 
             left join completed_module_count
-                on completed_module_count.course_id = all_data.course_id
+                on completed_module_count.course_id = cum.course_id
             group by 1,2,3,4,5,6,7
             order by 1 desc, 3)
         
@@ -203,10 +216,10 @@ transform_data = PostgresOperator(
             concat(course_id, user_id, course_id) as table_unique_key,
             user_level_data.*,
             case
-                when completed_module_count <> 0 and (count_of_a * 1.0 / completed_module_count) >= 0.9 then 'A1'
-                when completed_module_count <> 0 and (count_of_a * 1.0 / completed_module_count) >= 0.6 and (count_of_a * 1.0 / completed_module_count) < 0.9 then 'A2'
-                when completed_module_count <> 0 and (count_of_a * 1.0 / completed_module_count) >= 0.3 and (count_of_a * 1.0 / completed_module_count) < 0.6 then 'A3'
-                when completed_module_count <> 0 and (count_of_a * 1.0 / completed_module_count) < 0.3 then 'B'
+                when completed_module_count <> 0 and (count_of_a * 1.0 / completed_module_count) >= 1 then 'A1'
+                when completed_module_count <> 0 and (count_of_a * 1.0 / completed_module_count) >= 0.5 and (count_of_a * 1.0 / completed_module_count) < 1 then 'A2'
+                when completed_module_count <> 0 and (count_of_a * 1.0 / completed_module_count) > 0 and (count_of_a * 1.0 / completed_module_count) < 0.5 then 'A3'
+                when completed_module_count <> 0 and (count_of_a * 1.0 / completed_module_count) <= 0 then 'B'
                 else null
             end as student_category
         from
