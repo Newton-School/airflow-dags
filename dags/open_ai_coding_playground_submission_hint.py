@@ -59,7 +59,7 @@ create_table = PostgresOperator(
            id int not null PRIMARY KEY,
            submission_token varchar(64),
            playground_hash varchar(256),
-           ai_suggestion_response varchar(10000),
+           ai_suggestion_response varchar(100000),
            created_at TIMESTAMP,
            submission_status int,
            submission_type int
