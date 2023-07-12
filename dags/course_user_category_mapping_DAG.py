@@ -97,96 +97,85 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
     sql='''
-                with user_level_data as 
-            (with all_data as
-                    (with batch_module_mapping as
-                        (with module_raw as
-                            (select
-                                a.assignment_id,
-                                a.title as contest_name,
-                                a.course_id,
-                                c.course_name,
-                                date(a.start_timestamp) as contest_date,
-                                t.topic_template_id,
-                                t.template_name
-                            from 
-                                assignments a
-                            join courses c 
-                                on c.course_id = a.course_id and original_assignment_type in (3,4) 
-                                    and assignment_sub_type = 4
-                            join assignment_topic_mapping atm 
-                                on atm.assignment_id = a.assignment_id
-                            left join topics t 
-                                on t.topic_id = atm.topic_id and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
-                            group by 1,2,3,4,5,6,7
-                            order by 1 desc, 3, 4 desc)
-                        
-                        select distinct
-                            course_id,	
-                            course_name,
-                            topic_template_id,
-                            case 
-                                when topic_template_id in (102,344) then 145 -- react
-                                when topic_template_id in (103) then 146 -- JS
-                                when topic_template_id in (119,342) then 150 -- HTML/CSS
-                                when topic_template_id in (334) then 173 -- LDSA-1
-                                when topic_template_id in (338) then 177 -- LDSA-2
-                            end as rating_topic_template_id,
-                            -- introduced to map NS_datascience DB topic_pool_id to prod topic_template_id
-                            template_name
-                        from
-                            module_raw
-                        where topic_template_id in (102,103,119,334,338,342,344)
-                        group by 1,2,3,4,5
-                        order by 1 desc, 3)
-                    
-                select 
-                    aur.course_id,
-                    aur.course_name,
-                    aur.course_structure_class,
-                    batch_module_mapping.topic_template_id,
-                    batch_module_mapping.template_name as contest_module_name,
-                    aur.user_id,
-                    aur.course_user_mapping_status,
-                    aur.label_mapping_status,
-                    aur.topic_pool_id as rating_topic_template_id,
-                    aur.template_name as rating_template_name,
-                    rating,
-                    plagiarised_rating,
-                    mock_rating,
-                    module_cutoff,
-                    required_rating,
-                    grade_obtained,
-                    assignment_rating,
-                    contest_rating,
-                    milestone_rating,
-                    proctored_contest_rating,
-                    quiz_rating,
-                    plagiarised_assignment_rating,
-                    plagiarised_contest_rating,
-                    plagiarised_proctored_contest_rating
-                from 
-                    arl_user_ratings aur
-                left join batch_module_mapping
-                    on aur.course_id = batch_module_mapping.course_id 
-                        and batch_module_mapping.rating_topic_template_id = aur.topic_pool_id
-                where aur.course_structure_id <> 32),
-                
-            completed_module_count as 
-                (select
-                    course_id,
-                    course_name,
-                    count(distinct rating_topic_template_id) filter (where all_data.topic_template_id is not null) as comp_module_count
-                from
-                    all_data
-                group by 1,2)    
-            select
-                cum.course_id,
-                cum.course_name,
-                c.course_structure_class,
-                cum.user_id,
-                cum.status,
-                case 
+    select
+        concat(course_id, user_id, course_id) as table_unique_key,
+        course_id,
+        course_name,
+        course_structure_class,
+        user_id,
+        course_user_mapping_status,
+        label_mapping_status,
+        comp_module_count as completed_module_count,
+        count_of_a,
+        case
+            when comp_module_count <> 0 and (count_of_a * 1.0 / comp_module_count) >= 1 then 'A1'
+            when comp_module_count <> 0 and (count_of_a * 1.0 / comp_module_count) >= 0.5 and (count_of_a * 1.0 / comp_module_count) < 1 then 'A2'
+            when comp_module_count <> 0 and (count_of_a * 1.0 / comp_module_count) > 0 and (count_of_a * 1.0 / comp_module_count) < 0.5 then 'A3'
+            when comp_module_count <> 0 and (count_of_a * 1.0 / comp_module_count) <= 0 then 'B'
+            else null
+        end as student_category
+    from
+        (with batch_module_mapping as
+            (select 
+                id as table_uk,
+                course_id,
+                course_name,
+                topic_pool_id,
+                module_name,
+                module_completion_status 
+            from
+                batch_module_completion_status bmcs 
+            where module_completion_status = true),
+        
+        completed_module_count as 
+            (select
+                course_id,
+                course_name,
+                count(distinct topic_pool_id) filter (where module_completion_status is true) as comp_module_count
+            from
+                batch_module_completion_status bmcs
+            group by 1,2),
+        
+        required_user_data as 
+           (select 
+                aur.course_id,
+                aur.course_name,
+                aur.course_structure_class,
+                aur.user_id,
+                aur.course_user_mapping_status,
+                aur.label_mapping_status,
+                aur.topic_pool_id,
+                batch_module_mapping.table_uk,
+                batch_module_mapping.module_completion_status,
+                aur.template_name,
+                rating,
+                plagiarised_rating,
+                mock_rating,
+                module_cutoff,
+                required_rating,
+                grade_obtained,
+                assignment_rating,
+                contest_rating,
+                milestone_rating,
+                proctored_contest_rating,
+                quiz_rating,
+                plagiarised_assignment_rating,
+                plagiarised_contest_rating,
+                plagiarised_proctored_contest_rating
+            from 
+                arl_user_ratings aur
+            join batch_module_mapping
+                on batch_module_mapping.course_id = aur.course_id and aur.topic_pool_id = batch_module_mapping.topic_pool_id
+            where aur.course_structure_id <> 32)
+            
+            
+        select 
+            c.course_id,
+            c.course_name,
+            c.course_structure_class,
+            cum.user_id,
+            cum.status as course_user_mapping_status,
+            case 
                 when cum.label_id is null and cum.status in (8,9) then 'Enrolled Student'
                 when cum.label_id is not null and cum.status in (8,9) then 'Label Marked Student'
                 when c.course_structure_id in (1,18) and cum.status in (11,12) then 'ISA Cancelled Student'
@@ -195,35 +184,18 @@ transform_data = PostgresOperator(
                 when c.course_structure_id not in (1,18) and cum.status in (12) then 'Reject by NS-Ops'
                 else 'Mapping Error'
             end as label_mapping_status,
-                case 
-                    when all_data.course_id not in (select distinct course_id from completed_module_count where comp_module_count > 0) and all_data.course_id <= 400 then 5
-                    else completed_module_count.comp_module_count
-                end as completed_module_count,
-                count(distinct rating_topic_template_id) filter (where grade_obtained like 'A') as count_of_a
-            from
-            	course_user_mapping cum 
-            join courses c 
-            	on c.course_id = cum.course_id and c.course_structure_id in (1,6,8,11,12,14,18,19,20,22,23,26)
-            		and cum.status in (8,9,11,12,30)
-            left join all_data
-            	on all_data.course_id = cum.course_id and all_data.user_id = cum.user_id 
-            left join completed_module_count
-                on completed_module_count.course_id = cum.course_id
-            group by 1,2,3,4,5,6,7
-            order by 1 desc, 3)
-        
-        select 
-            concat(course_id, user_id, course_id) as table_unique_key,
-            user_level_data.*,
-            case
-                when completed_module_count <> 0 and (count_of_a * 1.0 / completed_module_count) >= 1 then 'A1'
-                when completed_module_count <> 0 and (count_of_a * 1.0 / completed_module_count) >= 0.5 and (count_of_a * 1.0 / completed_module_count) < 1 then 'A2'
-                when completed_module_count <> 0 and (count_of_a * 1.0 / completed_module_count) > 0 and (count_of_a * 1.0 / completed_module_count) < 0.5 then 'A3'
-                when completed_module_count <> 0 and (count_of_a * 1.0 / completed_module_count) <= 0 then 'B'
-                else null
-            end as student_category
+            completed_module_count.comp_module_count,
+            count(distinct topic_pool_id) filter (where grade_obtained like 'A') as count_of_a
         from
-            user_level_data;
+            course_user_mapping cum 
+        join courses c 
+            on c.course_id = cum.course_id and cum.status in (8,9,11,12,30)
+        left join required_user_data
+            on required_user_data.user_id = cum.user_id and cum.course_id = required_user_data.course_id
+        left join completed_module_count
+            on completed_module_count.course_id = c.course_id
+        group by 1,2,3,4,5,6,7) final_query
+    order by 2 desc, 5;
         ''',
     dag=dag
 )
