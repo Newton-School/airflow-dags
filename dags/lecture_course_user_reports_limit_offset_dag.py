@@ -219,7 +219,7 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
                     and cum.status in (8,9,11,12,30) and c.course_id in (select distinct wab.lu_course_id from wow_active_batches wab) 
             join lectures l
                 on l.course_id = c.course_id and l.start_timestamp >= '2022-07-01'
-                  and (l.lecture between %d and %d)
+                  and (l.lecture_id between %d and %d)
             left join user_raw_data let
                 on let.lecture_id = l.lecture_id and let.course_user_mapping_id = cum.course_user_mapping_id
             left join recorded_lectures_course_user_reports rlcur
@@ -345,7 +345,7 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
                 and cum.status in (8,9,11,12,30) and c.course_id in (select distinct wab.lu_course_id from wow_active_batches wab) 
         join lectures l
             on l.course_id = c.course_id and l.start_timestamp >= '2022-07-01'
-              and and (l.lecture between %d and %d)
+              and (l.lecture_id between %d and %d)
         left join user_raw_data let
             on let.lecture_id = l.lecture_id and let.course_user_mapping_id = cum.course_user_mapping_id
         left join recorded_lectures_course_user_reports rlcur
