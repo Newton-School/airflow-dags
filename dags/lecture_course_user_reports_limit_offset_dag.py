@@ -25,7 +25,7 @@ total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 5)
 total_number_of_extraction_cps_dags = Variable.get("total_number_of_extraction_cps_dags", 10)
 
 dag = DAG(
-    'lecture_course_user_reports_dag',
+    'lecture_course_user_reports_limit_offset_dag',
     default_args=default_args,
     concurrency=4,
     max_active_tasks=6,
