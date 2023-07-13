@@ -316,7 +316,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='Live lecture ET data with overlapping time calculation and table creation/update',
-    schedule_interval='30 2 * * *',
+    schedule_interval='0 1 * * *',
     catchup=False
 )
 
