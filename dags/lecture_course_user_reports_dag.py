@@ -112,7 +112,7 @@ create_table = PostgresOperator(
             course_name varchar(255),
             course_structure_class varchar(255),
             lecture_id bigint,
-            lecture_title varchar(1028)
+            lecture_title varchar(1028),
             mandatory boolean,
             topic_template_id int,
             template_name varchar(255),
