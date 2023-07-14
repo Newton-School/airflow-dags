@@ -58,7 +58,28 @@ def extract_data_to_nested(**kwargs):
                 'curriculum,'
                 'pace_of_the_course,'
                 'other,'
-                'subjective_feedback;',
+                'subjective_feedback)'
+                'VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
+                'lead_type = EXCLUDED.lead_type,'
+                'label_mapping_status = EXCLUDED.label_mapping_status,'
+                'course_name = EXCLUDED.course_name,'
+                'course_structure_class = EXCLUDED.course_structure_class,'
+                'course_structure_id = EXCLUDED.course_structure_id,'
+                'student_category = EXCLUDED.student_category,'
+                'admin_unit_name = EXCLUDED.admin_unit_name,'
+                'nps_rating = EXCLUDED.nps_rating,'
+                'student_nps_class = EXCLUDED.student_nps_class,'
+                'lecture_session = EXCLUDED.lecture_session,'
+                'mentor_session = EXCLUDED.mentor_session,'
+                'mock_interviews = EXCLUDED.mock_interviews,'
+                'assignments = EXCLUDED.assignments,'
+                'support_from_ns_team = EXCLUDED.support_from_ns_team,'
+                'contests = EXCLUDED.contests,'
+                'curriculum = EXCLUDED.curriculum,'
+                'pace_of_the_course = EXCLUDED.pace_of_the_course,'
+                'other = EXCLUDED.other,'
+                'subjective_feedback = EXCLUDED.subjective_feedback;',
             (
                 transform_row[0],
                 transform_row[1],
