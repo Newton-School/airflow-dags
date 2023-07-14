@@ -100,7 +100,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='Processed version of user_ratings table with grade_obtained column definition for this column given by the program team',
-    schedule_interval='35 1 * * *',
+    schedule_interval='45 0 * * *',
     catchup=False
 )
 
