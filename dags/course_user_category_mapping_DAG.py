@@ -43,6 +43,7 @@ def extract_data_to_nested(**kwargs):
             'on conflict (table_unique_key) do update set course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
             'course_user_mapping_status = EXCLUDED.course_user_mapping_status,'
+            'label_mapping_status = EXCLUDED.label_mapping_status,'
             'completed_module_count = EXCLUDED.completed_module_count,'
             'count_of_a = EXCLUDED.count_of_a,'
             'student_category = EXCLUDED.student_category,'
