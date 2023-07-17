@@ -58,8 +58,9 @@ def extract_data_to_nested(**kwargs):
                 'curriculum,'
                 'pace_of_the_course,'
                 'other,'
-                'subjective_feedback)'
-                'VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'subjective_feedback,'
+                'course_start_timestamp)'
+                'VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
                 'lead_type = EXCLUDED.lead_type,'
                 'label_mapping_status = EXCLUDED.label_mapping_status,'
@@ -79,7 +80,8 @@ def extract_data_to_nested(**kwargs):
                 'curriculum = EXCLUDED.curriculum,'
                 'pace_of_the_course = EXCLUDED.pace_of_the_course,'
                 'other = EXCLUDED.other,'
-                'subjective_feedback = EXCLUDED.subjective_feedback;',
+                'subjective_feedback = EXCLUDED.subjective_feedback,'
+                'course_start_timestamp = EXCLUDED.course_start_timestamp;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -106,6 +108,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[22],
                 transform_row[23],
                 transform_row[24],
+                transform_row[25],
             )
         )
     pg_conn.commit()
@@ -151,7 +154,8 @@ create_table = PostgresOperator(
             curriculum text,
             pace_of_the_course text,
             other text,
-            subjective_feedback text
+            subjective_feedback text,
+            course_start_timestamp timestamp 
         );
     ''',
     dag=dag
@@ -176,6 +180,7 @@ transform_data = PostgresOperator(
                     end as label_mapping_status,
                     c.course_id,
                     c.course_name,
+                    c.course_start_timestamp,
                     cum.admin_course_id,
                     cum.admin_unit_name,
                     c.course_structure_class,
@@ -270,10 +275,11 @@ transform_data = PostgresOperator(
                 max(curriculum) as curriculum,
                 max(pace_of_the_course) as pace_of_the_course,
                 max(other) as other,
-                max(subjective_feedback) as subjective_feedback
+                max(subjective_feedback) as subjective_feedback,
+                course_start_timestamp
             from 
                 raw_data
-            group by 1,2,3,4,5,6,7,8,9,10,11,12,13;
+            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,26;
         ''',
     dag=dag
 )
