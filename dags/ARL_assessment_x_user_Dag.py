@@ -35,14 +35,22 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO arl_assessments_x_user (table_unique_key,user_id,course_id,assessment_id,'
-            'assessment_title,assessment_type,assessment_sub_type,generation_and_creation_type,'
-            'assessment_class,assessment_release_date,'
-            'assessment_open_date,assessment_submission_date,assessment_attempt_status,'
-            'assessment_submission_status,question_count,questions_marked,questions_correct,'
-            'max_marks,marks_obtained,cheated)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set assessment_title = EXCLUDED.assessment_title,'
+            'INSERT INTO arl_assessments_x_user (table_unique_key, user_id,'
+            'student_name, lead_type, label_mapping_status, '
+            'course_id, course_name, student_category, course_structure_class, '
+            'assessment_id, assessment_title, assessment_type, assessment_sub_type, generation_and_creation_type,'
+            'assessment_class, assessment_release_date,'
+            'assessment_open_date, assessment_submission_date, assessment_attempt_status,'
+            'assessment_submission_status, question_count, questions_marked, questions_correct,'
+            'max_marks, marks_obtained, cheated)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
+            'lead_type = EXCLUDED.lead_type,'
+            'label_mapping_status = EXCLUDED.label_mapping_status,'
+            'course_name = EXCLUDED.course_name,'
+            'student_category = EXCLUDED.student_category,'
+            'course_structure_class = EXCLUDED.course_structure_class,'
+            'assessment_title = EXCLUDED.assessment_title,'
             'assessment_type = EXCLUDED.assessment_type,'
             'assessment_sub_type = EXCLUDED.assessment_sub_type,'
             'generation_and_creation_type = EXCLUDED.generation_and_creation_type,'
@@ -78,7 +86,13 @@ def extract_data_to_nested(**kwargs):
                 transform_row[16],
                 transform_row[17],
                 transform_row[18],
-                transform_row[19]
+                transform_row[19],
+                transform_row[20],
+                transform_row[21],
+                transform_row[22],
+                transform_row[23],
+                transform_row[24],
+
             )
         )
     pg_conn.commit()
@@ -100,9 +114,15 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS arl_assessments_x_user (
             id serial,
-            table_unique_key bigint not null PRIMARY KEY,
+            table_unique_key text not null PRIMARY KEY,
             user_id bigint,
+            student_name text,
+            lead_type text,
+            label_mapping_status text,
             course_id int,
+            course_name text,
+            student_category text,
+            course_structure_class text,
             assessment_id bigint,
             assessment_title varchar(256),
             assessment_type varchar(32),
@@ -128,13 +148,26 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
-    sql='''select 
-            cast(concat(assessments.course_id, assessments.assessment_id, course_user_mapping.user_id) as bigint) as table_unique_key,
+    sql='''select
+            concat(assessments.course_id, assessments.assessment_id, course_user_mapping.user_id) as table_unique_key,
             course_user_mapping.user_id,
-            assessments.course_id,
+            concat(ui.first_name,' ', ui.last_name) as student_name,
+            ui.lead_type,
+            case 
+                when course_user_mapping.label_id is null and course_user_mapping.status in (8,9) then 'Enrolled Student'
+                when course_user_mapping.label_id is not null and course_user_mapping.status in (8,9) then 'Label Marked Student'
+                when courses.course_structure_id in (1,18) and course_user_mapping.status in (11,12) then 'ISA Cancelled Student'
+                when courses.course_structure_id not in (1,18) and course_user_mapping.status in (30) then 'Deferred Student'
+                when courses.course_structure_id not in (1,18) and course_user_mapping.status in (11) then 'Foreclosed Student'
+                when courses.course_structure_id not in (1,18) and course_user_mapping.status in (12) then 'Reject by NS-Ops'
+                else 'Mapping Error'
+            end as label_mapping_status,
+            courses.course_id,
+            courses.course_name,
+            cucm.student_category,
+            courses.course_structure_class,
             assessments.assessment_id,
             assessments.title as assessment_title,
-
             case
                 when assessments.assessment_type = 1 then 'Normal Assessment'
                 when assessments.assessment_type = 2 then 'Filtering Assessment'
@@ -142,21 +175,18 @@ transform_data = PostgresOperator(
                 when assessments.assessment_type = 4 then 'Duration Assessment'
                 when assessments.assessment_type = 5 then 'Poll Assessment'
             end as assessment_type,
-
             case 
                 when assessments.sub_type = 1 then 'General'
                 when assessments.sub_type = 2 then 'In-Class'
                 when assessments.sub_type = 3 then 'Post-Class'
                 when assessments.sub_type = 4 then 'Classroom-Quiz'
             end as assessment_sub_type,
-            
             case 
             	when assessments.generation_and_creation_type = 1 then 'Fully Automated'
             	when assessments.generation_and_creation_type = 2 then 'Manually Released'
             	when assessments.generation_and_creation_type = 3 then 'Manually Created'
             	when assessments.generation_and_creation_type = 4 then 'Fully Manual'
             end as generation_and_creation_type,
-                
             case 
             	when (assessments.assessment_type = 1 and assessments.sub_type = 1 and assessments.generation_and_creation_type = 1) then 'General Quiz'
                 when (assessments.assessment_type = 1 and assessments.sub_type = 2 and assessments.generation_and_creation_type = 1) then 'In-Class Automated Quiz'
@@ -167,23 +197,19 @@ transform_data = PostgresOperator(
             	when assessments.assessment_type in (3,4) then 'MCQ-Contest'
             	when assessments.assessment_type = 5 then 'Poll Assessment'
             end as assessment_class,
-
             date(assessments.start_timestamp) as assessment_release_date,
             date(assessment_question_user_mapping.assessment_started_at) as assessment_open_date,
             date(assessment_question_user_mapping.assessment_completed_at) as assessment_submission_date,
-
             case 
                 when assessment_question_user_mapping.assessment_started_at <= assessments.end_timestamp then 'Attempted On Time'
                 when assessment_question_user_mapping.assessment_started_at > assessments.end_timestamp then 'Late Attempt'
                 when assessment_question_user_mapping.assessment_started_at is null then 'Not Attempted'
             end as assessment_attempt_status,
-
             case 
                 when assessment_late_completed = false then 'On Time Submission'
                 when assessment_late_completed = true then 'Late Submission'
                 when assessment_late_completed is null then 'Not Submitted'
             end as assessment_submission_status,
-
             assessments.question_count,
             count(distinct mcq_id) filter (where option_marked_at is not null) as questions_marked,
             count(distinct mcq_id) filter (where (marked_choice - correct_choice) = 0) as questions_correct,
@@ -193,12 +219,18 @@ transform_data = PostgresOperator(
         from
             assessments
         join courses
-            on courses.course_id = assessments.course_id and course_structure_id in (1,6,8,11,12,14,18,19,20,22,23,26)
+            on courses.course_id = assessments.course_id and course_structure_id in (1,6,8,11,12,14,18,19,20,22,23,26,34) and date(assessments.start_timestamp) >= '2022-07-01'
+        		and courses.course_id in (select distinct course_id from wow_active_batches wab)
         join course_user_mapping
-            on course_user_mapping.course_id = assessments.course_id and status in (5,8,9) and label_id is null and lower(course_user_mapping.unit_type) like 'learning'
+            on course_user_mapping.course_id = courses.course_id and status in (8,9,11,12,30)
+        join users_info ui 
+        	on ui.user_id = course_user_mapping.user_id
+        left join course_user_category_mapping cucm 
+        	on cucm.course_id = courses.course_id and cucm.user_id = course_user_mapping.user_id 
         left join assessment_question_user_mapping
-            on assessment_question_user_mapping.assessment_id = assessments.assessment_id and assessment_question_user_mapping.course_user_mapping_id = course_user_mapping.course_user_mapping_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,18,19,20;
+            on assessment_question_user_mapping.assessment_id = assessments.assessment_id 
+            	and assessment_question_user_mapping.course_user_mapping_id = course_user_mapping.course_user_mapping_id
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,24,25,26;
         ''',
     dag=dag
 )
