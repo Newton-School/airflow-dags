@@ -43,7 +43,7 @@ def extract_data_to_nested(**kwargs):
             'assessment_open_date, assessment_submission_date, assessment_attempt_status,'
             'assessment_submission_status, question_count, questions_marked, questions_correct,'
             'max_marks, marks_obtained, cheated)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
             'lead_type = EXCLUDED.lead_type,'
             'label_mapping_status = EXCLUDED.label_mapping_status,'
@@ -92,7 +92,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[22],
                 transform_row[23],
                 transform_row[24],
-
+                transform_row[25],
             )
         )
     pg_conn.commit()
