@@ -78,7 +78,7 @@ dag = DAG(
     'Job_Posting_DAG',
     default_args=default_args,
     description='A DAG for Job Posting data from Job Posting Analytics DB',
-    schedule_interval='30 15 * * *',
+    schedule_interval='30 4 * * *',
     catchup=False
 )
 
