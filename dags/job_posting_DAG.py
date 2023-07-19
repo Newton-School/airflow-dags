@@ -106,8 +106,8 @@ create_table = PostgresOperator(
             job_description_raw_text varchar(35000),
             job_description_url_without_job_id varchar(1000) not null PRIMARY KEY,
             _airbyte_ab_id varchar(1000),
-            _airbyte_emitted_at DATE,
-            _airbyte_normalized_at DATE,
+            _airbyte_emitted_at TIMESTAMP,
+            _airbyte_normalized_at TIMESTAMP,
             _airbyte_job_openings_hashid varchar(1000),
             _airbyte_unique_key varchar(1000),
             number_of_openings real
@@ -140,8 +140,8 @@ transform_data = PostgresOperator(
             job_openings.job_description_raw_text,
             job_openings.job_description_url_without_job_id,
             job_openings._airbyte_ab_id,
-            date(job_openings._airbyte_emitted_at) as _airbyte_emitted_at,
-            date(job_openings._airbyte_normalized_at) as _airbyte_normalized_at,
+            job_openings._airbyte_emitted_at::timestamp + INTERVAL '5 hours 30 minutes' as _airbyte_emitted_at,
+            job_openings._airbyte_normalized_at::timestamp + INTERVAL '5 hours 30 minutes' as _airbyte_normalized_at,
             job_openings._airbyte_job_openings_hashid,
             job_openings._airbyte_unique_key,
             raw_response -> 'vacancy' as number_of_openings
