@@ -132,10 +132,10 @@ transform_data = PostgresOperator(
             video_sessions_lectureslot.is_topic_tree_independent,
             video_sessions_lectureslot.status as lecture_slot_status,
             video_sessions_lectureslot.is_deleted as lecture_slot_is_deleted,
-            cast(video_sessions_lectureslot.created_at as varchar) as lecture_slot_created_at,
+            video_sessions_lectureslot.created_at as lecture_slot_created_at,
             video_sessions_lectureslot.created_by_id as lecture_slot_created_by_id,
             video_sessions_lectureslot.deleted_by_id as lecture_slot_deleted_by_id,
-            cast(video_sessions_lectureslot.modified_at as varchar) as lecture_slot_modified_at,
+            video_sessions_lectureslot.modified_at as lecture_slot_modified_at,
             video_sessions_lectureslot.automated_content_release_triggered,
             technologies_label.name as lecture_type
             from video_sessions_lecture
