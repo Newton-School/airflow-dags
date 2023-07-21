@@ -57,8 +57,14 @@ def extract_data_to_nested(**kwargs):
             'questions_with_plag_score_90,'
             'questions_with_plag_score_95,'
             'questions_with_plag_score_99,'
-            'hidden)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'hidden,'
+            'opened_questions_unique,'
+            'attempted_questions_unique,'
+            'completed_questions_unique,'
+            'plag_score_99_unique,'
+            'plag_score_95_unique,'
+            'plag_score_90_unique)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_id = EXCLUDED.course_id,'
             'course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
@@ -80,7 +86,13 @@ def extract_data_to_nested(**kwargs):
             'questions_with_plag_score_90 = EXCLUDED.questions_with_plag_score_90,'
             'questions_with_plag_score_95 = EXCLUDED.questions_with_plag_score_95,'
             'questions_with_plag_score_99 = EXCLUDED.questions_with_plag_score_99,'
-            'hidden = EXCLUDED.hidden;',
+            'hidden = EXCLUDED.hidden,'
+            'opened_questions_unique = EXCLUDED.opened_questions_unique,'
+            'attempted_questions_unique = EXCLUDED.attempted_questions_unique,'
+            'completed_questions_unique = EXCLUDED.completed_questions_unique,'
+            'plag_score_99_unique = EXCLUDED.plag_score_99_unique,'
+            'plag_score_95_unique = EXCLUDED.plag_score_95_unique,'
+            'plag_score_90_unique = EXCLUDED.plag_score_90_unique;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -105,7 +117,12 @@ def extract_data_to_nested(**kwargs):
                 transform_row[20],
                 transform_row[21],
                 transform_row[22],
-
+                transform_row[23],
+                transform_row[24],
+                transform_row[25],
+                transform_row[26],
+                transform_row[27],
+                transform_row[28],
             )
         )
     pg_conn.commit()
@@ -149,7 +166,13 @@ create_table = PostgresOperator(
             questions_with_plag_score_90 int,
             questions_with_plag_score_95 int,
             questions_with_plag_score_99 int,
-            hidden boolean
+            hidden boolean,
+            opened_questions_unique int,
+            attempted_questions_unique int,
+            completed_questions_unique int,
+            plag_score_99_unique int,
+            plag_score_95_unique int,
+            plag_score_90_unique int
         );
     ''',
     dag=dag
@@ -194,7 +217,33 @@ transform_data = PostgresOperator(
                count(distinct aqum.question_id) filter(where plagiarism_score >= 0.90) as questions_with_plag_score_90,
                count(distinct aqum.question_id) filter(where plagiarism_score >= 0.95) as questions_with_plag_score_95,
                count(distinct aqum.question_id) filter(where plagiarism_score >= 0.99) as questions_with_plag_score_99,
-               a.hidden
+               a.hidden,
+               case
+               		when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then count(distinct aqum.question_id)
+               		else null
+               end as opened_questions_unique,
+              case
+               		when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter (where aqum.max_test_case_passed is not null))
+               		else null
+               end as attempted_questions_unique,
+               case 
+               		when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true'))
+               		else null
+               end as completed_questions_unique,
+               case 
+               		when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter (where plagiarism_score >= 0.99))
+               		else null
+               end as plag_score_99_unique,
+               
+               case 
+               		when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter (where plagiarism_score >= 0.95))
+               		else null
+               end as plag_score_95_unique,
+               
+              case 
+               		when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter (where plagiarism_score >= 0.90))
+               		else null
+               end as plag_score_90_unique
             from
                 assignments a 
             join courses c 
