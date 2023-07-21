@@ -49,7 +49,9 @@ create_table = PostgresOperator(
             masters_grad_year date,
             masters_degree varchar(128),
             masters_field_of_study varchar(128),
-            lead_type varchar(32)
+            lead_type varchar(32),
+            course_structure_slug varchar(256),
+            marketing_url_structure_slug varchar(256)
         );
     ''',
     dag=dag
@@ -133,6 +135,8 @@ transform_data = PostgresOperator(
                 E.name as bachelors_degree,F.name as bachelors_field_of_study,D.grade as masters_marks,
                 D.end_date as masters_grad_year,M.name as masters_degree,MF.name as masters_field_of_study,
                 lead_type_table.lead_type,
+                (users_userprofile.utm_param_json->'course_structure_slug'::text) #>> '{}' as course_structure_slug,
+                (users_userprofile.utm_param_json->'marketing_url_structure_slug'::text) #>> '{}' as marketing_url_structure_slug,
                 row_number() over(partition by auth_user.id order by date_joined) as rank
                 
                 from auth_user left join users_userprofile on users_userprofile.user_id = auth_user.id 
@@ -150,7 +154,8 @@ transform_data = PostgresOperator(
                 )
                 select 
                     distinct user_id,first_name,last_name,date_joined,last_login,username,email,phone,current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,
-                    tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type
+                    tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type,
+                    course_structure_slug,marketing_url_structure_slug
                 from t1
                     where rank =1 and user_id is not null;
         ''',
@@ -182,8 +187,9 @@ def extract_data_to_nested(**kwargs):
                     'INSERT INTO users_info (user_id,first_name,last_name,date_joined,last_login,username,email,phone,'
                     'current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,'
                     'tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,'
-                    'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type) '
-                    'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
+                    'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type,'
+                    'course_structure_slug,marketing_url_structure_slug) '
+                    'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
                     'on conflict (user_id) do update set first_name=EXCLUDED.first_name,'
                     'last_name=EXCLUDED.last_name,last_login=EXCLUDED.last_login,'
                     'username=EXCLUDED.username,email=EXCLUDED.email,phone=EXCLUDED.phone,'
@@ -195,7 +201,8 @@ def extract_data_to_nested(**kwargs):
                     'bachelors_degree=EXCLUDED.bachelors_degree,bachelors_field_of_study=EXCLUDED.bachelors_field_of_study,'
                     'masters_marks=EXCLUDED.masters_marks,masters_grad_year=EXCLUDED.masters_grad_year,'
                     'masters_degree=EXCLUDED.masters_degree,masters_field_of_study=EXCLUDED.masters_field_of_study,'
-                    'lead_type=EXCLUDED.lead_type ;',
+                    'lead_type=EXCLUDED.lead_type,course_structure_slug=EXCLUDED.course_structure_slug,'
+                    'marketing_url_structure_slug=EXCLUDED.marketing_url_structure_slug ;',
                     (
                         transform_row[0],
                         transform_row[1],
@@ -223,6 +230,8 @@ def extract_data_to_nested(**kwargs):
                         transform_row[23],
                         transform_row[24],
                         transform_row[25],
+                        transform_row[26],
+                        transform_row[27],
                     )
             )
             pg_conn.commit()
