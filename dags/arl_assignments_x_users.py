@@ -56,8 +56,9 @@ def extract_data_to_nested(**kwargs):
             'completed_questions,'
             'questions_with_plag_score_90,'
             'questions_with_plag_score_95,'
-            'questions_with_plag_score_99)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'questions_with_plag_score_99,'
+            'hidden)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_id = EXCLUDED.course_id,'
             'course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
@@ -78,7 +79,8 @@ def extract_data_to_nested(**kwargs):
             'completed_questions = EXCLUDED.completed_questions,'
             'questions_with_plag_score_90 = EXCLUDED.questions_with_plag_score_90,'
             'questions_with_plag_score_95 = EXCLUDED.questions_with_plag_score_95,'
-            'questions_with_plag_score_99 = EXCLUDED.questions_with_plag_score_99;',
+            'questions_with_plag_score_99 = EXCLUDED.questions_with_plag_score_99,'
+            'hidden = EXCLUDED.hidden;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -102,6 +104,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[19],
                 transform_row[20],
                 transform_row[21],
+                transform_row[22],
+
             )
         )
     pg_conn.commit()
@@ -144,7 +148,8 @@ create_table = PostgresOperator(
             completed_questions int,
             questions_with_plag_score_90 int,
             questions_with_plag_score_95 int,
-            questions_with_plag_score_99 int
+            questions_with_plag_score_99 int,
+            hidden boolean
         );
     ''',
     dag=dag
@@ -188,7 +193,8 @@ transform_data = PostgresOperator(
                count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true') as completed_questions,
                count(distinct aqum.question_id) filter(where plagiarism_score >= 0.90) as questions_with_plag_score_90,
                count(distinct aqum.question_id) filter(where plagiarism_score >= 0.95) as questions_with_plag_score_95,
-               count(distinct aqum.question_id) filter(where plagiarism_score >= 0.99) as questions_with_plag_score_99
+               count(distinct aqum.question_id) filter(where plagiarism_score >= 0.99) as questions_with_plag_score_99,
+               a.hidden
             from
                 assignments a 
             join courses c 
@@ -221,7 +227,7 @@ transform_data = PostgresOperator(
                 where topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
                 group by 1,2,3) module_mapping
                     on module_mapping.assignment_id = a.assignment_id
-            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16;
+            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,23;
         ''',
     dag=dag
 )
