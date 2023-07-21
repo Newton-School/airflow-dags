@@ -267,8 +267,8 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
             courses_courseusermapping.user_id,
             assignments_assignment.id as assignment_id,
             assignments_assignmentcourseuserquestionmapping.assignment_question_id as question_id,
-            cast(assignments_assignmentcourseuserquestionmapping.started_at as varchar) as question_started_at,
-            cast(assignments_assignmentcourseuserquestionmapping.completed_at as varchar) as question_completed_at,
+            assignments_assignmentcourseuserquestionmapping.started_at as question_started_at,
+            assignments_assignmentcourseuserquestionmapping.completed_at as question_completed_at,
             assignments_assignmentcourseuserquestionmapping.completed,
             assignments_assignmentcourseuserquestionmapping.all_test_case_passed,
             case
@@ -295,9 +295,9 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
             assignments_assignmentcourseuserquestionmapping.latest_assignment_question_hint_mapping_id,
             assignments_assignmentcourseuserquestionmapping.late_submission,
             assignments_assignmentcourseuserquestionmapping.max_test_case_passed,
-            cast(assignments_assignmentcourseusermapping.started_at as varchar) as assignment_started_at,
-            cast(assignments_assignmentcourseusermapping.completed_at as varchar) as assignment_completed_at,
-            cast(assignments_assignmentcourseusermapping.cheated_marked_at as varchar) as assignment_cheated_marked_at,
+            assignments_assignmentcourseusermapping.started_at as assignment_started_at,
+            assignments_assignmentcourseusermapping.completed_at as assignment_completed_at,
+            assignments_assignmentcourseusermapping.cheated_marked_at as assignment_cheated_marked_at,
             assignments_assignmentcourseusermapping.cheated,
             case
             when pcps.id is not null then (plag_coding.plagiarism_report #>> '{plagiarism_submission_id}')::float
@@ -400,4 +400,3 @@ for assignment_sub_dag_id in range(int(total_number_of_sub_dags)):
             number_of_rows_per_assignment_sub_dag >> cps_sub_dag
 
     create_table >> assignment_sub_dag_task_group
-
