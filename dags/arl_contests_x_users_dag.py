@@ -156,9 +156,9 @@ def extract_data_to_nested(**kwargs):
 
 
 dag = DAG(
-    'ARL_Assignments',
+    'ARL_contests_x_users_dag',
     default_args=default_args,
-    description='An Analytics Reporting Layer DAG for Assignments',
+    description='An Analytics Reporting Layer DAG for Contests at user level ',
     concurrency=4,
     max_active_tasks=6,
     max_active_runs=6,
