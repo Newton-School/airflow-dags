@@ -34,7 +34,7 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO arl_mocks_x_user (table_unique_key,student_user_id,'
-            'student_name, leadt_type, student_category, user_enrollment_status,'
+            'student_name, lead_type, student_category, user_enrollment_status,'
             'expert_user_id, course_id, course_structure_class, course_name,'
             'one_to_one_id, session_title,'
             'one_to_one_date, one_to_one_type, topic_pool_id, topic_pool_title,'
@@ -116,7 +116,7 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS arl_mocks_x_user (
             id serial,
-            table_unique_key test not null PRIMARY KEY,
+            table_unique_key text not null PRIMARY KEY,
             student_user_id bigint,
             student_name text,
             lead_type text,
