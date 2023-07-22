@@ -17,12 +17,17 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO assignments (assignment_id,parent_assignment_id,assignment_sub_type,assignment_type,course_id,created_at,created_by_id,duration,start_timestamp,end_timestamp,hash,hidden,is_group,title,was_competitive,random_assignment_questions,is_proctored_exam,whole_course_access,lecture_slot_id,lecture_id,original_assignment_type,send_breach_parameter,plagiarism_check_analysis,parent_module_assignment_id)'
-                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'INSERT INTO assignments (assignment_id,parent_assignment_id,assignment_sub_type,assignment_type,course_id,created_at,'
+                'created_by_id,duration,start_timestamp,end_timestamp,hash,hidden,is_group,title,was_competitive,'
+                'random_assignment_questions,is_proctored_exam,whole_course_access,lecture_slot_id,lecture_id,'
+                'original_assignment_type,send_breach_parameter,'
+                'plagiarism_check_analysis,parent_module_assignment_id, question_count)'
+                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (assignment_id) do update set start_timestamp = EXCLUDED.start_timestamp,'
                 'plagiarism_check_analysis = EXCLUDED.plagiarism_check_analysis,'
                 'title = EXCLUDED.title,'
-                'end_timestamp = EXCLUDED.end_timestamp ;',
+                'end_timestamp = EXCLUDED.end_timestamp,'
+                'question_count = EXCLUDED.question_count ;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -48,7 +53,9 @@ def extract_data_to_nested(**kwargs):
                     transform_row[21],
                     transform_row[22],
                     transform_row[23],
-                 )
+                    transform_row[24],
+
+                )
         )
     pg_conn.commit()
 
@@ -88,7 +95,8 @@ create_table = PostgresOperator(
             original_assignment_type int,
             send_breach_parameter boolean,
             plagiarism_check_analysis boolean,
-            parent_module_assignment_id bigint
+            parent_module_assignment_id bigint,
+            question_count int 
         );
     ''',
     dag=dag
@@ -121,13 +129,43 @@ transform_data = PostgresOperator(
     assignments_assignment.original_assignment_type,
     assignments_assignment.send_breach_parameter,
     assignments_assignment.plagiarism_check_analysis,
-    assignments_assignment.parent_module_assignment_id
+    assignments_assignment.parent_module_assignment_id,
+    question_count.question_count
     from
         assignments_assignment
     left join video_sessions_lectureslot
         on video_sessions_lectureslot.id = assignments_assignment.lecture_slot_id
     left join video_sessions_lecture
-        on video_sessions_lecture.id = video_sessions_lectureslot.lecture_id;
+        on video_sessions_lecture.id = video_sessions_lectureslot.lecture_id
+    left join  
+        (with question_mapping as
+    (select 
+        assignments_assignment.id as assignment_id,
+        count(distinct assignments_assignmentquestionmapping.assignment_question_id) as question_count
+    from
+        assignments_assignment
+    join assignments_assignmentquestionmapping 
+        on assignments_assignmentquestionmapping.assignment_id = assignments_assignment.id and assignments_assignment.hidden = false
+    group by 1),
+
+topic_mapping as 
+    (select 
+        assignments_assignment.id as assignment_id,
+        sum(aatdnm.number) as question_count
+    from
+        assignments_assignment
+    join assignments_assignmenttopicmapping
+        on assignments_assignmenttopicmapping.assignment_id = assignments_assignment.id and assignments_assignment.hidden = false
+    join assignments_assignmenttopicdifficultynumbermapping aatdnm
+        on aatdnm.assignment_topic_mapping_id = assignments_assignmenttopicmapping.id
+    group by 1
+    order by 2 desc)
+
+select * from question_mapping
+
+union 
+
+select * from topic_mapping) question_count on question_count.assignment_id = assignments_assignment.id;
         ''',
     dag=dag
 )
