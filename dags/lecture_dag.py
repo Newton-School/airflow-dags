@@ -26,11 +26,14 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO lectures (lecture_id,lecture_title,course_id,child_video_session,created_by_id,created_at,start_timestamp,end_timestamp,'
-                'hash,mandatory,video_session_using,instructor_user_id,lecture_slot_id,is_topic_tree_independent,lecture_slot_status,'
-                'lecture_slot_is_deleted,lecture_slot_created_at,lecture_slot_created_by_id,'
-                'lecture_slot_deleted_by_id,lecture_slot_modified_at,automated_content_release_triggered,lecture_type) '
-                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'INSERT INTO lectures (lecture_id, lecture_title, course_id, child_video_session,'
+                'created_by_id, created_at, start_timestamp, end_timestamp,'
+                'hash, mandatory, video_session_using, instructor_user_id,'
+                'lecture_slot_id, is_topic_tree_independent, lecture_slot_status,'
+                'lecture_slot_is_deleted, lecture_slot_created_at, lecture_slot_created_by_id,'
+                'lecture_slot_deleted_by_id, lecture_slot_modified_at,'
+                'automated_content_release_triggered, lecture_type, lecture_slot_hash) '
+                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (lecture_id) do update set mandatory =EXCLUDED.mandatory,'
                 'lecture_title =EXCLUDED.lecture_title,'
                 'child_video_session =EXCLUDED.child_video_session,'
@@ -44,7 +47,8 @@ def extract_data_to_nested(**kwargs):
                 'instructor_user_id =EXCLUDED.instructor_user_id,'
                 'lecture_slot_id =EXCLUDED.lecture_slot_id,'
                 'automated_content_release_triggered=EXCLUDED.automated_content_release_triggered,'
-                'lecture_type=EXCLUDED.lecture_type ;',
+                'lecture_type=EXCLUDED.lecture_type,'
+                'lecture_slot_hash = EXCLUDED.lecture_slot_hash;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -68,6 +72,7 @@ def extract_data_to_nested(**kwargs):
                     transform_row[19],
                     transform_row[20],
                     transform_row[21],
+                    transform_row[22],
                  )
         )
     pg_conn.commit()
@@ -106,7 +111,8 @@ create_table = PostgresOperator(
             lecture_slot_deleted_by_id bigint,
             lecture_slot_modified_at timestamp,
             automated_content_release_triggered boolean,
-            lecture_type varchar(256)
+            lecture_type varchar(256),
+            lecture_slot_hash text 
         );
     ''',
     dag=dag
@@ -137,7 +143,8 @@ transform_data = PostgresOperator(
             video_sessions_lectureslot.deleted_by_id as lecture_slot_deleted_by_id,
             video_sessions_lectureslot.modified_at as lecture_slot_modified_at,
             video_sessions_lectureslot.automated_content_release_triggered,
-            technologies_label.name as lecture_type
+            technologies_label.name as lecture_type,
+            video_sessions_lectureslot.hash as lecture_slot_hash
             from video_sessions_lecture
             left join video_sessions_lectureslot on video_sessions_lectureslot.lecture_id = video_sessions_lecture.id
             left join technologies_label on technologies_label.id = video_sessions_lectureslot.label_id
