@@ -88,6 +88,7 @@ transform_data = PostgresOperator(
         when courses_course.course_structure_id in (14,20) then 'Data Science - Certification'
         when courses_course.course_structure_id in (11,26) then 'Data Science - IU'
         when courses_course.course_structure_id in (6,12,19) then 'Upfront - FSD'
+        when courses_course.course_structure_id in (32) then 'Upfront - FSD: Instructor - 2'
     end as course_structure_class,
     courses_course.start_timestamp as course_start_timestamp,
     courses_course.end_timestamp as course_end_timestamp,
