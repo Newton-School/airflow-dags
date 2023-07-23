@@ -102,7 +102,7 @@ transform_data = PostgresOperator(
         extract(epoch from video_recording_duration)/60 as link_duration_in_minutes
     from
         video_sessions_videosessionrecording
-    where created_at >= '2022-01-01';
+    where created_at >= '2023-01-01';
         ''',
     dag=dag
 )
