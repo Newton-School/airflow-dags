@@ -41,8 +41,20 @@ def extract_data_to_nested(**kwargs):
             'difficulty_level, scheduled, pending_confirmation, '
             'interviewer_declined, confirmation,'
             'student_cancellation, interviewer_cancellation, conducted,cleared,'
-            'final_call_no, final_call_maybe, student_no_show, interviewer_no_show)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'final_call_no, final_call_maybe, student_no_show, interviewer_no_show,'
+            'scheduled_unique,'
+            'pending_confirmation_unique,'
+            'interviewer_declined_unique,'
+            'confirmation_unique,'
+            'student_cancellation_unique,'
+            'interviewer_cancellation_unique,'
+            'conducted_unique,'
+            'cleared_unique,'
+            'final_call_no_unique,'
+            'final_call_maybe_unique,'
+            'student_no_show_unique,'
+            'interviewer_no_show_unique)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
             'lead_type = EXCLUDED.lead_type,'
             'student_category = EXCLUDED.student_category,'
@@ -63,7 +75,19 @@ def extract_data_to_nested(**kwargs):
             'final_call_no = EXCLUDED.final_call_no,'
             'final_call_maybe = EXCLUDED.final_call_maybe,'
             'student_no_show = EXCLUDED.student_no_show,'
-            'interviewer_no_show = EXCLUDED.interviewer_no_show;',
+            'interviewer_no_show = EXCLUDED.interviewer_no_show,'
+            'scheduled_unique = EXCLUDED.scheduled_unique,'
+            'pending_confirmation_unique = EXCLUDED.pending_confirmation_unique,'
+            'interviewer_declined_unique = EXCLUDED.interviewer_declined_unique,'
+            'confirmation_unique = EXCLUDED.confirmation_unique,'
+            'student_cancellation_unique = EXCLUDED.student_cancellation_unique,'
+            'interviewer_cancellation_unique = EXCLUDED.interviewer_cancellation_unique,'
+            'conducted_unique = EXCLUDED.conducted_unique,'
+            'cleared_unique = EXCLUDED.cleared_unique,'
+            'final_call_no_unique = EXCLUDED.final_call_no_unique,'
+            'final_call_maybe_unique = EXCLUDED.final_call_maybe_unique,'
+            'student_no_show_unique = EXCLUDED.student_no_show_unique,'
+            'interviewer_no_show_unique = EXCLUDED.interviewer_no_show_unique;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -94,7 +118,18 @@ def extract_data_to_nested(**kwargs):
                 transform_row[26],
                 transform_row[27],
                 transform_row[28],
-
+                transform_row[29],
+                transform_row[30],
+                transform_row[31],
+                transform_row[32],
+                transform_row[33],
+                transform_row[34],
+                transform_row[35],
+                transform_row[36],
+                transform_row[37],
+                transform_row[38],
+                transform_row[39],
+                transform_row[40],
             )
         )
     pg_conn.commit()
@@ -144,7 +179,19 @@ create_table = PostgresOperator(
             final_call_no int,
             final_call_maybe int,
             student_no_show int,
-            interviewer_no_show int
+            interviewer_no_show int,
+            scheduled_unique int, 
+            pending_confirmation_unique int,
+            interviewer_declined_unique int
+            confirmation_unique int,
+            student_cancellation_unique int, 
+            interviewer_cancellation_unique int,
+            conducted_unique int,
+            cleared_unique int,
+            final_call_no_unique int,
+            final_call_maybe_unique int, 
+            student_no_show_unique int, 
+            interviewer_no_show_unique int
         );
     ''',
     dag=dag
@@ -154,9 +201,9 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
     sql='''
-    select distinct 
-        concat(one_to_one.student_user_id,one_to_one.course_id,one_to_one.expert_user_id,one_to_one.one_to_one_id, EXTRACT(month FROM date(one_to_one.one_to_one_start_timestamp)),EXTRACT(year FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.one_to_one_type,one_to_one_topic_mapping.topic_pool_id,EXTRACT(day FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.difficulty_level) as table_unique_key,
-        one_to_one.student_user_id,
+select distinct 
+        concat(course_user_mapping.user_id,c.course_id,one_to_one.expert_user_id,one_to_one.one_to_one_id, EXTRACT(month FROM date(one_to_one.one_to_one_start_timestamp)),EXTRACT(year FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.one_to_one_type,one_to_one_topic_mapping.topic_pool_id,EXTRACT(day FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.difficulty_level) as table_unique_key,
+        course_user_mapping.user_id,
         concat(ui.first_name,' ', ui.last_name) as student_name,
         ui.lead_type,
         cucm.student_category,
@@ -170,7 +217,7 @@ transform_data = PostgresOperator(
             else 'Mapping Error'
         end as user_enrollment_status,
         one_to_one.expert_user_id,
-        one_to_one.course_id,
+        c.course_id,
         c.course_structure_class,
         c.course_name,
         one_to_one.one_to_one_id,
@@ -208,17 +255,65 @@ transform_data = PostgresOperator(
         count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 2) as final_call_no,
         count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 3) as final_call_maybe,
         count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and (one_to_one.cancel_reason like 'Insufficient time spent by booked by user%' or one_to_one.cancel_reason like 'Insufficient overlap time')) as student_no_show,
-        count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and one_to_one.cancel_reason like 'Insufficient time spent by booked with user%') as interviewer_no_show
+        count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and one_to_one.cancel_reason like 'Insufficient time spent by booked with user%') as interviewer_no_show,
+        case 
+        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+        	then count(distinct one_to_one.one_to_one_id) else null
+        end scheduled_unique,
+        case 
+        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 1) else null
+        end pending_confirmation_unique,
+        case 
+        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+        	then count(distinct one_to_one.one_to_one_id) else null
+        end interviewer_declined_unique,
+        case 
+        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+        	then count(distinct one_to_one.one_to_one_id) else null
+        end confirmation_unique,
+        case 
+        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+        	then count(distinct one_to_one.one_to_one_id) else null
+        end student_cancellation_unique,
+        case 
+        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+        	then count(distinct one_to_one.one_to_one_id) else null
+        end interviewer_cancellation_unique,
+        case 
+        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+        	then count(distinct one_to_one.one_to_one_id) else null
+        end conducted_unique,
+        case 
+        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+        	then count(distinct one_to_one.one_to_one_id) else null
+        end cleared_unique,
+        case 
+        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+        	then count(distinct one_to_one.one_to_one_id) else null
+        end final_call_no_unique,
+        case 
+        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+        	then count(distinct one_to_one.one_to_one_id) else null
+        end final_call_maybe_unique,
+        case 
+        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+        	then count(distinct one_to_one.one_to_one_id) else null
+        end student_no_show_unique,
+        case 
+        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+        	then count(distinct one_to_one.one_to_one_id) else null
+        end interviewer_no_show_unique
     from
-        one_to_one
-    join courses c
-        on c.course_id = one_to_one.course_id and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34)
+    	courses c
     join course_user_mapping
-        on course_user_mapping.course_id = c.course_id and one_to_one.student_user_id = course_user_mapping.user_id 
-            and course_user_mapping.status in (8,9,11,12,30)
-    left join course_user_category_mapping cucm 
+        on course_user_mapping.course_id = c.course_id and course_user_mapping.status in (8,9,11,12,30)
+        	and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34)
+    left join one_to_one 
+        on c.course_id = one_to_one.course_id and course_user_mapping.user_id = one_to_one.student_user_id
+    left join course_user_category_mapping cucm
         on cucm.course_id = c.course_id and course_user_mapping.user_id = cucm.user_id
-    left join users_info ui 
+    left join users_info ui
         on ui.user_id = course_user_mapping.user_id
     left join one_to_one_topic_mapping
         on one_to_one_topic_mapping.one_to_one_id = one_to_one.one_to_one_id
