@@ -182,7 +182,7 @@ create_table = PostgresOperator(
             interviewer_no_show int,
             scheduled_unique int, 
             pending_confirmation_unique int,
-            interviewer_declined_unique int
+            interviewer_declined_unique int,
             confirmation_unique int,
             student_cancellation_unique int, 
             interviewer_cancellation_unique int,
