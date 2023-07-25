@@ -266,43 +266,43 @@ select distinct
         end pending_confirmation_unique,
         case 
         	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) else null
+        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 3) else null
         end interviewer_declined_unique,
         case 
         	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) else null
+        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2) else null
         end confirmation_unique,
         case 
         	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) else null
+        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 5) else null
         end student_cancellation_unique,
         case 
         	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) else null
+        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 4) else null
         end interviewer_cancellation_unique,
         case 
         	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) else null
+        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call in (1,2,3)) else null
         end conducted_unique,
         case 
         	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) else null
+        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 1) else null
         end cleared_unique,
         case 
         	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) else null
+        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 2) else null
         end final_call_no_unique,
         case 
         	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) else null
+        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 3) else null
         end final_call_maybe_unique,
         case 
         	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) else null
+        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and (one_to_one.cancel_reason like 'Insufficient time spent by booked by user%' or one_to_one.cancel_reason like 'Insufficient overlap time')) else null
         end student_no_show_unique,
         case 
         	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) else null
+        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and one_to_one.cancel_reason like 'Insufficient time spent by booked with user%') else null
         end interviewer_no_show_unique
     from
     	courses c
