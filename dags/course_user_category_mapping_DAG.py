@@ -39,7 +39,7 @@ def extract_data_to_nested(**kwargs):
             'course_structure_class, user_id,'
             'course_user_mapping_status, label_mapping_status,'
             'completed_module_count, count_of_a, student_category, student_name)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
             'course_user_mapping_status = EXCLUDED.course_user_mapping_status,'
@@ -47,7 +47,8 @@ def extract_data_to_nested(**kwargs):
             'completed_module_count = EXCLUDED.completed_module_count,'
             'count_of_a = EXCLUDED.count_of_a,'
             'student_category = EXCLUDED.student_category,'
-            'student_name = EXCLUDED.student_name;',
+            'student_name = EXCLUDED.student_name,'
+            'lead_type = EXCLUDED.lead_type;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -60,7 +61,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[8],
                 transform_row[9],
                 transform_row[10],
-
+                transform_row[11],
             )
         )
     pg_conn.commit()
@@ -92,7 +93,8 @@ create_table = PostgresOperator(
             completed_module_count int,
             count_of_a int,
             student_category varchar(255),
-            student_name text
+            student_name text,
+            lead_type text
         );
     ''',
     dag=dag
@@ -102,7 +104,7 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
     sql='''
-    select
+select
         concat(course_id, user_id, course_id) as table_unique_key,
         course_id,
         course_name,
@@ -119,7 +121,8 @@ transform_data = PostgresOperator(
             when comp_module_count <> 0 and (count_of_a * 1.0 / comp_module_count) <= 0 then 'B'
             else null
         end as student_category,
-        student_name
+        student_name,
+        lead_type
     from
         (with batch_module_mapping as
             (select 
@@ -192,7 +195,8 @@ transform_data = PostgresOperator(
                 else 'Mapping Error'
             end as label_mapping_status,
             completed_module_count.comp_module_count,
-            count(distinct topic_pool_id) filter (where grade_obtained like 'A') as count_of_a
+            count(distinct topic_pool_id) filter (where grade_obtained like 'A') as count_of_a,
+            ui.lead_type
         from
             course_user_mapping cum 
         join courses c 
@@ -203,7 +207,7 @@ transform_data = PostgresOperator(
             on required_user_data.user_id = cum.user_id and cum.course_id = required_user_data.course_id
         left join completed_module_count
             on completed_module_count.course_id = c.course_id
-        group by 1,2,3,4,5,6,7,8) final_query
+        group by 1,2,3,4,5,6,7,8,10) final_query
     order by 2 desc, 5;
         ''',
     dag=dag
