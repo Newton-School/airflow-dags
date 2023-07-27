@@ -237,7 +237,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='Video sessions one to one Engagement time data with overlapping time calculation',
-    schedule_interval='30 0 * * *',
+    schedule_interval='30 0 * * SUN',
     catchup=False
 )
 
