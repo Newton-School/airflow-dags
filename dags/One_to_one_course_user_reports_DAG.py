@@ -208,7 +208,7 @@ def insert_preprocessed_data(**kwargs):
 
     for _, row in df_cleaned.iterrows():
         print("Insert Pre Processed Data", row)
-    pg_cursor.execute(
+        pg_cursor.execute(
         'INSERT INTO video_sessions_course_user_reports (one_to_one_id, user_id, stakeholder_name,'
         'course_user_mapping_id, join_time, leave_time, report_type, one_to_one_type,'
         'stakeholder_type, overlapping_time_seconds, overlapping_time_minutes)'
