@@ -38,7 +38,7 @@ def extract_data_to_nested(**kwargs):
             'INSERT INTO course_user_category_mapping (table_unique_key, course_id, course_name,'
             'course_structure_class, user_id,'
             'course_user_mapping_status, label_mapping_status,'
-            'completed_module_count, count_of_a, student_category, student_name)'
+            'completed_module_count, count_of_a, student_category, student_name, lead_type)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
