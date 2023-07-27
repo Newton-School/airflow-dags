@@ -143,8 +143,7 @@ def fetch_data_and_preprocess(**kwargs):
             
             select * from booked_by_mapping)
         
-        select * from final_data
-        where join_time >= '2023-07-25';
+        select * from final_data;
     """
 
 
