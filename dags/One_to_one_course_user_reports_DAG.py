@@ -67,15 +67,15 @@ def fetch_data_and_preprocess(**kwargs):
     pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
 
-    # result_hook = PostgresHook(postgres_conn_id='postgres_result_db')
-    # result_conn = result_hook.get_conn()
-    # result_cursor = result_conn.cursor()
-    #
-    # result_cursor.execute("""
-    # select distinct lecture_id from lecture_engagement_time;
-    #     """)
+    result_hook = PostgresHook(postgres_conn_id='postgres_result_db')
+    result_conn = result_hook.get_conn()
+    result_cursor = result_conn.cursor()
 
-    # inserted_lecture_id = list(result_cursor.fetchall())
+    result_cursor.execute("""
+    select distinct one_to_one_id from video_sessions_course_user_reports;
+        """)
+
+    inserted_one_to_one_id = list(result_cursor.fetchall())
 
     query = """
         with raw_data as 
@@ -107,7 +107,7 @@ def fetch_data_and_preprocess(**kwargs):
             from
                 raw_data
             join video_sessions_onetoone
-                on video_sessions_onetoone.id = raw_data.one_to_one_id
+                on video_sessions_onetoone.id = raw_data.one_to_one_id and video_sessions_onetoone.id > 505268
             join courses_courseusermapping
                 on courses_courseusermapping.id = raw_data.course_user_mapping_id
                     and video_sessions_onetoone.booked_with_id = courses_courseusermapping.user_id
@@ -128,7 +128,7 @@ def fetch_data_and_preprocess(**kwargs):
             from
                 raw_data
             join video_sessions_onetoone
-                on video_sessions_onetoone.id = raw_data.one_to_one_id
+                on video_sessions_onetoone.id = raw_data.one_to_one_id and video_sessions_onetoone.id > 505268
             join courses_courseusermapping
                 on courses_courseusermapping.id = raw_data.course_user_mapping_id
                     and video_sessions_onetoone.booked_by_id = courses_courseusermapping.user_id
@@ -143,12 +143,11 @@ def fetch_data_and_preprocess(**kwargs):
             
             select * from booked_by_mapping)
         
-        select * from final_data;
+        select * from final_data
+        where one_to_one_id <> ANY(%s);
     """
 
-
-    pg_cursor.execute(query)
-    # , (inserted_lecture_id,))
+    pg_cursor.execute(query, (inserted_one_to_one_id,))
 
     rows = pg_cursor.fetchall()
     column_names = ['one_to_one_id', 'user_id', 'stakeholder_name', 'course_user_mapping_id',
@@ -237,7 +236,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='Video sessions one to one Engagement time data with overlapping time calculation',
-    schedule_interval='30 0 * * SUN',
+    schedule_interval='30 0 * * *',
     catchup=False
 )
 
