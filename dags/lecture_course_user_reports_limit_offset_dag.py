@@ -61,7 +61,11 @@ create_table = PostgresOperator(
             live_attendance int,
             recorded_attendance int,
             overall_attendance int,
-            total_overlapping_time_in_mins int
+            total_overlapping_time_in_mins int,
+            answer_rating int,
+            rating_feedback_answer text,
+            lecture_understood_rating int,
+            lecture_understanding_feedback_answer text
         );
     ''',
     dag=dag
@@ -269,7 +273,6 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
                 and cum.status in (8,9,11,12,30) and c.course_id in (select distinct wab.lu_course_id from wow_active_batches wab) 
         join lectures l
             on l.course_id = c.course_id and l.start_timestamp >= '2022-07-01'
-            and l.course_id = 708
               and (l.lecture_id between %d and %d)
         left join user_raw_data let
             on let.lecture_id = l.lecture_id and let.course_user_mapping_id = cum.course_user_mapping_id
@@ -441,7 +444,6 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
                 and cum.status in (8,9,11,12,30) and c.course_id in (select distinct wab.lu_course_id from wow_active_batches wab) 
         join lectures l
             on l.course_id = c.course_id and l.start_timestamp >= '2022-07-01'
-            and l.course_id = 708
               and (l.lecture_id between %d and %d)
         left join user_raw_data let
             on let.lecture_id = l.lecture_id and let.course_user_mapping_id = cum.course_user_mapping_id
