@@ -101,7 +101,7 @@ def fetch_data_and_preprocess(**kwargs):
     from
         video_sessions_lecturecourseuserreport
     where report_type = 4
-    and date(join_time) >= '2023-07-05'
+    and lecture_id > 30934
     group by 1,2,3,4,5,6),
 
 course_inst_mapping_raw as
@@ -187,7 +187,7 @@ order by 1 desc, 5, 2;
     """
 
     #print(query)
-    print(inserted_lecture_id)
+    # print(inserted_lecture_id)
     pg_cursor.execute(query, (inserted_lecture_id,))
 
     rows = pg_cursor.fetchall()
@@ -233,45 +233,6 @@ order by 1 desc, 5, 2;
                         overlapping_time_seconds / 60, 2)
                 new_df = pd.concat([new_df, student_dataframe])
 
-    # # MAIN CODE AND CALLING OF FUNCTIONS
-    # new_df = pd.DataFrame(rows, columns=column_names)  # copy of the original df
-    # result_df = pd.DataFrame([], columns=column_names)
-    # for i, row in df.groupby('lecture_id'):
-    #     instructor_dataframe = row[row['user_type'] == 'Instructor']
-    #     instructor_dataframe = instructor_dataframe.sort_values('join_time')
-    #     if instructor_dataframe.shape[0] == 0:
-    #         continue
-    #     instructor_dataframe = remove_redundant_rows(instructor_dataframe)
-    #     instructor_times = np.array(instructor_dataframe[['join_time', 'leave_time']].values.tolist())
-    #     # concat_instructor_dataframe
-    #     new_df = pd.concat([new_df, instructor_dataframe])
-    #     for j, row2 in row.groupby('course_user_mapping_id'):
-    #         user_type = row2['user_type'].values[0]
-    #         if user_type == 'User':
-    #             row2 = row2.sort_values('join_time')
-    #             student_dataframe = remove_redundant_rows(row2)
-    #             for k, row3 in student_dataframe.iterrows():
-    #                 student_join_time = row3['join_time']
-    #                 student_leave_time = row3['leave_time']
-    #
-    #                 # Get the index of the row in the original dataframe (df)
-    #                 original_index = row3.name
-    #                 print("original index", original_index)
-    #
-    #                 # Check if the row is redundant based on its index
-    #                 is_redundant = original_index != k
-    #
-    #                 # Set user_type to None for redundant rows
-    #                 user_type = row3['user_type'] if not is_redundant else None
-    #
-    #                 overlapping_time_seconds = calculate_student_instructor_overlapping_time(student_join_time,
-    #                                                                                          student_leave_time,
-    #                                                                                          instructor_times)
-    #                 student_dataframe.at[original_index, 'overlapping_time_seconds'] = round(overlapping_time_seconds, 0)
-    #                 student_dataframe.at[original_index, 'overlapping_time_minutes'] = round(overlapping_time_seconds/60, 2)
-    #             new_df = pd.concat([new_df, student_dataframe])
-    #             # print("result df", result_df)
-
     # result_df = result_df.drop(['index'], axis=1)
     column_positioning = ['lecture_id', 'course_user_mapping_id', 'user_type', 'join_time', 'leave_time',
                           'overlapping_time_seconds', 'overlapping_time_minutes']
@@ -280,7 +241,6 @@ order by 1 desc, 5, 2;
 
     ti = kwargs['ti']
     ti.xcom_push(key='preprocessed_data_df', value=new_df)
-
 
 def insert_preprocessed_data(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
@@ -307,7 +267,6 @@ def insert_preprocessed_data(**kwargs):
         )
 
     pg_conn.commit()
-
 
 dag = DAG(
     'lecture_time_dag',
