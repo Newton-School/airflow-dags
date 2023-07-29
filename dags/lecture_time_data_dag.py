@@ -187,7 +187,7 @@ order by 1 desc, 5, 2;
     """
 
     #print(query)
-
+    print(inserted_lecture_id)
     pg_cursor.execute(query, (inserted_lecture_id,))
 
     rows = pg_cursor.fetchall()
