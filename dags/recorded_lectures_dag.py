@@ -27,16 +27,19 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO recorded_lectures_course_user_reports (table_unique_key,lecture_id,course_user_mapping_id,total_time_watched_in_mins)'
-            'VALUES (%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set lecture_id = EXCLUDED.lecture_id,'
-            'course_user_mapping_id = EXCLUDED.course_user_mapping_id,'
-            'total_time_watched_in_mins = EXCLUDED.total_time_watched_in_mins;',
+            'INSERT INTO recorded_lectures_course_user_reports (table_unique_key, lecture_id,'
+            'lecture_watch_date, course_user_mapping_id, total_time_watched_in_mins,'
+            'lecture_watched_in_seconds)'
+            'VALUES (%s,%s,%s,%s,%s,%s)'
+            'on conflict (table_unique_key) do update set total_time_watched_in_mins = EXCLUDED.total_time_watched_in_mins,'
+            'lecture_watched_in_seconds = EXCLUDED.lecture_watched_in_seconds;',
             (
                 transform_row[0],
                 transform_row[1],
                 transform_row[2],
-                transform_row[3]
+                transform_row[3],
+                transform_row[4],
+                transform_row[5],
             )
         )
     pg_conn.commit()
@@ -55,10 +58,12 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS recorded_lectures_course_user_reports (
             id serial not null,
-            table_unique_key bigint not null PRIMARY KEY,
+            table_unique_key text not null PRIMARY KEY,
             lecture_id bigint,
+            lecture_watch_date date,
             course_user_mapping_id bigint,
-            total_time_watched_in_mins bigint
+            total_time_watched_in_mins real,
+            lecture_watched_in_seconds real
         );
     ''',
     dag=dag
@@ -68,14 +73,16 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
     sql='''select
-        cast(concat(course_user_mapping_id, video_sessions_lecturecourseuserreport.lecture_id, right(cast(course_user_mapping_id AS varchar),3)) as bigint) as table_unique_key_one,
+        concat(lecture_id, course_user_mapping_id, date(created_at)) as table_unique_key,
         lecture_id,
+        date(created_at) as lecture_watch_date,
         course_user_mapping_id,
-        sum(duration) / 60 as total_time_watched_in_mins
+        sum(duration) / 60 as total_time_watched_in_mins,
+        sum(duration) as lecture_watched_in_seconds
     from
         video_sessions_lecturecourseuserreport
     where report_type = 3
-    group by 2,3;
+    group by 1,2,3,4;
         ''',
     dag=dag
 )
