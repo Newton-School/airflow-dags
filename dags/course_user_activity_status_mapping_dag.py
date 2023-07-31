@@ -43,7 +43,7 @@ def extract_data_to_nested(**kwargs):
             'lead_type = EXCLUDED.lead_type,'
             'label_mapping_status = EXCLUDED.label_mapping_status,'
             'student_category = EXCLUDED.student_category,'
-            'last_activity_date = EXCLUDED.last_activity_date,'
+            'latest_activity_date = EXCLUDED.latest_activity_date,'
             'activity_status_7_days = EXCLUDED.activity_status_7_days,'
             'activity_status_14_days = EXCLUDED.activity_status_14_days,'
             'activity_status_30_days = EXCLUDED.activity_status_30_days,'
