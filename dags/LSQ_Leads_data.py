@@ -133,8 +133,8 @@ create_table = PostgresOperator(
     dag=dag
 )
 
-transform_data = PostgresOperator(
-    task_id='transform_data',
+transform_data1 = PostgresOperator(
+    task_id='transform_data1',
     postgres_conn_id='postgres_lsq_leads',
     sql='''select
             distinct 
@@ -243,16 +243,139 @@ transform_data = PostgresOperator(
                 
             FROM leadsquareactivity l 
             left join leadsquareleadsdata l2 on l2.prospectid = l.relatedprospectid 
+            where date(l.createdon) < 'April 1,2023'
+            order by 2,5;
+        ''',
+    dag=dag
+)
+
+extract_python_data1 = PythonOperator(
+    task_id='extract_python_data1',
+    python_callable=extract_data_to_nested,
+    provide_context=True,
+    dag=dag
+)
+transform_data2 = PostgresOperator(
+    task_id='transform_data2',
+    postgres_conn_id='postgres_lsq_leads',
+    sql='''select
+            distinct 
+            concat(l2.prospectid,l.activityid) as table_unique_key,
+            l2.prospectid as prospect_id,
+            l.activityid as activity_id,
+            l2.emailaddress as email_address,
+            l2.createdon::timestamp + INTERVAL '5 hours 30 minutes' as lead_created_on,
+            eventname as event,
+            l.createdon::timestamp + INTERVAL '5 hours 30 minutes' as modified_on,
+            l2.prospectstage as prospect_stage,
+            l2.owneridname as lead_owner,
+            l2.mx_substatus as lead_sub_status,
+            l2.mx_last_call_status as lead_last_call_status,
+            l2.mx_last_call_sub_status as lead_last_call_sub_status,
+            l2.mx_last_call_connection_status as lead_last_call_connection_status,
+            mx_mid_funnel_count as mid_funnel_count,
+            mx_mid_funnel_buckets as mid_funnel_buckets,
+            mx_reactivation_bucket as reactivation_bucket,
+            mx_reactivation_date as reactivation_date,
+            mx_source_intended_course as source_intended_course,
+            case 
+            when lower(mx_source_intended_course) like ('%fsd%') then 'FSD'
+            when lower(mx_source_intended_course) like ('%full%') then 'FSD'
+            when lower(mx_source_intended_course) like ('%data%') then 'DS'
+            when lower(mx_source_intended_course) like ('%ds%') then 'DS'
+            when lower(mx_source_intended_course) like '%bs%' then 'Bachelors' end as intended_course,
+                coalesce(cast((CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'CreatedBy')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'CreatedBy' LIMIT 1 ) ELSE null end) as varchar),
+                      cast((CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'CreatedByName')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'CreatedByName' LIMIT 1 ) ELSE null end)as varchar)) AS created_by_name,
+
+                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'EventName')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'EventName' LIMIT 1 ) ELSE null end) AS event_name,
+
+                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'NotableEventDescription')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'NotableEventDescription' LIMIT 1 ) ELSE null end) AS notable_event_description,
+
+                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'PreviousStage')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'PreviousStage' LIMIT 1 ) ELSE null end) AS previous_stage,
+
+                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'CurrentStage')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'CurrentStage' LIMIT 1 ) ELSE null end) AS current_stage,
+
+                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'CallType')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'CallType' LIMIT 1 ) ELSE null end) AS call_type,
+
+                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'Caller')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'Caller' LIMIT 1 ) ELSE null end) AS caller,
+
+                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'Duration')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'Duration' LIMIT 1 ) ELSE null end) AS duration,
+
+                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'CallNotes')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'CallNotes' LIMIT 1 ) ELSE null end) AS call_notes,
+
+                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'PreviousOwner')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'PreviousOwner' LIMIT 1 ) ELSE null end) AS previous_owner,
+
+                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'CurrentOwner')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'CurrentOwner' LIMIT 1 ) ELSE null end) AS current_owner,
+
+                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'HasAttachments')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                        WHERE (message->>'Key')::varchar = 'HasAttachments' LIMIT 1 ) ELSE null end) AS has_attachments,
+
+                (CASE when jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_1')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                      WHERE (message->>'Key')::varchar = 'mx_Custom_1' LIMIT 1 )ELSE null END) AS call_status,
+
+                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_2')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                      WHERE (message->>'Key')::varchar = 'mx_Custom_2' LIMIT 1 )ELSE null END) AS call_sub_status,
+
+                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'Status')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                      WHERE (message->>'Key')::varchar = 'Status' LIMIT 1 )ELSE null END) AS call_connection_status
+
+            FROM leadsquareactivity l 
+            left join leadsquareleadsdata l2 on l2.prospectid = l.relatedprospectid 
             where date(l.createdon) >= 'April 1,2023'
             order by 2,5;
         ''',
     dag=dag
 )
 
-extract_python_data = PythonOperator(
-    task_id='extract_python_data',
+extract_python_data2 = PythonOperator(
+    task_id='extract_python_data2',
     python_callable=extract_data_to_nested,
     provide_context=True,
     dag=dag
 )
-create_table >> transform_data >> extract_python_data
+
+create_table >> transform_data1 >> extract_python_data1 >> transform_data2 >> extract_python_data2
