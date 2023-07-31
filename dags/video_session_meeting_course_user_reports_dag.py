@@ -67,15 +67,15 @@ def fetch_data_and_preprocess(**kwargs):
     pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
 
-    # result_hook = PostgresHook(postgres_conn_id='postgres_result_db')
-    # result_conn = result_hook.get_conn()
-    # result_cursor = result_conn.cursor()
-    #
-    # result_cursor.execute("""
-    # select distinct one_to_one_id from video_sessions_course_user_reports;
-    #     """)
-    #
-    # inserted_one_to_one_id = list(result_cursor.fetchall())
+    result_hook = PostgresHook(postgres_conn_id='postgres_result_db')
+    result_conn = result_hook.get_conn()
+    result_cursor = result_conn.cursor()
+
+    result_cursor.execute("""
+    select distinct meeting_id from group_session_course_user_reports;
+        """)
+
+    inserted_meeting_id = list(result_cursor.fetchall())
 
     query = """
         with mentor_mapping as 
@@ -89,6 +89,7 @@ def fetch_data_and_preprocess(**kwargs):
                     video_sessions_meetingcourseuserreport
                 join video_sessions_meeting
                     on video_sessions_meeting.id = video_sessions_meetingcourseuserreport.meeting_id
+                        and video_sessions_meeting.id > 92777
                 join courses_courseusermapping
                     on courses_courseusermapping.user_id = video_sessions_meeting.booked_by_id 
                         and video_sessions_meetingcourseuserreport.course_user_mapping_id = courses_courseusermapping.id
@@ -107,6 +108,7 @@ def fetch_data_and_preprocess(**kwargs):
                     video_sessions_meetingcourseuserreport
                 join video_sessions_meeting
                     on video_sessions_meeting.id = video_sessions_meetingcourseuserreport.meeting_id
+                        and video_sessions_meeting.id > 92777
                 join video_sessions_meeting_booked_with
                     on video_sessions_meeting_booked_with.meeting_id = video_sessions_meeting.id 
                 join courses_courseusermapping
@@ -124,11 +126,11 @@ def fetch_data_and_preprocess(**kwargs):
             select * from mentee_mapping)
         
         select * from all_data
+        where meeting_id <> ANY(%s)
         order by 1 desc, 5 desc, 2, 3;
     """
 
-    pg_cursor.execute(query)
-                      # , (inserted_one_to_one_id,))
+    pg_cursor.execute(query, (inserted_meeting_id,))
 
     rows = pg_cursor.fetchall()
     column_names = ['meeting_id', 'course_user_mapping_id', 'join_time', 'leave_time', 'user_type']
@@ -215,7 +217,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='Video sessions meeting Engagement time data with overlapping time calculation',
-    schedule_interval='0 1 * * FRI',
+    schedule_interval='0 1 * * *',
     catchup=False
 )
 
