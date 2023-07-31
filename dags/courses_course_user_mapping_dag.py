@@ -29,12 +29,17 @@ def extract_data_to_nested(**kwargs):
                 'INSERT INTO course_user_mapping (course_user_mapping_id,user_id,course_id,'
                 'course_name,unit_type,admin_course_user_mapping_id,admin_unit_name,'
                 'admin_course_id,created_at,status,label_id,utm_campaign,utm_source,'
-                'utm_medium,hash) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'utm_medium,hash,apply_form_current_city,apply_form_graduation_year,apply_form_current_occupation,'
+                'apply_form_work_ex) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (course_user_mapping_id) do update set course_name=EXCLUDED.course_name,'
                 'unit_type=EXCLUDED.unit_type,admin_unit_name=EXCLUDED.admin_unit_name,'
                 'admin_course_id=EXCLUDED.admin_course_id,'
                 'status = EXCLUDED.status,label_id = EXCLUDED.label_id,'
-                'admin_course_user_mapping_id = EXCLUDED.admin_course_user_mapping_id;',
+                'admin_course_user_mapping_id = EXCLUDED.admin_course_user_mapping_id,'
+                'apply_form_current_city=EXCLUDED.apply_form_current_city,'
+                'apply_form_graduation_year=EXCLUDED.apply_form_graduation_year,'
+                'apply_form_current_occupation=EXCLUDED.apply_form_current_occupation,'
+                'apply_form_work_ex=EXCLUDED.apply_form_work_ex;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -51,6 +56,10 @@ def extract_data_to_nested(**kwargs):
                     transform_row[12],
                     transform_row[13],
                     transform_row[14],
+                    transform_row[15],
+                    transform_row[16],
+                    transform_row[17],
+                    transform_row[18],
                  )
         )
     pg_conn.commit()
@@ -82,7 +91,11 @@ create_table = PostgresOperator(
             utm_campaign varchar(256),
             utm_source varchar(256),
             utm_medium varchar(256),
-            hash varchar(100)
+            hash varchar(100),
+            apply_form_current_city varchar(256),
+            apply_form_graduation_year varchar(256),
+            apply_form_current_occupation varchar(256),
+            apply_form_work_ex varchar(256)
         );
     ''',
     dag=dag
@@ -106,7 +119,11 @@ transform_data = PostgresOperator(
             (courses_courseusermapping.utm_param_json->'utm_source'::text) #>> '{}' as utm_source,
             (courses_courseusermapping.utm_param_json->'utm_medium'::text) #>> '{}' as utm_medium,
             (courses_courseusermapping.utm_param_json->'utm_campaign'::text) #>> '{}' as utm_campaign,
-            courses_courseusermapping.hash
+            courses_courseusermapping.hash,
+            (SELECT U0.response FROM apply_forms_courseuserapplyformquestionmapping U0 WHERE (U0.apply_form_question_id = 17 AND U0.course_user_mapping_id = (courses_courseusermapping.id))  LIMIT 1) as apply_form_current_city,
+            (SELECT U0.response FROM apply_forms_courseuserapplyformquestionmapping U0 WHERE (U0.apply_form_question_id = 3 AND U0.course_user_mapping_id = (courses_courseusermapping.id))  LIMIT 1) as apply_form_graduation_year,
+            (SELECT U0.response FROM apply_forms_courseuserapplyformquestionmapping U0 WHERE (U0.apply_form_question_id = 53 AND U0.course_user_mapping_id = (courses_courseusermapping.id))  LIMIT 1) as apply_form_current_occupation,
+            (SELECT U0.response FROM apply_forms_courseuserapplyformquestionmapping U0 WHERE (U0.apply_form_question_id = 54 AND U0.course_user_mapping_id = (courses_courseusermapping.id))  LIMIT 1) as apply_form_work_ex
         from
             courses_courseusermapping
         left join courses_courseuserlabelmapping
@@ -129,7 +146,12 @@ select
     raw.utm_campaign,
     raw.utm_source,
     raw.utm_medium,
-    raw.hash 
+    raw.hash,
+    raw.apply_form_current_city,
+    raw.apply_form_graduation_year,
+    raw.apply_form_current_occupation,
+    raw.apply_form_work_ex
+    
 from
     raw
 left join raw as r_one
