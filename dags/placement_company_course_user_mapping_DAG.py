@@ -88,7 +88,7 @@ create_table = PostgresOperator(
             created_at TIMESTAMP,
             created_by_id bigint,
             ctc bigint,
-            feedback varchar(900),
+            feedback text,
             hash varchar(15),
             job_opening_id int,
             join_timestamp TIMESTAMP,
