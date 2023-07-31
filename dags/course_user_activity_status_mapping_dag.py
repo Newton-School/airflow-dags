@@ -35,7 +35,7 @@ def extract_data_to_nested(**kwargs):
             'course_id, course_name, course_structure_class, lead_type, label_mapping_status, student_category,'
             'latest_activity_date, activity_status_7_days, activity_status_14_days, activity_status_30_days,'
             'last_activity, last_lecture_attended_on, last_question_attempted_on, last_quiz_attempted_on, '
-            'last_mock_date, last_one_to_one_date, last_recorded_lecture_watched_on, last_group_session_date)'
+            'last_mock_date, last_one_on_one_date, last_recorded_lecture_watched_on, last_group_session_date)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
             'course_name = EXCLUDED.course_name,'
@@ -52,7 +52,7 @@ def extract_data_to_nested(**kwargs):
             'last_question_attempted_on = EXCLUDED.last_question_attempted_on,'
             'last_quiz_attempted_on = EXCLUDED.last_quiz_attempted_on,'
             'last_mock_date = EXCLUDED.last_mock_date,'
-            'last_one_to_one_date = EXCLUDED.last_one_to_one_date,'
+            'last_one_on_one_date = EXCLUDED.last_one_on_one_date,'
             'last_recorded_lecture_watched_on = EXCLUDED.last_recorded_lecture_watched_on,'
             'last_group_session_date = EXCLUDED.last_group_session_date',
             (
