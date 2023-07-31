@@ -27,26 +27,21 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO group_sessions (table_unique_key,meeting_id,start_timestamp,end_timestamp,mentor_user_id,'
-            'mentor_report_type,course_id,mentee_user_id,mentee_report_type,mentor_min_join_time,'
-            'mentor_max_leave_time,mentor_total_time_in_mins,mentee_min_join_time,'
-            'mentee_max_leave_time,mentee_total_time_in_mins,mentee_overlapping_time_in_mins)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set meeting_id = EXCLUDED.meeting_id,'
-            'start_timestamp = EXCLUDED.start_timestamp,'
-            'end_timestamp = EXCLUDED.end_timestamp,'
-            'mentor_user_id = EXCLUDED.mentor_user_id,'
-            'mentor_report_type = EXCLUDED.mentor_report_type,'
-            'course_id = EXCLUDED.course_id,'
-            'mentee_user_id = EXCLUDED.mentee_user_id,'
-            'mentee_report_type = EXCLUDED.mentee_report_type,'
-            'mentor_min_join_time = EXCLUDED.mentor_min_join_time,'
-            'mentor_max_leave_time = EXCLUDED.mentor_max_leave_time,'
-            'mentor_total_time_in_mins = EXCLUDED.mentor_total_time_in_mins,'
-            'mentee_min_join_time = EXCLUDED.mentee_min_join_time,'
-            'mentee_max_leave_time = EXCLUDED.mentee_max_leave_time,'
-            'mentee_total_time_in_mins = EXCLUDED.mentee_total_time_in_mins,'
-            'mentee_overlapping_time_in_mins = EXCLUDED.mentee_overlapping_time_in_mins;',
+            'INSERT INTO group_sessions (meeting_id,booked_by_id,child_video_session,'
+            'course_id,actual_duration,created_at,start_timestamp,end_timestamp,end_via_api,hash,'
+            'participants_count,reports_pulled,title,video_session_using,with_mentees,is_deleted,'
+            'deleted_by_id,should_redirect,cancel_reason,meeting_status)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (meeting_id) do update set booked_by_id=EXCLUDED.booked_by_id,'
+            'child_video_session=EXCLUDED.child_video_session, course_id=EXCLUDED.course_id,'
+            'actual_duration=EXCLUDED.actual_duration,start_timestamp=EXCLUDED.start_timestamp,'
+            'end_timestamp=EXCLUDED.end_timestamp,end_via_api=EXCLUDED.end_via_api,'
+            'hash=EXCLUDED.hash,participants_count=EXCLUDED.participants_count,'
+            'reports_pulled=EXCLUDED.reports_pulled,title=EXCLUDED.title,'
+            'video_session_using=EXCLUDED.video_session_using,with_mentees=EXCLUDED.with_mentees,'
+            'is_deleted=EXCLUDED.is_deleted,deleted_by_id=EXCLUDED.deleted_by_id,'
+            'should_redirect=EXCLUDED.should_redirect,cancel_reason=EXCLUDED.cancel_reason,'
+            'meeting_status=EXCLUDED.meeting_status ;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -63,7 +58,11 @@ def extract_data_to_nested(**kwargs):
                 transform_row[12],
                 transform_row[13],
                 transform_row[14],
-                transform_row[15]
+                transform_row[15],
+                transform_row[16],
+                transform_row[17],
+                transform_row[18],
+                transform_row[19],
             )
         )
     pg_conn.commit()
@@ -82,23 +81,26 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS group_sessions (
-            id serial not null,
-            table_unique_key double precision not null PRIMARY KEY,
-            meeting_id bigint,
-            start_timestamp timestamp,
-            end_timestamp timestamp,
-            mentor_user_id bigint,
-            mentor_report_type int,
+            meeting_id int not null PRIMARY KEY,
+            booked_by_id bigint,
+            child_video_session boolean,
             course_id int,
-            mentee_user_id bigint,
-            mentee_report_type int,
-            mentor_min_join_time timestamp,
-            mentor_max_leave_time timestamp,
-            mentor_total_time_in_mins bigint,
-            mentee_min_join_time timestamp,
-            mentee_max_leave_time timestamp,
-            mentee_total_time_in_mins bigint,
-            mentee_overlapping_time_in_mins bigint
+            actual_duration int,
+            created_at TIMESTAMP,
+            start_timestamp TIMESTAMP,
+            end_timestamp TIMESTAMP,
+            end_via_api boolean,
+            hash varchar(256),
+            participants_count int,
+            reports_pulled boolean,
+            title varchar(256),
+            video_session_using int,
+            with_mentees boolean,
+            is_deleted boolean,
+            deleted_by_id bigint,
+            should_redirect boolean,
+            cancel_reason varchar(256),
+            meeting_status int
         );
     ''',
     dag=dag
@@ -107,92 +109,28 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
-    sql='''with mentor_data as
-
-    (select 
-        video_sessions_meeting.id as meeting_id,
-        video_sessions_meeting.start_timestamp,
-        video_sessions_meeting.end_timestamp,
-        video_sessions_meeting.booked_by_id as mentor_user_id,
-        video_sessions_meetingcourseuserreport.report_type,
-        video_sessions_meeting.course_id,
-        min(video_sessions_meetingcourseuserreport.created_at) as min_created_at,
-        min(video_sessions_meetingcourseuserreport.join_time) as min_join_time,
-        max(video_sessions_meetingcourseuserreport.leave_time) as max_leave_time,
-        sum(duration) as total_time
-    from
-        video_sessions_meeting
-    join courses_course
-        on courses_course.id = video_sessions_meeting.course_id
-    join courses_courseusermapping
-        on courses_courseusermapping.course_id = courses_course.id and video_sessions_meeting.booked_by_id = courses_courseusermapping.user_id
-        
-    left join video_sessions_meetingcourseuserreport
-        on video_sessions_meetingcourseuserreport.course_user_mapping_id = courses_courseusermapping.id and video_sessions_meetingcourseuserreport.meeting_id = video_sessions_meeting.id 
-            and video_sessions_meetingcourseuserreport.report_type in (1,2,4)
-    
-    where report_type in (1,2,4)
-    group by 1,2,3,4,5,6),
-
-mentee_data as 
-
-    (select 
-        video_sessions_meeting.id as meeting_id,
-        video_sessions_meeting.start_timestamp,
-        video_sessions_meeting.end_timestamp,
-        video_sessions_meeting_booked_with.user_id as mentee_user_id,
-        video_sessions_meetingcourseuserreport.report_type,
-        video_sessions_meeting.course_id,
-        min(video_sessions_meetingcourseuserreport.created_at) as min_created_at,
-        min(video_sessions_meetingcourseuserreport.join_time) as min_join_time,
-        max(video_sessions_meetingcourseuserreport.leave_time) as max_leave_time,
-        sum(duration) as total_time,
-        
-        sum(duration) 
-            
-            filter (where video_sessions_meetingcourseuserreport.report_type = mentor_data.report_type and (video_sessions_meetingcourseuserreport.join_time >= mentor_data.min_join_time)
-                and (video_sessions_meetingcourseuserreport.leave_time <= mentor_data.max_leave_time)) as overlapping_time
-    
-    from
-        video_sessions_meeting
-    join courses_course
-        on courses_course.id = video_sessions_meeting.course_id
-    join video_sessions_meeting_booked_with
-        on video_sessions_meeting_booked_with.meeting_id = video_sessions_meeting.id
-    join courses_courseusermapping
-        on courses_courseusermapping.course_id = courses_course.id and video_sessions_meeting_booked_with.user_id = courses_courseusermapping.user_id
-        
-    left join video_sessions_meetingcourseuserreport
-        on video_sessions_meetingcourseuserreport.course_user_mapping_id = courses_courseusermapping.id and video_sessions_meetingcourseuserreport.meeting_id = video_sessions_meeting.id 
-            and video_sessions_meetingcourseuserreport.report_type in (1,2,4)
-    
-    left join mentor_data
-        on mentor_data.meeting_id = video_sessions_meeting.id and mentor_data.report_type = video_sessions_meetingcourseuserreport.report_type
-    group by 1,2,3,4,5,6)
-    
-    
-select
-    cast(concat(mentor_data.meeting_id,mentee_data.mentee_user_id,mentor_data.report_type,mentee_data.report_type) as double precision) as table_unique_key,
-    mentor_data.meeting_id,
-    mentor_data.start_timestamp,
-    mentor_data.end_timestamp,
-    mentor_user_id,
-    mentor_data.report_type as mentor_report_type,
-    mentor_data.course_id,
-    mentee_data.mentee_user_id,
-    mentee_data.report_type as mentee_report_type,
-    mentor_data.min_join_time as mentor_min_join_time,
-    mentor_data.max_leave_time as mentor_max_leave_time,
-    mentor_data.total_time/60 as mentor_total_time_in_mins,
-    mentee_data.min_join_time as mentee_min_join_time,
-    mentee_data.max_leave_time as mentee_max_leave_time,
-    mentee_data.total_time/60 as mentee_total_time_in_mins,
-    mentee_data.overlapping_time/60 as mentee_overlapping_time_in_mins
-    
-from
-    mentor_data
-left join mentee_data
-    on mentor_data.meeting_id = mentee_data.meeting_id and mentee_data.report_type = mentor_data.report_type;
+    sql='''select
+            id as meeting_id,
+            booked_by_id,
+            child_video_session,
+            course_id,
+            actual_duration,
+            created_at,
+            start_timestamp,
+            end_timestamp,
+            end_via_api,
+            hash,
+            participants_count,
+            reports_pulled,
+            title,
+            video_session_using,
+            with_mentees,
+            is_deleted,
+            deleted_by_id,
+            should_redirect,
+            cancel_reason,
+            meeting_status
+            from video_sessions_meeting;
         ''',
     dag=dag
 )
