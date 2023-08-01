@@ -59,8 +59,11 @@ def extract_data_to_nested(**kwargs):
                 'pace_of_the_course,'
                 'other,'
                 'subjective_feedback,'
-                'course_start_timestamp)'
-                'VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'course_start_timestamp,'
+                'activity_status_7_days,'
+                'activity_status_14_days,'
+                'activity_status_30_days)'
+                'VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
                 'lead_type = EXCLUDED.lead_type,'
                 'label_mapping_status = EXCLUDED.label_mapping_status,'
@@ -81,7 +84,10 @@ def extract_data_to_nested(**kwargs):
                 'pace_of_the_course = EXCLUDED.pace_of_the_course,'
                 'other = EXCLUDED.other,'
                 'subjective_feedback = EXCLUDED.subjective_feedback,'
-                'course_start_timestamp = EXCLUDED.course_start_timestamp;',
+                'course_start_timestamp = EXCLUDED.course_start_timestamp,'
+                'activity_status_7_days = EXCLUDED.activity_status_7_days,'
+                'activity_status_14_days = EXCLUDED.activity_status_14_days,'
+                'activity_status_30_days = EXCLUDED.activity_status_30_days;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -109,6 +115,9 @@ def extract_data_to_nested(**kwargs):
                 transform_row[23],
                 transform_row[24],
                 transform_row[25],
+                transform_row[26],
+                transform_row[27],
+                transform_row[28],
             )
         )
     pg_conn.commit()
@@ -155,7 +164,10 @@ create_table = PostgresOperator(
             pace_of_the_course text,
             other text,
             subjective_feedback text,
-            course_start_timestamp timestamp 
+            course_start_timestamp timestamp,
+            activity_status_7_days text,
+            activity_status_14_days text,
+            activity_status_30_days text
         );
     ''',
     dag=dag
@@ -251,10 +263,10 @@ transform_data = PostgresOperator(
                     on ffaq.feedback_form_id = ffar.feedback_form_id and ffaq.feedback_question_id = ffar.feedback_question_id)
                     
             select 
-                concat(user_id, course_id, admin_course_id, extract('year' from form_fill_date), extract('month' from form_fill_date),extract('day' from form_fill_date)) as table_unique_key,
-                user_id,
-                student_name,
-                lead_type,
+                concat(raw_data.user_id, course_id, admin_course_id, extract('year' from form_fill_date), extract('month' from form_fill_date),extract('day' from form_fill_date)) as table_unique_key,
+                raw_data.user_id,
+                raw_data.student_name,
+                raw_data.lead_type,
                 label_mapping_status,
                 course_id,
                 course_name,
@@ -276,10 +288,15 @@ transform_data = PostgresOperator(
                 max(pace_of_the_course) as pace_of_the_course,
                 max(other) as other,
                 max(subjective_feedback) as subjective_feedback,
-                course_start_timestamp
+                course_start_timestamp,
+                uasm.activity_status_7_days,
+                uasm.activity_status_14_days,
+                uasm.activity_status_30_days
             from 
                 raw_data
-            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,26;
+            left join user_activity_status_mapping uasm
+            	on uasm.user_id = raw_data.user_id
+            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,26,27,28,29;
         ''',
     dag=dag
 )

@@ -103,7 +103,7 @@ create_table = PostgresOperator(
             student_name text,
             lead_type text,
             activity_status_7_days text,
-            activity_status_14_days text
+            activity_status_14_days text,
             activity_status_30_days text
         );
     ''',

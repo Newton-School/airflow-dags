@@ -73,9 +73,12 @@ def extract_data_to_nested(**kwargs):
             'challenge_completed_questions_unique,'
             'plag_score_99_unique,'
             'plag_score_95_unique,'
-            'plag_score_90_unique)'
+            'plag_score_90_unique,'
+            'activity_status_7_days,'
+            'activity_status_14_days,'
+            'activity_status_30_days)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
-            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
             'assignment_title = EXCLUDED.assignment_title,'
@@ -109,7 +112,10 @@ def extract_data_to_nested(**kwargs):
             'challenge_completed_questions_unique = EXCLUDED.challenge_completed_questions_unique,'
             'plag_score_99_unique = EXCLUDED.plag_score_99_unique,'
             'plag_score_95_unique = EXCLUDED.plag_score_95_unique,'
-            'plag_score_90_unique = EXCLUDED.plag_score_90_unique;',
+            'plag_score_90_unique = EXCLUDED.plag_score_90_unique,'
+            'activity_status_7_days = EXCLUDED.activity_status_7_days,'
+            'activity_status_14_days = EXCLUDED.activity_status_14_days,'
+            'activity_status_30_days = EXCLUDED.activity_status_30_days;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -150,6 +156,10 @@ def extract_data_to_nested(**kwargs):
                 transform_row[36],
                 transform_row[37],
                 transform_row[38],
+                transform_row[39],
+                transform_row[40],
+                transform_row[41],
+
             )
         )
     pg_conn.commit()
@@ -210,7 +220,10 @@ create_table = PostgresOperator(
             challenge_completed_questions_unique int,
             plag_score_99_unique int,
             plag_score_95_unique int,
-            plag_score_90_unique int
+            plag_score_90_unique int,
+            activity_status_7_days text,
+            activity_status_14_days text,
+            activity_status_30_days text
         );
     ''',
     dag=dag
@@ -312,7 +325,10 @@ transform_data = PostgresOperator(
           case 
                 when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter (where plagiarism_score >= 0.90))
                 else null
-           end as plag_score_90_unique
+           end as plag_score_90_unique,
+           uasm.activity_status_7_days,
+           uasm.activity_status_14_days,
+           uasm.activity_status_30_days 
         from
             assignments a
         join courses c
@@ -324,6 +340,8 @@ transform_data = PostgresOperator(
             on ui.user_id = cum.user_id 
         left join course_user_category_mapping cucm 
             on cucm.user_id = cum.user_id and cum.course_id = cucm.course_id 
+        left join user_activity_status_mapping uasm 
+        	on uasm.user_id = cum.user_id
         left join assignment_question_user_mapping aqum
             on aqum.user_id = cum.user_id and a.assignment_id = aqum.assignment_id
         left join assignment_question aq
@@ -340,7 +358,7 @@ transform_data = PostgresOperator(
             where topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
             group by 1,2,3) module_mapping
                 on module_mapping.assignment_id = a.assignment_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17;
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,40,41,42;
         ''',
     dag=dag
 )

@@ -65,7 +65,10 @@ create_table = PostgresOperator(
             answer_rating int,
             rating_feedback_answer text,
             lecture_understood_rating int,
-            lecture_understanding_feedback_answer text
+            lecture_understanding_feedback_answer text,
+            activity_status_7_days text,
+            activity_status_14_days text,
+            activity_status_30_days text
         );
     ''',
     dag=dag
@@ -90,8 +93,11 @@ def extract_data_to_nested(**kwargs):
             'overall_attendance, total_overlapping_time_in_mins, answer_rating,'
             'rating_feedback_answer,'
             'lecture_understood_rating,'
-            'lecture_understanding_feedback_answer)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'lecture_understanding_feedback_answer,'
+            'activity_status_7_days,'
+            'activity_status_14_days,'
+            'activity_status_30_days)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
             'lead_type = EXCLUDED.lead_type,'
             'student_category = EXCLUDED.student_category,'
@@ -111,7 +117,10 @@ def extract_data_to_nested(**kwargs):
             'answer_rating = EXCLUDED.answer_rating,'
             'rating_feedback_answer = EXCLUDED.rating_feedback_answer,'
             'lecture_understood_rating = EXCLUDED.lecture_understood_rating,'
-            'lecture_understanding_feedback_answer = EXCLUDED.lecture_understanding_feedback_answer;',
+            'lecture_understanding_feedback_answer = EXCLUDED.lecture_understanding_feedback_answer,'
+            'activity_status_7_days = EXCLUDED.activity_status_7_days,'
+            'activity_status_14_days = EXCLUDED.activity_status_14_days,'
+            'activity_status_30_days = EXCLUDED.activity_status_30_days;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -139,6 +148,9 @@ def extract_data_to_nested(**kwargs):
                 transform_row[23],
                 transform_row[24],
                 transform_row[25],
+                transform_row[26],
+                transform_row[27],
+                transform_row[28],
             )
         )
         pg_conn.commit()
@@ -265,7 +277,10 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
             answer_rating,
             rating_feedback_answer,
             lecture_understood_rating,
-            lecture_understanding_feedback_answer
+            lecture_understanding_feedback_answer,
+            uasm.activity_status_7_days,
+            uasm.activity_status_14_days,
+            uasm.activity_status_30_days
         from
             courses c
         join course_user_mapping cum
@@ -294,7 +309,9 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
         left join lecture_rating
         	on lecture_rating.lecture_id = l.lecture_id 
         		and lecture_rating.user_id = cum.user_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,23,24,25,26) count_query;
+        left join user_activity_status_mapping uasm 
+        	on uasm.user_id = cum.user_id 
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,23,24,25,26,27,28,29) count_query;
         ''' % (start_lecture_id, end_lecture_id),
     )
 
@@ -436,7 +453,10 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
             answer_rating,
             rating_feedback_answer,
             lecture_understood_rating,
-            lecture_understanding_feedback_answer
+            lecture_understanding_feedback_answer,
+            uasm.activity_status_7_days,
+            uasm.activity_status_14_days,
+            uasm.activity_status_30_days
         from
             courses c
         join course_user_mapping cum
@@ -465,7 +485,9 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
         left join lecture_rating
         	on lecture_rating.lecture_id = l.lecture_id 
         		and lecture_rating.user_id = cum.user_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,23,24,25,26;
+        left join user_activity_status_mapping uasm 
+        	on uasm.user_id = cum.user_id 
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,23,24,25,26,27,28,29;
             ''' % (start_lecture_id, end_lecture_id),
     )
 

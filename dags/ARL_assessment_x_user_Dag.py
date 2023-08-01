@@ -42,8 +42,10 @@ def extract_data_to_nested(**kwargs):
             'assessment_class, assessment_release_date,'
             'assessment_open_date, assessment_submission_date, assessment_attempt_status,'
             'assessment_submission_status, question_count, questions_marked, questions_correct,'
-            'max_marks, marks_obtained, cheated)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'max_marks, marks_obtained, cheated, activity_status_7_days,'
+            'activity_status_14_days,'
+            'activity_status_30_days)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
             'lead_type = EXCLUDED.lead_type,'
             'label_mapping_status = EXCLUDED.label_mapping_status,'
@@ -65,7 +67,10 @@ def extract_data_to_nested(**kwargs):
             'questions_correct = EXCLUDED.questions_correct,'
             'max_marks = EXCLUDED.max_marks,'
             'marks_obtained = EXCLUDED.marks_obtained,'
-            'cheated = EXCLUDED.cheated;',
+            'cheated = EXCLUDED.cheated,'
+            'activity_status_7_days = EXCLUDED.activity_status_7_days,'
+            'activity_status_14_days = EXCLUDED.activity_status_14_days,'
+            'activity_status_30_days = EXCLUDED.activity_status_30_days;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -93,6 +98,9 @@ def extract_data_to_nested(**kwargs):
                 transform_row[23],
                 transform_row[24],
                 transform_row[25],
+                transform_row[26],
+                transform_row[27],
+                transform_row[28],
             )
         )
     pg_conn.commit()
@@ -139,7 +147,10 @@ create_table = PostgresOperator(
             questions_correct int,
             max_marks int,
             marks_obtained int,
-            cheated boolean
+            cheated boolean,
+            activity_status_7_days text,
+            activity_status_14_days text,
+            activity_status_30_days text
         );
     ''',
     dag=dag
@@ -215,7 +226,10 @@ transform_data = PostgresOperator(
             count(distinct mcq_id) filter (where (marked_choice - correct_choice) = 0) as questions_correct,
             assessments.max_marks,
             assessment_question_user_mapping.marks_obtained,
-            assessment_question_user_mapping.cheated
+            assessment_question_user_mapping.cheated,
+            uasm.activity_status_7_days,
+            uasm.activity_status_14_days,
+            uasm.activity_status_30_days
         from
             assessments
         join courses
@@ -230,7 +244,9 @@ transform_data = PostgresOperator(
         left join assessment_question_user_mapping
             on assessment_question_user_mapping.assessment_id = assessments.assessment_id 
             	and assessment_question_user_mapping.course_user_mapping_id = course_user_mapping.course_user_mapping_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,24,25,26;
+        left join user_activity_status_mapping uasm 
+        	on uasm.user_id = course_user_mapping.user_id
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,24,25,26,27,28,29;
         ''',
     dag=dag
 )

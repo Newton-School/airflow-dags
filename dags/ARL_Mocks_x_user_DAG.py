@@ -53,8 +53,11 @@ def extract_data_to_nested(**kwargs):
             'final_call_no_unique,'
             'final_call_maybe_unique,'
             'student_no_show_unique,'
-            'interviewer_no_show_unique)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'interviewer_no_show_unique,'
+            'activity_status_7_days,'
+            'activity_status_14_days,'
+            'activity_status_30_days)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
             'lead_type = EXCLUDED.lead_type,'
             'student_category = EXCLUDED.student_category,'
@@ -87,7 +90,10 @@ def extract_data_to_nested(**kwargs):
             'final_call_no_unique = EXCLUDED.final_call_no_unique,'
             'final_call_maybe_unique = EXCLUDED.final_call_maybe_unique,'
             'student_no_show_unique = EXCLUDED.student_no_show_unique,'
-            'interviewer_no_show_unique = EXCLUDED.interviewer_no_show_unique;',
+            'interviewer_no_show_unique = EXCLUDED.interviewer_no_show_unique,'
+            'activity_status_7_days = EXCLUDED.activity_status_7_days,'
+            'activity_status_14_days = EXCLUDED.activity_status_14_days,'
+            'activity_status_30_days = EXCLUDED.activity_status_30_days;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -130,6 +136,10 @@ def extract_data_to_nested(**kwargs):
                 transform_row[38],
                 transform_row[39],
                 transform_row[40],
+                transform_row[41],
+                transform_row[42],
+                transform_row[43],
+
             )
         )
     pg_conn.commit()
@@ -191,7 +201,10 @@ create_table = PostgresOperator(
             final_call_no_unique int,
             final_call_maybe_unique int, 
             student_no_show_unique int, 
-            interviewer_no_show_unique int
+            interviewer_no_show_unique int,
+            activity_status_7_days text,
+            activity_status_14_days text,
+            activity_status_30_days text
         );
     ''',
     dag=dag
@@ -201,125 +214,130 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
     sql='''
-select distinct 
-        concat(course_user_mapping.user_id,c.course_id,one_to_one.expert_user_id,one_to_one.one_to_one_id, EXTRACT(month FROM date(one_to_one.one_to_one_start_timestamp)),EXTRACT(year FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.one_to_one_type,one_to_one_topic_mapping.topic_pool_id,EXTRACT(day FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.difficulty_level) as table_unique_key,
-        course_user_mapping.user_id,
-        concat(ui.first_name,' ', ui.last_name) as student_name,
-        ui.lead_type,
-        cucm.student_category,
-        case
-            when course_user_mapping.label_id is null and course_user_mapping.status in (8,9) then 'Enrolled Student'
-            when course_user_mapping.label_id is not null and course_user_mapping.status in (8,9) then 'Label Marked Student'
-            when c.course_structure_id in (1,18) and course_user_mapping.status in (11,12) then 'ISA Cancelled Student'
-            when c.course_structure_id not in (1,18) and course_user_mapping.status in (30) then 'Deferred Student'
-            when c.course_structure_id not in (1,18) and course_user_mapping.status in (11) then 'Foreclosed Student'
-            when c.course_structure_id not in (1,18) and course_user_mapping.status in (12) then 'Reject by NS-Ops'
-            else 'Mapping Error'
-        end as user_enrollment_status,
-        one_to_one.expert_user_id,
-        c.course_id,
-        c.course_structure_class,
-        c.course_name,
-        one_to_one.one_to_one_id,
-        one_to_one.title as session_title,
-        date(one_to_one.one_to_one_start_timestamp) as one_to_one_date,
-        case
-            when one_to_one.one_to_one_type = 1 then 'Mock Technical Interview'
-            when one_to_one.one_to_one_type = 2 then 'Mock HR Interview'
-            when one_to_one.one_to_one_type = 3 then 'Mock Project'
-            when one_to_one.one_to_one_type = 4 then 'Mock DSA'
-            when one_to_one.one_to_one_type = 5 then 'Mock Full Stack'
-            when one_to_one.one_to_one_type = 6 then 'Entrance Interview'
-            when one_to_one.one_to_one_type = 7 then 'Mentor Catch Up'
-            when one_to_one.one_to_one_type = 8 then 'Interview Coaching'
-            when one_to_one.one_to_one_type = 9 then 'Mock Data Science'
-            when one_to_one.one_to_one_type = 10 then 'General Interview'
-        end as one_to_one_type,
-        one_to_one_topic_mapping.topic_pool_id,
-        topic_pool_mapping.topic_pool_title,
-        case 
-            when one_to_one.difficulty_level = 1 then 'Beginner'
-            when one_to_one.difficulty_level = 2 then 'Easy'
-            when one_to_one.difficulty_level = 3 then 'Medium'
-            when one_to_one.difficulty_level = 4 then 'Hard'
-            when one_to_one.difficulty_level = 5 then 'Challenge' else null 
-        end as difficulty_level,
-        count(distinct one_to_one.one_to_one_id) as scheduled,
-        count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 1) as pending_confirmation,
-        count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 3) as interviewer_declined,
-        count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2) as confirmation,
-        count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 5) as student_cancellation,
-        count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 4) as interviewer_cancellation,
-        count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call in (1,2,3)) as conducted,
-        count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 1) as cleared,
-        count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 2) as final_call_no,
-        count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 3) as final_call_maybe,
-        count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and (one_to_one.cancel_reason like 'Insufficient time spent by booked by user%' or one_to_one.cancel_reason like 'Insufficient overlap time')) as student_no_show,
-        count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and one_to_one.cancel_reason like 'Insufficient time spent by booked with user%') as interviewer_no_show,
-        case 
-        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) else null
-        end scheduled_unique,
-        case 
-        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 1) else null
-        end pending_confirmation_unique,
-        case 
-        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 3) else null
-        end interviewer_declined_unique,
-        case 
-        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2) else null
-        end confirmation_unique,
-        case 
-        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 5) else null
-        end student_cancellation_unique,
-        case 
-        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 4) else null
-        end interviewer_cancellation_unique,
-        case 
-        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call in (1,2,3)) else null
-        end conducted_unique,
-        case 
-        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 1) else null
-        end cleared_unique,
-        case 
-        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 2) else null
-        end final_call_no_unique,
-        case 
-        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 3) else null
-        end final_call_maybe_unique,
-        case 
-        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and (one_to_one.cancel_reason like 'Insufficient time spent by booked by user%' or one_to_one.cancel_reason like 'Insufficient overlap time')) else null
-        end student_no_show_unique,
-        case 
-        	when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
-        	then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and one_to_one.cancel_reason like 'Insufficient time spent by booked with user%') else null
-        end interviewer_no_show_unique
-    from
-    	courses c
-    join course_user_mapping
-        on course_user_mapping.course_id = c.course_id and course_user_mapping.status in (8,9,11,12,30)
-        	and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34)
-    left join one_to_one 
-        on c.course_id = one_to_one.course_id and course_user_mapping.user_id = one_to_one.student_user_id
-    left join course_user_category_mapping cucm
-        on cucm.course_id = c.course_id and course_user_mapping.user_id = cucm.user_id
-    left join users_info ui
-        on ui.user_id = course_user_mapping.user_id
-    left join one_to_one_topic_mapping
-        on one_to_one_topic_mapping.one_to_one_id = one_to_one.one_to_one_id
-    left join topic_pool_mapping
-        on topic_pool_mapping.topic_pool_id = one_to_one_topic_mapping.topic_pool_id
-    group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17;
+        select distinct 
+            concat(course_user_mapping.user_id,c.course_id,one_to_one.expert_user_id,one_to_one.one_to_one_id, EXTRACT(month FROM date(one_to_one.one_to_one_start_timestamp)),EXTRACT(year FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.one_to_one_type,one_to_one_topic_mapping.topic_pool_id,EXTRACT(day FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.difficulty_level) as table_unique_key,
+            course_user_mapping.user_id,
+            concat(ui.first_name,' ', ui.last_name) as student_name,
+            ui.lead_type,
+            cucm.student_category,
+            case
+                when course_user_mapping.label_id is null and course_user_mapping.status in (8,9) then 'Enrolled Student'
+                when course_user_mapping.label_id is not null and course_user_mapping.status in (8,9) then 'Label Marked Student'
+                when c.course_structure_id in (1,18) and course_user_mapping.status in (11,12) then 'ISA Cancelled Student'
+                when c.course_structure_id not in (1,18) and course_user_mapping.status in (30) then 'Deferred Student'
+                when c.course_structure_id not in (1,18) and course_user_mapping.status in (11) then 'Foreclosed Student'
+                when c.course_structure_id not in (1,18) and course_user_mapping.status in (12) then 'Reject by NS-Ops'
+                else 'Mapping Error'
+            end as user_enrollment_status,
+            one_to_one.expert_user_id,
+            c.course_id,
+            c.course_structure_class,
+            c.course_name,
+            one_to_one.one_to_one_id,
+            one_to_one.title as session_title,
+            date(one_to_one.one_to_one_start_timestamp) as one_to_one_date,
+            case
+                when one_to_one.one_to_one_type = 1 then 'Mock Technical Interview'
+                when one_to_one.one_to_one_type = 2 then 'Mock HR Interview'
+                when one_to_one.one_to_one_type = 3 then 'Mock Project'
+                when one_to_one.one_to_one_type = 4 then 'Mock DSA'
+                when one_to_one.one_to_one_type = 5 then 'Mock Full Stack'
+                when one_to_one.one_to_one_type = 6 then 'Entrance Interview'
+                when one_to_one.one_to_one_type = 7 then 'Mentor Catch Up'
+                when one_to_one.one_to_one_type = 8 then 'Interview Coaching'
+                when one_to_one.one_to_one_type = 9 then 'Mock Data Science'
+                when one_to_one.one_to_one_type = 10 then 'General Interview'
+            end as one_to_one_type,
+            one_to_one_topic_mapping.topic_pool_id,
+            topic_pool_mapping.topic_pool_title,
+            case 
+                when one_to_one.difficulty_level = 1 then 'Beginner'
+                when one_to_one.difficulty_level = 2 then 'Easy'
+                when one_to_one.difficulty_level = 3 then 'Medium'
+                when one_to_one.difficulty_level = 4 then 'Hard'
+                when one_to_one.difficulty_level = 5 then 'Challenge' else null 
+            end as difficulty_level,
+            count(distinct one_to_one.one_to_one_id) as scheduled,
+            count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 1) as pending_confirmation,
+            count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 3) as interviewer_declined,
+            count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2) as confirmation,
+            count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 5) as student_cancellation,
+            count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 4) as interviewer_cancellation,
+            count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call in (1,2,3)) as conducted,
+            count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 1) as cleared,
+            count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 2) as final_call_no,
+            count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 3) as final_call_maybe,
+            count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and (one_to_one.cancel_reason like 'Insufficient time spent by booked by user%' or one_to_one.cancel_reason like 'Insufficient overlap time')) as student_no_show,
+            count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and one_to_one.cancel_reason like 'Insufficient time spent by booked with user%') as interviewer_no_show,
+            case 
+                when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+                then count(distinct one_to_one.one_to_one_id) else null
+            end scheduled_unique,
+            case 
+                when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+                then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 1) else null
+            end pending_confirmation_unique,
+            case 
+                when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+                then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 3) else null
+            end interviewer_declined_unique,
+            case 
+                when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+                then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2) else null
+            end confirmation_unique,
+            case 
+                when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+                then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 5) else null
+            end student_cancellation_unique,
+            case 
+                when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+                then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 4) else null
+            end interviewer_cancellation_unique,
+            case 
+                when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+                then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call in (1,2,3)) else null
+            end conducted_unique,
+            case 
+                when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+                then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 1) else null
+            end cleared_unique,
+            case 
+                when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+                then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 2) else null
+            end final_call_no_unique,
+            case 
+                when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+                then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 2 and one_to_one.final_call = 3) else null
+            end final_call_maybe_unique,
+            case 
+                when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+                then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and (one_to_one.cancel_reason like 'Insufficient time spent by booked by user%' or one_to_one.cancel_reason like 'Insufficient overlap time')) else null
+            end student_no_show_unique,
+            case 
+                when dense_rank () over (partition by course_user_mapping.user_id ,one_to_one.one_to_one_id order by one_to_one_topic_mapping.topic_pool_id) = 1 
+                then count(distinct one_to_one.one_to_one_id) filter (where one_to_one.one_to_one_status = 10 and one_to_one.cancel_reason like 'Insufficient time spent by booked with user%') else null
+            end interviewer_no_show_unique,
+            uasm.activity_status_7_days,
+            uasm.activity_status_14_days,
+            uasm.activity_status_30_days
+        from
+            courses c
+        join course_user_mapping
+            on course_user_mapping.course_id = c.course_id and course_user_mapping.status in (8,9,11,12,30)
+                and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34)
+        left join one_to_one 
+            on c.course_id = one_to_one.course_id and course_user_mapping.user_id = one_to_one.student_user_id
+        left join course_user_category_mapping cucm
+            on cucm.course_id = c.course_id and course_user_mapping.user_id = cucm.user_id
+        left join users_info ui
+            on ui.user_id = course_user_mapping.user_id
+        left join one_to_one_topic_mapping
+            on one_to_one_topic_mapping.one_to_one_id = one_to_one.one_to_one_id
+        left join topic_pool_mapping
+            on topic_pool_mapping.topic_pool_id = one_to_one_topic_mapping.topic_pool_id
+        left join user_activity_status_mapping uasm 
+            on uasm.user_id = course_user_mapping.user_id
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,42,43,44;
         ''',
     dag=dag
 )
