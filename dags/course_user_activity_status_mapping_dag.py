@@ -36,7 +36,7 @@ def extract_data_to_nested(**kwargs):
             'last_activity, last_lecture_attended_on, last_question_attempted_on, last_quiz_attempted_on, '
             'last_mock_date, last_one_on_one_date, last_recorded_lecture_watched_on, last_group_session_date)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
+            'on conflict (user_id) do update set student_name = EXCLUDED.student_name,'
             'lead_type = EXCLUDED.lead_type,'
             'latest_activity_date = EXCLUDED.latest_activity_date,'
             'activity_status_7_days = EXCLUDED.activity_status_7_days,'
