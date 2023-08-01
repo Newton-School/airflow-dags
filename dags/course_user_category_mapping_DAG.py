@@ -38,8 +38,9 @@ def extract_data_to_nested(**kwargs):
             'INSERT INTO course_user_category_mapping (table_unique_key, course_id, course_name,'
             'course_structure_class, user_id,'
             'course_user_mapping_status, label_mapping_status,'
-            'completed_module_count, count_of_a, student_category, student_name, lead_type)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'completed_module_count, count_of_a, student_category, student_name, lead_type, activity_status_7_days,'
+            'activity_status_14_days, activity_status_30_days)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
             'course_user_mapping_status = EXCLUDED.course_user_mapping_status,'
@@ -48,7 +49,10 @@ def extract_data_to_nested(**kwargs):
             'count_of_a = EXCLUDED.count_of_a,'
             'student_category = EXCLUDED.student_category,'
             'student_name = EXCLUDED.student_name,'
-            'lead_type = EXCLUDED.lead_type;',
+            'lead_type = EXCLUDED.lead_type,'
+            'activity_status_7_days = EXCLUDED.activity_status_7_days,'
+            'activity_status_14_days = EXCLUDED.activity_status_14_days,'
+            'activity_status_30_days = EXCLUDED.activity_status_30_days;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -62,6 +66,9 @@ def extract_data_to_nested(**kwargs):
                 transform_row[9],
                 transform_row[10],
                 transform_row[11],
+                transform_row[12],
+                transform_row[13],
+                transform_row[14],
             )
         )
     pg_conn.commit()
@@ -94,7 +101,10 @@ create_table = PostgresOperator(
             count_of_a int,
             student_category varchar(255),
             student_name text,
-            lead_type text
+            lead_type text,
+            activity_status_7_days text,
+            activity_status_14_days text
+            activity_status_30_days text
         );
     ''',
     dag=dag
@@ -122,7 +132,10 @@ select
             else null
         end as student_category,
         student_name,
-        lead_type
+        lead_type,
+        activity_status_7_days,
+        activity_status_14_days,
+        activity_status_30_days
     from
         (with batch_module_mapping as
             (select 
@@ -196,7 +209,10 @@ select
             end as label_mapping_status,
             completed_module_count.comp_module_count,
             count(distinct topic_pool_id) filter (where grade_obtained like 'A') as count_of_a,
-            ui.lead_type
+            ui.lead_type,
+            uasm.activity_status_7_days,
+            uasm.activity_status_14_days,
+            uasm.activity_status_30_days
         from
             course_user_mapping cum 
         join courses c 
@@ -207,7 +223,9 @@ select
             on required_user_data.user_id = cum.user_id and cum.course_id = required_user_data.course_id
         left join completed_module_count
             on completed_module_count.course_id = c.course_id
-        group by 1,2,3,4,5,6,7,8,10) final_query
+        left join user_activity_status_mapping uasm 
+        	on uasm.user_id = cum.user_id
+        group by 1,2,3,4,5,6,7,8,10,11,12,13) final_query
     order by 2 desc, 5;
         ''',
     dag=dag
