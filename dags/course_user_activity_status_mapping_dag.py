@@ -78,7 +78,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='assigns activity status as active/ inactive to each user_id irrespective of user course',
-    schedule_interval='0 2 * * *',
+    schedule_interval='30 0 * * *',
     catchup=False
 )
 
