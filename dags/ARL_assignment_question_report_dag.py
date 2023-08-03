@@ -1,10 +1,7 @@
 from airflow import DAG
-# from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.models import Variable
-from airflow.utils.task_group import TaskGroup
 from datetime import datetime
 
 from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
@@ -36,7 +33,6 @@ def extract_data_to_nested(**kwargs):
         pg_cursor.execute(
             'INSERT INTO arl_assignment_reported_question (table_unique_key, user_id,'
             'course_id,'
-            'status,'
             'assignment_id,'
             'assignment_release_date,'
             'assignment_release_date_week,'
@@ -51,11 +47,13 @@ def extract_data_to_nested(**kwargs):
             'input_unclear_or_incorrect,'
             'required_topics_not_taught,'
             'expected_output_is_inaccurate,'
-            'test_cases_missing_or_wrong)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'test_cases_missing_or_wrong,'
+            'topic_template_id,'
+            'module_name,'
+            'user_type)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set user_id = EXCLUDED.user_id,'
             'course_id = EXCLUDED.course_id,'
-            'status = EXCLUDED.status,'
             'assignment_id = EXCLUDED.assignment_id,'
             'assignment_release_date = EXCLUDED.assignment_release_date,'
             'assignment_release_date_week = EXCLUDED.assignment_release_date_week,'
@@ -70,7 +68,10 @@ def extract_data_to_nested(**kwargs):
             'input_unclear_or_incorrect = EXCLUDED.input_unclear_or_incorrect,'
             'required_topics_not_taught = EXCLUDED.required_topics_not_taught,'
             'expected_output_is_inaccurate = EXCLUDED.expected_output_is_inaccurate,'
-            'test_cases_missing_or_wrong = EXCLUDED.test_cases_missing_or_wrong;',
+            'test_cases_missing_or_wrong = EXCLUDED.test_cases_missing_or_wrong,'
+            'topic_template_id = EXCLUDED.topic_template_id,'
+            'module_name = EXCLUDED.module_name,'
+            'user_type = EXCLUDED.user_type;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -91,6 +92,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[16],
                 transform_row[17],
                 transform_row[18],
+                transform_row[19],
+                transform_row[20],
             )
         )
     pg_conn.commit()
@@ -115,7 +118,6 @@ create_table = PostgresOperator(
             table_unique_key text not null PRIMARY KEY,
             user_id bigint,
             course_id int,
-            status int,
             assignment_id bigint,
             assignment_release_date date,
             assignment_release_date_week timestamp,
@@ -130,7 +132,10 @@ create_table = PostgresOperator(
             input_unclear_or_incorrect varchar(16),
             required_topics_not_taught varchar(16),
             expected_output_is_inaccurate varchar(16),
-            test_cases_missing_or_wrong varchar(16)
+            test_cases_missing_or_wrong varchar(16),
+            topic_template_id int,
+            module_name text,
+            user_type text
         );
     ''',
     dag=dag
@@ -197,17 +202,16 @@ transform_data = PostgresOperator(
             order by 2 desc, 1)
         
         select
-            concat(extract('month' from question_report_date), extract('day' from question_report_date), assignments.assignment_id, feedback_raw.user_id,'1' ,assignment_question_id, course_user_mapping.course_id) as table_unique_key,
+            concat(extract('month' from question_report_date), extract('day' from question_report_date), assignments.assignment_id, feedback_raw.user_id,'1' ,feedback_raw.assignment_question_id, course_user_mapping.course_id) as table_unique_key,
             feedback_raw.user_id,
             course_user_mapping.course_id,
-            course_user_mapping.status,
             assignments.assignment_id,
             date(assignments.start_timestamp) as assignment_release_date,
             date_trunc('week', assignments.start_timestamp) as assignment_release_date_week,
             question_report_date,
             date_trunc('week', question_report_date) as question_report_date_week,
-            assignment_question_id,
-            question_title,
+            feedback_raw.assignment_question_id,
+            feedback_raw.question_title,
             feedback_question_id,
             question_text,
             max(inaccurate_difficulty) as inaccurate_difficulty,
@@ -215,7 +219,18 @@ transform_data = PostgresOperator(
             max(input_unclear_or_incorrect) as input_unclear_or_incorrect,
             max(required_topics_not_taught) as required_topics_not_taught,
             max(expected_output_is_inaccurate) as expected_output_is_inaccurate,
-            max(test_cases_missing_or_wrong) as test_cases_missing_or_wrong
+            max(test_cases_missing_or_wrong) as test_cases_missing_or_wrong,
+            t.topic_template_id,
+            t.template_name as module_name,
+            case
+            	when course_user_mapping.status in (5,8,9) then 'Enrolled Student'
+            	when course_user_mapping.status in (13) then 'Mentor'
+            	when course_user_mapping.status in (27) then 'Instructor'
+            	when course_user_mapping.status in (25) then 'Mock Interviewer'
+            	when course_user_mapping.status is null then 'Free User'
+            	else 'Other' 
+            end as user_type
+            
         from
             feedback_raw
         left join course_user_mapping
@@ -227,7 +242,13 @@ transform_data = PostgresOperator(
             on assignments.assignment_id = question_release_date.assignment_id 
                 and feedback_raw.assignment_question_id = question_release_date.question_id 
                     and course_user_mapping.course_id = question_release_date.course_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13;
+    	left join assignment_question aq 
+			on aq.assignment_question_id = feedback_raw.assignment_question_id
+	    left join topics t 
+		    on aq.topic_id  = t.topic_id 
+		    	and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
+
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,19,20,21;
         ''',
     dag=dag
 )
