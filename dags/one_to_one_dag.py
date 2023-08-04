@@ -26,28 +26,31 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO one_to_one (one_to_one_id,student_user_id,course_id,expert_user_id,'
-                'one_to_one_start_timestamp,one_to_one_end_timestamp,hash,one_to_one_created_at,'
-                'one_to_one_confirmed_at,one_to_one_cancel_timestamp,one_to_one_status,one_to_one_type,'
-                'final_call,cancel_reason,rating,reports_pulled,title,video_session_using,one_to_one_token_id,'
-                'expert_min_join_time,expert_max_leave_time,student_min_join_time,student_max_leave_time,'
-                'student_duration,expert_duration,overlapping_time,difficulty_level) '
-                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                'on conflict (one_to_one_id) do update set expert_user_id=EXCLUDED.expert_user_id,'
+                'INSERT INTO one_to_one (one_to_one_id, student_user_id, course_id, expert_user_id,'
+                'one_to_one_start_timestamp, one_to_one_end_timestamp, hash, one_to_one_created_at,'
+                'one_to_one_confirmed_at, one_to_one_cancel_timestamp, one_to_one_status, one_to_one_type,'
+                'final_call, cancel_reason, rating, reports_pulled, title,'
+                'video_session_using, one_to_one_token_id, difficulty_level)'
+                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'on conflict (one_to_one_id) do update set student_user_id = EXCLUDED.student_user_id,'
+                'course_id = EXCLUDED.course_id,'
+                'expert_user_id = EXCLUDED.expert_user_id,'
                 'one_to_one_start_timestamp = EXCLUDED.one_to_one_start_timestamp,'
-                'one_to_one_end_timestamp=EXCLUDED.one_to_one_end_timestamp,'
-                'one_to_one_confirmed_at= EXCLUDED.one_to_one_confirmed_at,'
-                'one_to_one_cancel_timestamp=EXCLUDED.one_to_one_cancel_timestamp,'
-                'one_to_one_status=EXCLUDED.one_to_one_status,one_to_one_type=EXCLUDED.one_to_one_type,'
-                'final_call=EXCLUDED.final_call,'
-                'cancel_reason=EXCLUDED.cancel_reason,rating=EXCLUDED.rating,reports_pulled=EXCLUDED.reports_pulled,'
-                'expert_min_join_time=EXCLUDED.expert_min_join_time,'
-                'expert_max_leave_time=EXCLUDED.expert_max_leave_time,'
-                'student_min_join_time=EXCLUDED.student_min_join_time,'
-                'student_max_leave_time=EXCLUDED.student_max_leave_time,'
-                'student_duration=EXCLUDED.student_duration,expert_duration=EXCLUDED.expert_duration,'
-                'overlapping_time=EXCLUDED.overlapping_time,'
-                'difficulty_level=EXCLUDED.difficulty_level ;',
+                'one_to_one_end_timestamp = EXCLUDED.one_to_one_end_timestamp,'
+                'hash = EXCLUDED.hash,'
+                'one_to_one_created_at = EXCLUDED.one_to_one_created_at,'
+                'one_to_one_confirmed_at = EXCLUDED.one_to_one_confirmed_at,'
+                'one_to_one_cancel_timestamp = EXCLUDED.one_to_one_cancel_timestamp,'
+                'one_to_one_status = EXCLUDED.one_to_one_status,'
+                'one_to_one_type = EXCLUDED.one_to_one_type,'
+                'final_call = EXCLUDED.final_call,'
+                'cancel_reason = EXCLUDED.cancel_reason,'
+                'rating = EXCLUDED.rating,'
+                'reports_pulled = EXCLUDED.reports_pulled,'
+                'title = EXCLUDED.title,'
+                'video_session_using = EXCLUDED.video_session_using,'
+                'one_to_one_token_id = EXCLUDED.one_to_one_token_id,'
+                'difficulty_level=EXCLUDED.difficulty_level;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -69,13 +72,6 @@ def extract_data_to_nested(**kwargs):
                     transform_row[17],
                     transform_row[18],
                     transform_row[19],
-                    transform_row[20],
-                    transform_row[21],
-                    transform_row[22],
-                    transform_row[23],
-                    transform_row[24],
-                    transform_row[25],
-                    transform_row[26],
                  )
         )
     pg_conn.commit()
@@ -99,7 +95,7 @@ create_table = PostgresOperator(
             expert_user_id bigint,
             one_to_one_start_timestamp timestamp,
             one_to_one_end_timestamp timestamp,
-            hash varchar(100),
+            hash text,
             one_to_one_created_at timestamp,
             one_to_one_confirmed_at timestamp,
             one_to_one_cancel_timestamp timestamp,
@@ -109,16 +105,9 @@ create_table = PostgresOperator(
             cancel_reason varchar(2048),
             rating int,
             reports_pulled boolean,
-            title varchar(256),
+            title text,
             video_session_using int,
             one_to_one_token_id bigint,
-            expert_min_join_time timestamp,
-            expert_max_leave_time timestamp,
-            student_min_join_time timestamp,
-            student_max_leave_time timestamp,
-            student_duration bigint,
-            expert_duration bigint,
-            overlapping_time bigint,
             difficulty_level int
         );
     ''',
@@ -128,67 +117,31 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
-    sql='''with expert_report as(
-            select
-            video_sessions_onetoonecourseuserreport.one_to_one_id,
-            min(join_time) as expert_min_join_time,
-            max(leave_time) as expert_max_leave_time,
-            sum(video_sessions_onetoonecourseuserreport.duration) filter (where video_sessions_onetoonecourseuserreport.report_type =4) as expert_duration
-            from video_sessions_onetoone
-            left join courses_courseusermapping
-                on courses_courseusermapping.user_id = video_sessions_onetoone.booked_with_id and video_sessions_onetoone.course_id = courses_courseusermapping.course_id
-            left join video_sessions_onetoonecourseuserreport
-                on video_sessions_onetoonecourseuserreport.one_to_one_id = video_sessions_onetoone.id and video_sessions_onetoonecourseuserreport.course_user_mapping_id = courses_courseusermapping.id
-            group by 1
-            ),
-            student_report as(
-            select
-            video_sessions_onetoonecourseuserreport.one_to_one_id,
-            min(join_time) as student_min_join_time,
-            max(leave_time) as student_max_leave_time,
-            sum(video_sessions_onetoonecourseuserreport.duration) filter (where video_sessions_onetoonecourseuserreport.report_type =4) as student_duration,
-            sum(video_sessions_onetoonecourseuserreport.duration) filter (where video_sessions_onetoonecourseuserreport.report_type =4 and video_sessions_onetoonecourseuserreport.join_time >= expert_min_join_time and video_sessions_onetoonecourseuserreport.leave_time <= expert_max_leave_time ) as overlapping_time
-            from video_sessions_onetoone
-            left join courses_courseusermapping
-                on courses_courseusermapping.user_id = video_sessions_onetoone.booked_by_id and video_sessions_onetoone.course_id = courses_courseusermapping.course_id
-            left join video_sessions_onetoonecourseuserreport
-                on video_sessions_onetoonecourseuserreport.one_to_one_id = video_sessions_onetoone.id and video_sessions_onetoonecourseuserreport.course_user_mapping_id = courses_courseusermapping.id
-            left join expert_report on expert_report.one_to_one_id = video_sessions_onetoone.id
-            group by 1
-            )
-            select
-            distinct video_sessions_onetoone.id as one_to_one_id,
-            video_sessions_onetoone.booked_by_id as student_user_id,
-            video_sessions_onetoone.course_id,
-            video_sessions_onetoone.booked_with_id as expert_user_id,
-            video_sessions_onetoone.start_timestamp as one_to_one_start_timestamp,
-            video_sessions_onetoone.end_timestamp as one_to_one_end_timestamp,
-            video_sessions_onetoone.hash,
-            video_sessions_onetoone.created_at as one_to_one_created_at,
-            video_sessions_onetoone.confirmed_at as one_to_one_confirmed_at,
-            video_sessions_onetoone.cancel_timestamp as one_to_one_cancel_timestamp,
-            video_sessions_onetoone.one_to_one_status,
-            video_sessions_onetoone.one_to_one_type,
-            video_sessions_onetoone.final_call,
-            video_sessions_onetoone.cancel_reason,
-            video_sessions_onetoone.rating,
-            video_sessions_onetoone.reports_pulled,
-            video_sessions_onetoone.title,
-            video_sessions_onetoone.video_session_using,
-            video_sessions_onetoone.one_to_one_token_id,
-            expert_min_join_time,
-            expert_max_leave_time,
-            student_min_join_time,
-            student_max_leave_time,
-            student_duration,
-            expert_duration,
-            overlapping_time,
-            video_sessions_onetoonetoken.difficulty_level
-            from video_sessions_onetoone
-            left join video_sessions_onetoonetoken on video_sessions_onetoonetoken.id = video_sessions_onetoone.one_to_one_token_id
-            left join expert_report on expert_report.one_to_one_id = video_sessions_onetoone.id
-            left join student_report on student_report.one_to_one_id = video_sessions_onetoone.id
-    ;
+    sql='''select distinct 
+        video_sessions_onetoone.id as one_to_one_id,
+        video_sessions_onetoone.booked_by_id as student_user_id,
+        video_sessions_onetoone.course_id,
+        video_sessions_onetoone.booked_with_id as expert_user_id,
+        video_sessions_onetoone.start_timestamp as one_to_one_start_timestamp,
+        video_sessions_onetoone.end_timestamp as one_to_one_end_timestamp,
+        video_sessions_onetoone.hash,
+        video_sessions_onetoone.created_at as one_to_one_created_at,
+        video_sessions_onetoone.confirmed_at as one_to_one_confirmed_at,
+        video_sessions_onetoone.cancel_timestamp as one_to_one_cancel_timestamp,
+        video_sessions_onetoone.one_to_one_status,
+        video_sessions_onetoone.one_to_one_type,
+        video_sessions_onetoone.final_call,
+        video_sessions_onetoone.cancel_reason,
+        video_sessions_onetoone.rating,
+        video_sessions_onetoone.reports_pulled,
+        video_sessions_onetoone.title,
+        video_sessions_onetoone.video_session_using,
+        video_sessions_onetoone.one_to_one_token_id,
+        video_sessions_onetoonetoken.difficulty_level
+    from
+        video_sessions_onetoone
+    left join video_sessions_onetoonetoken
+        on video_sessions_onetoonetoken.id = video_sessions_onetoone.one_to_one_token_id;
         ''',
     dag=dag
 )
