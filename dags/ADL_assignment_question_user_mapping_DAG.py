@@ -83,7 +83,7 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor = pg_conn.cursor()
         pg_cursor.execute(
-            'INSERT INTO assignment_question_user_mapping (table_unique_key, user_id, assignment_id, '
+            'INSERT INTO assignment_question_user_mapping_new (table_unique_key, user_id, assignment_id, '
             'question_id, question_started_at,'
             'question_completed_at, completed, all_test_case_passed,'
             'playground_type, playground_id, playground_hash, hash,'
