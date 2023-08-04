@@ -56,8 +56,16 @@ def extract_data_to_nested(**kwargs):
             'interviewer_no_show_unique,'
             'activity_status_7_days,'
             'activity_status_14_days,'
-            'activity_status_30_days)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'activity_status_30_days,'
+            'expert_join_time,'
+            'expert_leave_time,'
+            'user_join_time,'
+            'user_leave_time,'
+            'total_expert_time_mins,'
+            'total_user_time_mins,'
+            'total_overlapping_time_mins,'
+            'cancel_reason)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
             'lead_type = EXCLUDED.lead_type,'
             'student_category = EXCLUDED.student_category,'
@@ -93,7 +101,15 @@ def extract_data_to_nested(**kwargs):
             'interviewer_no_show_unique = EXCLUDED.interviewer_no_show_unique,'
             'activity_status_7_days = EXCLUDED.activity_status_7_days,'
             'activity_status_14_days = EXCLUDED.activity_status_14_days,'
-            'activity_status_30_days = EXCLUDED.activity_status_30_days;',
+            'activity_status_30_days = EXCLUDED.activity_status_30_days,'
+            'expert_join_time = EXCLUDED.expert_join_time,'
+            'expert_leave_time= EXCLUDED.expert_leave_time,'
+            'user_join_time = EXCLUDED.user_join_time,'
+            'user_leave_time = EXCLUDED.user_leave_time,'
+            'total_expert_time_mins = EXCLUDED.total_expert_time_mins,'
+            'total_user_time_mins = EXCLUDED.total_user_time_mins,'
+            'total_overlapping_time_mins = EXCLUDED.total_overlapping_time_mins,'
+            'cancel_reason = EXCLUDED.cancel_reason;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -139,6 +155,14 @@ def extract_data_to_nested(**kwargs):
                 transform_row[41],
                 transform_row[42],
                 transform_row[43],
+                transform_row[44],
+                transform_row[45],
+                transform_row[46],
+                transform_row[47],
+                transform_row[48],
+                transform_row[49],
+                transform_row[50],
+                transform_row[51],
 
             )
         )
@@ -204,7 +228,15 @@ create_table = PostgresOperator(
             interviewer_no_show_unique int,
             activity_status_7_days text,
             activity_status_14_days text,
-            activity_status_30_days text
+            activity_status_30_days text,
+            expert_join_time timestamp, 
+            expert_leave_time timestamp, 
+            user_join_time timestamp,
+            user_leave_time timestamp,
+            total_expert_time_mins real,
+            total_user_time_mins real,
+            total_overlapping_time_mins real,
+            cancel_reason text
         );
     ''',
     dag=dag
@@ -214,7 +246,60 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
     sql='''
-        select distinct 
+        with time_data as 
+            (with vscur as 
+                (select 
+                    one_to_one_id,
+                    user_id,
+                    course_user_mapping_id,
+                    join_time,
+                    leave_time,
+                    extract('epoch' from (leave_time - join_time)) as time_diff_in_secs,
+                    one_to_one_type,
+                    stakeholder_type,
+                    overlapping_time_seconds,
+                    overlapping_time_minutes
+                from
+                    video_sessions_course_user_reports vscur 
+                group by 1,2,3,4,5,6,7,8,9,10)
+    
+        select
+            oto.one_to_one_id,
+            oto.course_id,
+            oto.student_user_id,
+            oto.expert_user_id,
+            date(oto.one_to_one_start_timestamp) as session_date,
+            case 
+                when oto.one_to_one_type = 1 then 'Technical Mock'	
+                when oto.one_to_one_type = 2 then 'HR Mock'
+                when oto.one_to_one_type = 3 then 'Project Mock'
+                when oto.one_to_one_type = 4 then 'DSA Mock' 
+                when oto.one_to_one_type = 5 then 'Mock Full stack'
+                when oto.one_to_one_type = 7 then 'One-On-One Session'
+                when oto.one_to_one_type = 9 then 'Data Science - Mock'
+                when oto.one_to_one_type = 11 then 'Mentor Help - Doubt Session'
+                when oto.one_to_one_type = 12 then 'FrontEnd - Mock Interview'
+                when oto.one_to_one_type = 13 then 'BackEnd - Mock Interview'
+                when oto.one_to_one_type = 14 then 'FrontEnd - JS Mock Interview'
+                when oto.one_to_one_type = 15 then 'FrontEnd - ReactJS Mock Interview'
+            end as session_type,
+            oto.cancel_reason,
+            min(vscur.join_time) filter (where stakeholder_type like 'Expert') as expert_join_time,
+            min(vscur.join_time) filter (where stakeholder_type like 'User') as user_join_time,
+            max(vscur.leave_time) filter (where stakeholder_type like 'Expert') as expert_leave_time,
+            max(vscur.leave_time) filter (where stakeholder_type like 'User') as user_leave_time,
+            sum(time_diff_in_secs) filter (where stakeholder_type like 'Expert') / 60 as total_expert_time_mins,
+            sum(time_diff_in_secs) filter (where stakeholder_type like 'User') / 60 as total_user_time_mins,
+            sum(overlapping_time_minutes) filter (where stakeholder_type like 'User') as total_overlapping_time_mins
+        from
+            one_to_one oto
+        left join vscur
+            on vscur.one_to_one_id = oto.one_to_one_id
+        group by 1,2,3,4,5,6,7
+        order by 5 desc)
+    
+
+    select distinct 
             concat(course_user_mapping.user_id,c.course_id,one_to_one.expert_user_id,one_to_one.one_to_one_id, EXTRACT(month FROM date(one_to_one.one_to_one_start_timestamp)),EXTRACT(year FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.one_to_one_type,one_to_one_topic_mapping.topic_pool_id,EXTRACT(day FROM date(one_to_one.one_to_one_start_timestamp)),one_to_one.difficulty_level) as table_unique_key,
             course_user_mapping.user_id,
             concat(ui.first_name,' ', ui.last_name) as student_name,
@@ -319,7 +404,15 @@ transform_data = PostgresOperator(
             end interviewer_no_show_unique,
             uasm.activity_status_7_days,
             uasm.activity_status_14_days,
-            uasm.activity_status_30_days
+            uasm.activity_status_30_days,
+            expert_join_time,
+            expert_leave_time,
+            user_join_time,
+            user_leave_time,
+            time_data.total_expert_time_mins,
+            time_data.total_user_time_mins,
+            total_overlapping_time_mins,
+            one_to_one.cancel_reason 
         from
             courses c
         join course_user_mapping
@@ -337,7 +430,11 @@ transform_data = PostgresOperator(
             on topic_pool_mapping.topic_pool_id = one_to_one_topic_mapping.topic_pool_id
         left join user_activity_status_mapping uasm 
             on uasm.user_id = course_user_mapping.user_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,42,43,44;
+        left join time_data
+        	on time_data.one_to_one_id = one_to_one.one_to_one_id
+        		and time_data.student_user_id = course_user_mapping.user_id
+        			and time_data.expert_user_id = one_to_one.expert_user_id
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,42,43,44,45,46,47,48,49,50,51,52;
         ''',
     dag=dag
 )
