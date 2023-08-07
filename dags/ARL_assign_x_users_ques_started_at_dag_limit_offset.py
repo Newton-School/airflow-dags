@@ -24,7 +24,7 @@ total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 5)
 total_number_of_extraction_cps_dags = Variable.get("total_number_of_extraction_cps_dags", 10)
 
 dag = DAG(
-    'ARL_assignments_x_user_ques_started_at_dag',
+    'ARL_assignments_x_user_ques_started_at_limit_offset_dag',
     default_args=default_args,
     concurrency=4,
     max_active_tasks=6,
