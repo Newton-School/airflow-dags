@@ -180,7 +180,7 @@ join courses c on
 join assignment_random_question_mapping arqm on
 	a.assignment_id = arqm.assignment_id and atm.topic_id in (3180, 3351)
 group by 1,2,3,4,5,6,7,8) AS query
-LEFT JOIN assignment_question_user_mapping aqum 
+LEFT JOIN assignment_question_user_mapping_new aqum 
     ON query.user_id = aqum.user_id AND query.assignment_id = aqum.assignment_id
 left join course_user_mapping
 	on course_user_mapping.user_id = query.user_id and course_user_mapping.course_id = query.course_id

@@ -229,7 +229,7 @@ transform_data = PostgresOperator(
                 left join assignment_question_mapping aqm on aqm.assignment_id = a.assignment_id 
                 left join assignment_question aq  on aq.assignment_question_id  = aqm.question_id 
                 left join topics t on t.topic_id = aq.topic_id and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344)
-                left join assignment_question_user_mapping aqum on aqum.assignment_id = aqm.assignment_id and aqum.question_id = aqm.question_id 
+                left join assignment_question_user_mapping_new aqum on aqum.assignment_id = aqm.assignment_id and aqum.question_id = aqm.question_id 
                 join (select distinct
                                     wud.course_user_mapping_id,
                                     wud.user_id ,
@@ -288,7 +288,7 @@ transform_data = PostgresOperator(
                 left join assignment_question_mapping aqm on aqm.assignment_id = a.assignment_id 
                 left join assignment_question aq  on aq.assignment_question_id  = aqm.question_id 
                 left join topics t on t.topic_id = aq.topic_id and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344)
-                left join assignment_question_user_mapping aqum on aqum.assignment_id = aqm.assignment_id and aqum.question_id = aqm.question_id 
+                left join assignment_question_user_mapping_new aqum on aqum.assignment_id = aqm.assignment_id and aqum.question_id = aqm.question_id 
                 left join course_user_mapping on course_user_mapping.course_id = c.course_id and course_user_mapping.status in (5,8,9) and course_user_mapping.label_id is null
                 group by 1,2,3,4,5,6,7,8,9,10,11,12
                 )

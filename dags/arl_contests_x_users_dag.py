@@ -342,7 +342,7 @@ transform_data = PostgresOperator(
             on cucm.user_id = cum.user_id and cum.course_id = cucm.course_id 
         left join user_activity_status_mapping uasm 
         	on uasm.user_id = cum.user_id
-        left join assignment_question_user_mapping aqum
+        left join assignment_question_user_mapping_new aqum
             on aqum.user_id = cum.user_id and a.assignment_id = aqum.assignment_id
         left join assignment_question aq
             on aq.assignment_question_id = aqum.question_id

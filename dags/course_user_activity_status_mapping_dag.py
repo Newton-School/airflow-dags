@@ -181,7 +181,7 @@ transform_data = PostgresOperator(
                             max(aqum.question_started_at) as last_question_attempted_on
                         from
                             users_info ui
-                        left join assignment_question_user_mapping aqum 
+                        left join assignment_question_user_mapping_new aqum 
                             on ui.user_id = aqum.user_id
                         group by 1),
                     
