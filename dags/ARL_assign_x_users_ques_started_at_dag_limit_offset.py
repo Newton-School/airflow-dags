@@ -313,7 +313,7 @@ def limit_offset_generator_func(**kwargs):
 def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag_id, current_assignment_sub_dag_id):
     return PostgresOperator(
         task_id='transform_data',
-        postgres_conn_id='postgres_read_replica',
+        postgres_conn_id='postgres_result_db',
         dag=dag,
         params={
             'current_cps_sub_dag_id': cps_sub_dag_id,
