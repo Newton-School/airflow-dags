@@ -259,7 +259,7 @@ transform_data = PostgresOperator(
                on c.course_id = a.course_id
              left join assignment_question_mapping aqm
                on aqm.assignment_id = a.assignment_id 
-             left join assignment_question_user_mapping aqum
+             left join assignment_question_user_mapping_new aqum
                on aqum.assignment_id  = a.assignment_id
              join (select distinct
                             wud.course_user_mapping_id,
@@ -284,7 +284,7 @@ transform_data = PostgresOperator(
                count(distinct question_id) filter(where plagiarism_score >= 0.90) as plag_score_90,
                count(distinct question_id) filter(where plagiarism_score >= 0.95) as plag_score_95,
                count(distinct question_id) filter(where plagiarism_score >= 0.99) as plag_score_99
-           from assignment_question_user_mapping aqum
+           from assignment_question_user_mapping_new aqum
            left join assignments on aqum.assignment_id = assignments.assignment_id
            join (select distinct
                             wud.course_user_mapping_id,
@@ -369,7 +369,7 @@ transform_data = PostgresOperator(
                on c.course_id = a.course_id
              left join assignment_question_mapping aqm
                on aqm.assignment_id = a.assignment_id 
-             left join assignment_question_user_mapping aqum
+             left join assignment_question_user_mapping_new aqum
                on aqum.assignment_id  = a.assignment_id
             left join course_user_mapping on course_user_mapping.course_id = c.course_id and course_user_mapping.status in (5,8,9) and course_user_mapping.label_id is null
             group by 1,2,3,4,5,6,7),
@@ -383,7 +383,7 @@ transform_data = PostgresOperator(
                count(distinct question_id) filter(where plagiarism_score >= 0.90) as plag_score_90,
                count(distinct question_id) filter(where plagiarism_score >= 0.95) as plag_score_95,
                count(distinct question_id) filter(where plagiarism_score >= 0.99) as plag_score_99
-           from assignment_question_user_mapping aqum
+           from assignment_question_user_mapping_new aqum
            left join assignments on aqum.assignment_id = assignments.assignment_id
            group by 1,2),
         assignment_questions as 
