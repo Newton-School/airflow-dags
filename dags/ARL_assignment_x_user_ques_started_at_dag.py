@@ -150,7 +150,7 @@ create_table = PostgresOperator(
             activity_status_14_days text,
             activity_status_30_days text,
             assignment_id bigint,
-            assignment_title, text
+            assignment_title text,
             release_date date,
             normal_assignment_type text,
             course_id int,
