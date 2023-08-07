@@ -189,7 +189,7 @@ def extract_data_to_nested(**kwargs):
 def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignment_id):
     return PostgresOperator(
         task_id='number_of_rows_per_assignment_sub_dag',
-        postgres_conn_id='postgres_read_replica',
+        postgres_conn_id='postgres_result_db',
         dag=dag,
         sql=''' select count(table_unique_key) from
         (select * from
