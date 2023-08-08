@@ -88,6 +88,7 @@ def fetch_data_and_preprocess(**kwargs):
         """)
 
     inserted_lecture_id = list(result_cursor.fetchall())
+    print(inserted_lecture_id)
 
     query = """
     with vsl_cur_raw as
@@ -311,4 +312,5 @@ insert_data = PythonOperator(
     dag=dag
 )
 
-create_table >> fetch_data >> insert_data
+create_table >> fetch_data
+# >> insert_data
