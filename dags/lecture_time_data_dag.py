@@ -1,27 +1,16 @@
 from airflow import DAG
-# from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from sqlalchemy import text
-from airflow.models import Variable
-from airflow.utils.task_group import TaskGroup
 from datetime import datetime
-from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 import pandas as pd
 import numpy as np
 
-import math
-
 default_args = {
     'owner': 'airflow',
-    'max_active_tasks': 6,
-    'max_active_runs': 6,
-    'concurrency': 4,
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
-
 
 # DATA CLEANING FUNCTION
 def remove_redundant_rows(df):
@@ -56,11 +45,8 @@ def remove_redundant_rows(df):
 def calculate_student_instructor_overlapping_time(student_join_time, student_leave_time, instructor_times):
     overlapping_time = 0
     for instructor_time in instructor_times:
-        # inst_join_time, inst_leave_time = pd.to_datetime(instructor_time)  # Convert numpy.int64 to Timestamp
         instructor_join_time = pd.Timestamp(instructor_time[0])
         instructor_leave_time = pd.Timestamp(instructor_time[1])
-        # instructor_join_time = instructor_time[0]
-        # instructor_leave_time = instructor_time[1]
 
         # Check for overlap between student and instructor times
         if student_join_time <= instructor_leave_time and student_leave_time >= instructor_join_time:
@@ -91,105 +77,105 @@ def fetch_data_and_preprocess(**kwargs):
     new_inserted_lecture_id = []
     for insert_lecture in inserted_lecture_id:
         new_inserted_lecture_id.append(insert_lecture[0])
-    print(inserted_lecture_id)
-    print(new_inserted_lecture_id)
-    print(len(inserted_lecture_id))
+    # print(inserted_lecture_id)
+    # print(new_inserted_lecture_id)
+    # print(len(inserted_lecture_id))
 
     query = """
-    with vsl_cur_raw as
-    (select
-        lecture_id,
-        course_user_mapping_id,
-        join_time,
-        leave_time,
-        duration,
-        report_type
-    from
-        video_sessions_lecturecourseuserreport
-    where report_type = 4
-    and lecture_id > 30934
-    group by 1,2,3,4,5,6),
+        with vsl_cur_raw as
+            (select
+                lecture_id,
+                course_user_mapping_id,
+                join_time,
+                leave_time,
+                duration,
+                report_type
+            from
+                video_sessions_lecturecourseuserreport
+            where report_type = 4
+            and lecture_id > 30934
+            group by 1,2,3,4,5,6),
+    
+        course_inst_mapping_raw as
+            (select 
+                trainers_courseinstructormapping.course_id,
+                trainers_instructor.user_id,
+                courses_courseusermapping.status,
+                courses_courseusermapping.id as cum_id
+            from
+                trainers_instructor
+            join trainers_courseinstructormapping
+                on trainers_courseinstructormapping.instructor_id = trainers_instructor.id
+            join courses_courseusermapping
+                on courses_courseusermapping.user_id = trainers_instructor.user_id and courses_courseusermapping.course_id = trainers_courseinstructormapping.course_id
+            left join auth_user
+                on auth_user.id = trainers_instructor.user_id
+            group by 1,2,3,4),
 
-course_inst_mapping_raw as
-    (select 
-        trainers_courseinstructormapping.course_id,
-        trainers_instructor.user_id,
-        courses_courseusermapping.status,
-        courses_courseusermapping.id as cum_id
-    from
-        trainers_instructor
-    join trainers_courseinstructormapping
-        on trainers_courseinstructormapping.instructor_id = trainers_instructor.id
-    join courses_courseusermapping
-        on courses_courseusermapping.user_id = trainers_instructor.user_id and courses_courseusermapping.course_id = trainers_courseinstructormapping.course_id
-    left join auth_user
-        on auth_user.id = trainers_instructor.user_id
-    group by 1,2,3,4),
+        inst_lecture_details as
+            (select 
+                video_sessions_lecture.id as lecture_id,
+                date(video_sessions_lecture.start_timestamp) as lecture_date,
+                course_inst_mapping_raw.user_id as inst_user_id,
+                vsl_cur_raw.course_user_mapping_id,
+                vsl_cur_raw.report_type,
+                min(vsl_cur_raw.join_time) as inst_min_join_time,
+                max(vsl_cur_raw.leave_time) as inst_max_leave_time,
+                sum(duration) filter (where report_type = 4) as duration_in_secs,
+                cast(extract (epoch from (max(vsl_cur_raw.leave_time) - min(vsl_cur_raw.join_time))) as int) as time_diff_in_secs
+            from
+                video_sessions_lecture
+            join vsl_cur_raw
+                on vsl_cur_raw.lecture_id = video_sessions_lecture.id
+            join course_inst_mapping_raw
+                on course_inst_mapping_raw.cum_id = vsl_cur_raw.course_user_mapping_id and video_sessions_lecture.course_id = course_inst_mapping_raw.course_id
+            group by 1,2,3,4,5),
 
-inst_lecture_details as
-    (select 
-        video_sessions_lecture.id as lecture_id,
-        date(video_sessions_lecture.start_timestamp) as lecture_date,
-        course_inst_mapping_raw.user_id as inst_user_id,
-        vsl_cur_raw.course_user_mapping_id,
-        vsl_cur_raw.report_type,
-        min(vsl_cur_raw.join_time) as inst_min_join_time,
-        max(vsl_cur_raw.leave_time) as inst_max_leave_time,
-        sum(duration) filter (where report_type = 4) as duration_in_secs,
-        cast(extract (epoch from (max(vsl_cur_raw.leave_time) - min(vsl_cur_raw.join_time))) as int) as time_diff_in_secs
-    from
-        video_sessions_lecture
-    join vsl_cur_raw
-        on vsl_cur_raw.lecture_id = video_sessions_lecture.id
-    join course_inst_mapping_raw
-        on course_inst_mapping_raw.cum_id = vsl_cur_raw.course_user_mapping_id and video_sessions_lecture.course_id = course_inst_mapping_raw.course_id
-    group by 1,2,3,4,5),
-
-inst_labeling as 
-    (select
-        *,
-        dense_rank()over (partition by lecture_id order by least(duration_in_secs, time_diff_in_secs) desc, inst_min_join_time) as d_rank
-    from
-        inst_lecture_details),
-
-lecture_inst_mapping as
-    (select 
-        lecture_id,
-        lecture_date,
-        inst_user_id,
-        course_user_mapping_id as inst_cum_id,
-        report_type,
-        inst_min_join_time,
-        inst_max_leave_time,
-        least(duration_in_secs, time_diff_in_secs)/60 as inst_total_time_in_mins
-    from
-        inst_labeling
-    where d_rank = 1),
-
-inst_details as 
-    (select distinct 
-        row_number()over (order by lecture_id) as key_value,
-        lecture_id,
-        inst_user_id,
-        inst_cum_id
-    from 
-        lecture_inst_mapping)
-
-select
-    vsl_cur_raw.lecture_id,
-    vsl_cur_raw.course_user_mapping_id,
-    vsl_cur_raw.join_time,
-    vsl_cur_raw.leave_time,
-    case 
-        when inst_details.key_value is null then 'User'
-        else 'Instructor' 
-    end as user_type
-from
-    vsl_cur_raw
-left join inst_details
-    on inst_details.lecture_id = vsl_cur_raw.lecture_id and inst_details.inst_cum_id = vsl_cur_raw.course_user_mapping_id
-where vsl_cur_raw.lecture_id <> ANY(%s) 
-order by 1 desc, 5, 2;
+        inst_labeling as 
+            (select
+                *,
+                dense_rank()over (partition by lecture_id order by least(duration_in_secs, time_diff_in_secs) desc, inst_min_join_time) as d_rank
+            from
+                inst_lecture_details),
+        
+        lecture_inst_mapping as
+            (select 
+                lecture_id,
+                lecture_date,
+                inst_user_id,
+                course_user_mapping_id as inst_cum_id,
+                report_type,
+                inst_min_join_time,
+                inst_max_leave_time,
+                least(duration_in_secs, time_diff_in_secs)/60 as inst_total_time_in_mins
+            from
+                inst_labeling
+            where d_rank = 1),
+        
+        inst_details as 
+            (select distinct 
+                row_number()over (order by lecture_id) as key_value,
+                lecture_id,
+                inst_user_id,
+                inst_cum_id
+            from 
+                lecture_inst_mapping)
+        
+        select
+            vsl_cur_raw.lecture_id,
+            vsl_cur_raw.course_user_mapping_id,
+            vsl_cur_raw.join_time,
+            vsl_cur_raw.leave_time,
+            case 
+                when inst_details.key_value is null then 'User'
+                else 'Instructor' 
+            end as user_type
+        from
+            vsl_cur_raw
+        left join inst_details
+            on inst_details.lecture_id = vsl_cur_raw.lecture_id and inst_details.inst_cum_id = vsl_cur_raw.course_user_mapping_id
+        where vsl_cur_raw.lecture_id <> ANY(%s) 
+        order by 1 desc, 5, 2;
     """
 
     #print(query)
@@ -317,5 +303,4 @@ insert_data = PythonOperator(
     dag=dag
 )
 
-create_table >> fetch_data
-# >> insert_data
+create_table >> fetch_data >> insert_data
