@@ -240,8 +240,9 @@ transform_data = PostgresOperator(
             a.assignment_id,
             a.title as assignment_title,
             case 
-                when a.assignment_sub_type = 1 then 'Weekend Contest'
-                when a.assignment_sub_type = 4 then 'Module Contest'
+                when a.is_group = true then 'Group Contest'
+	            when a.assignment_sub_type = 1 and a.is_group = false then 'Weekend Contest'
+                when a.assignment_sub_type = 4 and a.is_group = false then 'Module Contest'
                 else 'Contest Mapping Error'
             end as contest_type,
             module_mapping.topic_template_id,
