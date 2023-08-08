@@ -89,6 +89,7 @@ def fetch_data_and_preprocess(**kwargs):
 
     inserted_lecture_id = list(result_cursor.fetchall())
     print(inserted_lecture_id)
+    print(len(inserted_lecture_id))
 
     query = """
     with vsl_cur_raw as
