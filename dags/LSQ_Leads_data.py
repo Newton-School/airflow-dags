@@ -243,7 +243,7 @@ transform_data = PostgresOperator(
                 
             FROM leadsquareactivity l 
             left join leadsquareleadsdata l2 on l2.prospectid = l.relatedprospectid 
-            where date(l.createdon) >= 'April 1,2023'
+            where date(l.createdon) < 'April 1,2023'
             order by 2,5;
         ''',
     dag=dag
