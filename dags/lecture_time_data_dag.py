@@ -88,7 +88,11 @@ def fetch_data_and_preprocess(**kwargs):
         """)
 
     inserted_lecture_id = list(result_cursor.fetchall())
+    new_inserted_lecture_id = []
+    for insert_lecture in inserted_lecture_id:
+        new_inserted_lecture_id.append(insert_lecture[0])
     print(inserted_lecture_id)
+    print(new_inserted_lecture_id)
     print(len(inserted_lecture_id))
 
     query = """
