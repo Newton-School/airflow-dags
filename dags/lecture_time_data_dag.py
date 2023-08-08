@@ -194,7 +194,7 @@ order by 1 desc, 5, 2;
 
     #print(query)
     # print(inserted_lecture_id)
-    pg_cursor.execute(query, (inserted_lecture_id,))
+    pg_cursor.execute(query, (new_inserted_lecture_id,))
 
     rows = pg_cursor.fetchall()
     column_names = ['lecture_id', 'course_user_mapping_id', 'join_time', 'leave_time', 'user_type']
