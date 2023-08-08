@@ -122,7 +122,8 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
         task_id='number_of_rows_per_assignment_sub_dag',
         postgres_conn_id='postgres_read_replica',
         dag=dag,
-        sql=''' with raw as
+        sql='''select count(table_unique_key) from 
+        (with raw as
             (Select
                 feedback_feedbackformuserquestionanswermapping.id as fuqam_id,
                 feedback_feedbackformuserquestionanswerm2m.id as m2m_id,
