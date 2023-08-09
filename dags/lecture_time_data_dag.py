@@ -182,7 +182,7 @@ def fetch_data_and_preprocess(**kwargs):
     #print(query)
     # print(inserted_lecture_id)
     # pg_cursor.execute(query)
-    pg_cursor.execute(query, (new_inserted_lecture_id,))
+    pg_cursor.execute(query, (tuple(new_inserted_lecture_id),))
 
     rows = pg_cursor.fetchall()
     print(rows)
