@@ -76,6 +76,9 @@ def fetch_data_and_preprocess(**kwargs):
         """)
 
     inserted_one_to_one_id = list(result_cursor.fetchall())
+    new_inserted_one_to_one_id = []
+    for insert_oto_id in inserted_one_to_one_id:
+        new_inserted_one_to_one_id.append(insert_oto_id[0])
 
     query = """
         with raw_data as 
@@ -144,10 +147,10 @@ def fetch_data_and_preprocess(**kwargs):
             select * from booked_by_mapping)
         
         select * from final_data
-        where one_to_one_id <> ANY(%s);
+        where one_to_one_id not in %s;
     """
 
-    pg_cursor.execute(query, (inserted_one_to_one_id,))
+    pg_cursor.execute(query, (tuple(inserted_one_to_one_id),))
 
     rows = pg_cursor.fetchall()
     column_names = ['one_to_one_id', 'user_id', 'stakeholder_name', 'course_user_mapping_id',

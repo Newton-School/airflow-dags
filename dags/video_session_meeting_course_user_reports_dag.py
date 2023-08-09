@@ -76,6 +76,10 @@ def fetch_data_and_preprocess(**kwargs):
         """)
 
     inserted_meeting_id = list(result_cursor.fetchall())
+    new_inserted_meeting_id = []
+    for insert_gs_id in inserted_meeting_id:
+        new_inserted_meeting_id.append(insert_gs_id[0])
+
 
     query = """
         with mentor_mapping as 
@@ -126,11 +130,11 @@ def fetch_data_and_preprocess(**kwargs):
             select * from mentee_mapping)
         
         select * from all_data
-        where meeting_id <> ANY(%s)
+        where meeting_id not in %s
         order by 1 desc, 5 desc, 2, 3;
     """
 
-    pg_cursor.execute(query, (inserted_meeting_id,))
+    pg_cursor.execute(query, (tuple(inserted_meeting_id),))
 
     rows = pg_cursor.fetchall()
     column_names = ['meeting_id', 'course_user_mapping_id', 'join_time', 'leave_time', 'user_type']
