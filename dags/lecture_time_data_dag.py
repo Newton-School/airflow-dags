@@ -175,7 +175,7 @@ def fetch_data_and_preprocess(**kwargs):
             vsl_cur_raw
         left join inst_details
             on inst_details.lecture_id = vsl_cur_raw.lecture_id and inst_details.inst_cum_id = vsl_cur_raw.course_user_mapping_id
-                and vsl_cur_raw.lecture_id not in %s 
+        where vsl_cur_raw.lecture_id not in %s 
         order by 1 desc, 5, 2) q;
     """
 
