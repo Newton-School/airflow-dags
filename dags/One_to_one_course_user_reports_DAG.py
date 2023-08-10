@@ -94,6 +94,7 @@ def fetch_data_and_preprocess(**kwargs):
             join video_sessions_onetoone
                 on video_sessions_onetoone.id = video_sessions_onetoonecourseuserreport.one_to_one_id
             where report_type = 4
+            and video_sessions_onetoone.id > 509162
             group by 1,2,3,4,5,6),
         
         booked_with_mapping as
@@ -110,7 +111,7 @@ def fetch_data_and_preprocess(**kwargs):
             from
                 raw_data
             join video_sessions_onetoone
-                on video_sessions_onetoone.id = raw_data.one_to_one_id and video_sessions_onetoone.id > 505268
+                on video_sessions_onetoone.id = raw_data.one_to_one_id and video_sessions_onetoone.id > 509162
             join courses_courseusermapping
                 on courses_courseusermapping.id = raw_data.course_user_mapping_id
                     and video_sessions_onetoone.booked_with_id = courses_courseusermapping.user_id
@@ -131,7 +132,7 @@ def fetch_data_and_preprocess(**kwargs):
             from
                 raw_data
             join video_sessions_onetoone
-                on video_sessions_onetoone.id = raw_data.one_to_one_id and video_sessions_onetoone.id > 505268
+                on video_sessions_onetoone.id = raw_data.one_to_one_id and video_sessions_onetoone.id > 509162
             join courses_courseusermapping
                 on courses_courseusermapping.id = raw_data.course_user_mapping_id
                     and video_sessions_onetoone.booked_by_id = courses_courseusermapping.user_id
