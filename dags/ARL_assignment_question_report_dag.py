@@ -159,7 +159,7 @@ transform_data = PostgresOperator(
             case when ffar.feedback_answer_id = 194 then 'Yes' else null end as expected_output_is_inaccurate,
             case when ffar.feedback_answer_id = 192 then 'Yes' else null end as test_cases_missing_or_wrong
         from 
-            feedback_form_all_responses ffar 
+            feedback_form_all_responses_new ffar 
         join feedback_forms_and_questions ffaq 
             on ffaq.feedback_form_id = ffar.feedback_form_id
                 and ffar.feedback_form_id = 4419 and ffar.feedback_answer_id in (189,190,191,192,193,194)

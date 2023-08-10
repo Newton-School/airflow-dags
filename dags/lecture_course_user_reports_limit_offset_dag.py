@@ -218,7 +218,7 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
 			    end as answer_rating,
 			    feedback_answer as rating_feedback_answer
 			from
-				feedback_form_all_responses ffar
+				feedback_form_all_responses_new ffar
 			where ffar.feedback_form_id = 4377 
 				and ffar.feedback_question_id = 348
 			group by 1,2,3,4),
@@ -234,7 +234,7 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
 		        end as lecture_understood_rating,
 				    feedback_answer as lecture_understanding_feedback_answer
 				from
-					feedback_form_all_responses ffar
+					feedback_form_all_responses_new ffar
 				where ffar.feedback_form_id = 4377 
 					and ffar.feedback_question_id = 331
 				group by 1,2,3,4)    
@@ -394,7 +394,7 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
 			    end as answer_rating,
 			    feedback_answer as rating_feedback_answer
 			from
-				feedback_form_all_responses ffar
+				feedback_form_all_responses_new ffar
 			where ffar.feedback_form_id = 4377 
 				and ffar.feedback_question_id = 348
 			group by 1,2,3,4),
@@ -410,7 +410,7 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
 		        end as lecture_understood_rating,
 				    feedback_answer as lecture_understanding_feedback_answer
 				from
-					feedback_form_all_responses ffar
+					feedback_form_all_responses_new ffar
 				where ffar.feedback_form_id = 4377 
 					and ffar.feedback_question_id = 331
 				group by 1,2,3,4)    

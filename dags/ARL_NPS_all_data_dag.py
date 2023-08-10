@@ -248,7 +248,7 @@ transform_data = PostgresOperator(
                         else null
                     end as pace_of_the_course
                 from 
-                    feedback_form_all_responses ffar
+                    feedback_form_all_responses_new ffar
                 join course_user_mapping cum 
                     on cum.user_id = ffar.user_id and cum.status in (8,9,11,12,30)
                         and feedback_form_id = 4428
