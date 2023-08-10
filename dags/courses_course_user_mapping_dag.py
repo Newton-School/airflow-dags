@@ -30,7 +30,7 @@ def extract_data_to_nested(**kwargs):
                 'course_name,unit_type,admin_course_user_mapping_id,admin_unit_name,'
                 'admin_course_id,created_at,status,label_id,utm_campaign,utm_source,'
                 'utm_medium,hash,apply_form_current_city,apply_form_graduation_year,apply_form_current_occupation,'
-                'apply_form_work_ex) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'apply_form_work_ex, user_placement_status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (course_user_mapping_id) do update set course_name=EXCLUDED.course_name,'
                 'unit_type=EXCLUDED.unit_type,admin_unit_name=EXCLUDED.admin_unit_name,'
                 'admin_course_id=EXCLUDED.admin_course_id,'
