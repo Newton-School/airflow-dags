@@ -30,7 +30,7 @@ def extract_data_to_nested(**kwargs):
                 'course_name,unit_type,admin_course_user_mapping_id,admin_unit_name,'
                 'admin_course_id,created_at,status,label_id,utm_campaign,utm_source,'
                 'utm_medium,hash,apply_form_current_city,apply_form_graduation_year,apply_form_current_occupation,'
-                'apply_form_work_ex) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'apply_form_work_ex) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (course_user_mapping_id) do update set course_name=EXCLUDED.course_name,'
                 'unit_type=EXCLUDED.unit_type,admin_unit_name=EXCLUDED.admin_unit_name,'
                 'admin_course_id=EXCLUDED.admin_course_id,'
@@ -39,7 +39,8 @@ def extract_data_to_nested(**kwargs):
                 'apply_form_current_city=EXCLUDED.apply_form_current_city,'
                 'apply_form_graduation_year=EXCLUDED.apply_form_graduation_year,'
                 'apply_form_current_occupation=EXCLUDED.apply_form_current_occupation,'
-                'apply_form_work_ex=EXCLUDED.apply_form_work_ex;',
+                'apply_form_work_ex=EXCLUDED.apply_form_work_ex,'
+                'user_placement_status = EXCLUDED.user_placement_status;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -60,6 +61,7 @@ def extract_data_to_nested(**kwargs):
                     transform_row[16],
                     transform_row[17],
                     transform_row[18],
+                    transform_row[19],
                  )
         )
     pg_conn.commit()
@@ -95,7 +97,8 @@ create_table = PostgresOperator(
             apply_form_current_city varchar(256),
             apply_form_graduation_year varchar(256),
             apply_form_current_occupation varchar(256),
-            apply_form_work_ex varchar(256)
+            apply_form_work_ex varchar(256),
+            user_placement_status text
         );
     ''',
     dag=dag
@@ -129,34 +132,88 @@ transform_data = PostgresOperator(
         left join courses_courseuserlabelmapping
             on courses_courseuserlabelmapping.course_user_mapping_id = courses_courseusermapping.admin_course_user_mapping_id and courses_courseuserlabelmapping.label_id = 677
         left join courses_course 
-            on courses_course.id = courses_courseusermapping.course_id)
+            on courses_course.id = courses_courseusermapping.course_id),
+
+    pr_npr_data as 
+        (with au_user_raw as 
+            (select
+                courses_course.id as au_course_id,
+                courses_course.title as au_batch_name,
+                courses_courseusermapping.id as admin_cum_id,
+                courses_courseusermapping.user_id,
+                concat(auth_user.first_name,' ', auth_user.last_name) as student_name,
+                courses_courseusermapping.status as admin_cum_status,
+                case
+                    when placements_courseuserplacementstatus.id is null or placements_courseuserplacementstatus.status = 1 then 'NPR'
+                    when placements_courseuserplacementstatus.status = 2 then 'PR'
+                    when placements_courseuserplacementstatus.status = 3 then 'Placed'
+                end as user_placement_status
+            from
+                courses_courseusermapping
+            join courses_course
+                on courses_course.id = courses_courseusermapping.course_id and lower(courses_course.unit_type) like 'admin'
+            left join placements_courseuserplacementstatus
+                on placements_courseuserplacementstatus.course_user_mapping_id = courses_courseusermapping.id
+            left join auth_user
+                on auth_user.id = courses_courseusermapping.user_id and lower(auth_user.email) not like '%newtonschool.co%'),
+                
+        user_lu_au_mapping as
+            (select
+                courses_course.id as lu_cid,
+                courses_course.title as lu_name,
+                courses_courseusermapping.user_id,
+                courses_courseusermapping.id as lu_cum_id,
+                courses_courseusermapping.status as lu_cum_status,
+                cc2.id as au_cid,
+                cc2.title as au_batch_name,
+                ccum2.user_id as au_uid,
+                ccum2.id as au_cum_id,
+                ccum2.status as au_cum_status
+            from
+                courses_course
+            join courses_courseusermapping
+                on courses_courseusermapping.course_id = courses_course.id and lower(courses_course.unit_type) like 'learning'
+            left join courses_courseusermapping ccum2
+                on ccum2.id = courses_courseusermapping.admin_course_user_mapping_id
+            left join courses_course cc2
+                on cc2.id = ccum2.course_id)
+                
+        select
+            user_lu_au_mapping.*,
+            au_user_raw.user_placement_status
+        from
+            user_lu_au_mapping
+        left join au_user_raw
+            on au_user_raw.admin_cum_id = user_lu_au_mapping.au_cum_id)
+    select
+        raw.course_user_mapping_id, 
+        raw.user_id,
+        raw.course_id,
+        raw.course_name,
+        raw.unit_type,
+        raw.admin_course_user_mapping_id,
+        r_one.course_name as admin_unit_name,
+        r_one.course_id as admin_course_id,
+        raw.created_at,
+        raw.status, 
+        raw.label_id,
+        raw.utm_campaign,
+        raw.utm_source,
+        raw.utm_medium,
+        raw.hash,
+        raw.apply_form_current_city,
+        raw.apply_form_graduation_year,
+        raw.apply_form_current_occupation,
+        raw.apply_form_work_ex,
+        pr_npr_data.user_placement_status
         
-select
-    raw.course_user_mapping_id, 
-    raw.user_id,
-    raw.course_id,
-    raw.course_name,
-    raw.unit_type,
-    raw.admin_course_user_mapping_id,
-    r_one.course_name as admin_unit_name,
-    r_one.course_id as admin_course_id,
-    raw.created_at,
-    raw.status, 
-    raw.label_id,
-    raw.utm_campaign,
-    raw.utm_source,
-    raw.utm_medium,
-    raw.hash,
-    raw.apply_form_current_city,
-    raw.apply_form_graduation_year,
-    raw.apply_form_current_occupation,
-    raw.apply_form_work_ex
-    
-from
-    raw
-left join raw as r_one
-    on raw.admin_course_user_mapping_id = r_one.course_user_mapping_id
-group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19;
+    from
+        raw
+    left join raw as r_one
+        on raw.admin_course_user_mapping_id = r_one.course_user_mapping_id
+    left join pr_npr_data
+        on pr_npr_data.user_id = raw.user_id and raw.course_id = pr_npr_data.lu_cid
+    group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20;
         ''',
     dag=dag
 )
