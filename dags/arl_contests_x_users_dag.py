@@ -80,7 +80,7 @@ def extract_data_to_nested(**kwargs):
             'user_placement_status)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
             '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set course_id = EXCLUDED.course_id'
+            'on conflict (table_unique_key) do update set course_id = EXCLUDED.course_id,'
             'course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
             'assignment_title = EXCLUDED.assignment_title,'
