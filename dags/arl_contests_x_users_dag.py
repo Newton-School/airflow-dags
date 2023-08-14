@@ -76,10 +76,12 @@ def extract_data_to_nested(**kwargs):
             'plag_score_90_unique,'
             'activity_status_7_days,'
             'activity_status_14_days,'
-            'activity_status_30_days)'
+            'activity_status_30_days,'
+            'user_placement_status)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
-            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set course_name = EXCLUDED.course_name,'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (table_unique_key) do update set course_id = EXCLUDED.course_id'
+            'course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
             'assignment_title = EXCLUDED.assignment_title,'
             'contest_type = EXCLUDED.contest_type,'
@@ -115,7 +117,8 @@ def extract_data_to_nested(**kwargs):
             'plag_score_90_unique = EXCLUDED.plag_score_90_unique,'
             'activity_status_7_days = EXCLUDED.activity_status_7_days,'
             'activity_status_14_days = EXCLUDED.activity_status_14_days,'
-            'activity_status_30_days = EXCLUDED.activity_status_30_days;',
+            'activity_status_30_days = EXCLUDED.activity_status_30_days,'
+            'user_placement_status = EXCLUDED.user_placement_status;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -159,6 +162,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[39],
                 transform_row[40],
                 transform_row[41],
+                transform_row[42],
 
             )
         )
@@ -180,7 +184,6 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS arl_contests_x_users (
-            
             id serial,
             table_unique_key double precision not null PRIMARY KEY,
             course_id int,
@@ -223,7 +226,8 @@ create_table = PostgresOperator(
             plag_score_90_unique int,
             activity_status_7_days text,
             activity_status_14_days text,
-            activity_status_30_days text
+            activity_status_30_days text,
+            user_placement_status text
         );
     ''',
     dag=dag
@@ -329,7 +333,8 @@ transform_data = PostgresOperator(
            end as plag_score_90_unique,
            uasm.activity_status_7_days,
            uasm.activity_status_14_days,
-           uasm.activity_status_30_days 
+           uasm.activity_status_30_days,
+           cum.user_placement_status
         from
             assignments a
         join courses c
@@ -359,7 +364,7 @@ transform_data = PostgresOperator(
             where topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
             group by 1,2,3) module_mapping
                 on module_mapping.assignment_id = a.assignment_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,40,41,42;
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,40,41,42,43;
         ''',
     dag=dag
 )
