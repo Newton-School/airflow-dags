@@ -93,7 +93,7 @@ def fetch_data_and_preprocess(**kwargs):
             from
                 video_sessions_lecturecourseuserreport
             where report_type = 4
-            and lecture_id > 30934
+            and lecture_id in (30391 , 29842 , 29827 , 29824 , 29843 , 29820 , 29799 , 29798 , 29804 , 29816 , 29810 , 29815 , 29822 , 29826 , 29836 , 29840 , 29812 , 29838 , 29825 , 29830 , 29837 , 29829 , 29802 , 29833 , 29814 , 29817 , 29811 , 29813 , 29805 , 29839 , 29831 , 29834 , 29809 , 29819 , 29807 , 29823 , 29806 , 28958 , 30760 , 30907)
             group by 1,2,3,4,5,6),
     
         course_inst_mapping_raw as
