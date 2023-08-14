@@ -40,7 +40,7 @@ def extract_data_to_nested(**kwargs):
                 'is_group = EXCLUDED.is_group,'
                 'title = EXCLUDED.title,'
                 'was_competitive = EXCLUDED.was_competitive,'
-                'randon_assignment_questions = EXCLUDED.randon_assignment_questions,'
+                'random_assignment_questions = EXCLUDED.random_assignment_questions,'
                 'is_proctored_exam = EXCLUDED.is_proctored_exam,'
                 'whole_course_access = EXCLUDED.whole_course_access,'
                 'lecture_slot_id = EXCLUDED.lecture_slot_id,'
