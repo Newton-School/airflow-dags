@@ -3,11 +3,8 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.models import Variable
-from airflow.utils.task_group import TaskGroup
 from datetime import datetime
 
-from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 
 default_args = {
     'owner': 'airflow',
@@ -17,7 +14,6 @@ default_args = {
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
-
 
 def extract_data_to_nested(**kwargs):
     def clean_input(data_type, data_value):
@@ -66,8 +62,10 @@ def extract_data_to_nested(**kwargs):
             'plag_score_90_unique,'
             'activity_status_7_days,'
             'activity_status_14_days,'
-            'activity_status_30_days)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'activity_status_30_days,'
+            'user_placement_status)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_id = EXCLUDED.course_id,'
             'course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
@@ -98,7 +96,8 @@ def extract_data_to_nested(**kwargs):
             'plag_score_90_unique = EXCLUDED.plag_score_90_unique,'
             'activity_status_7_days = EXCLUDED.activity_status_7_days,'
             'activity_status_14_days = EXCLUDED.activity_status_14_days,'
-            'activity_status_30_days = EXCLUDED.activity_status_30_days;',
+            'activity_status_30_days = EXCLUDED.activity_status_30_days,'
+            'user_placement_status = EXCLUDED.user_placement_status;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -132,6 +131,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[29],
                 transform_row[30],
                 transform_row[31],
+                transform_row[32],
+
             )
         )
     pg_conn.commit()
@@ -184,7 +185,8 @@ create_table = PostgresOperator(
             plag_score_90_unique int,
             activity_status_7_days text,
             activity_status_14_days text,
-            activity_status_30_days text
+            activity_status_30_days text,
+            user_placement_status text
 
         );
     ''',
@@ -259,7 +261,8 @@ transform_data = PostgresOperator(
                end as plag_score_90_unique,
               uasm.activity_status_7_days,
               uasm.activity_status_14_days,
-              uasm.activity_status_30_days 
+              uasm.activity_status_30_days,
+              cum.user_placement_status
             from
                 assignments a 
             join courses c 
@@ -294,7 +297,7 @@ transform_data = PostgresOperator(
                 where topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
                 group by 1,2,3) module_mapping
                     on module_mapping.assignment_id = a.assignment_id
-            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,23,30,31,32;
+            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,23,30,31,32,33;
         ''',
     dag=dag
 )
