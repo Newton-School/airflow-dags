@@ -17,17 +17,39 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO assignments (assignment_id,parent_assignment_id,assignment_sub_type,assignment_type,course_id,created_at,'
-                'created_by_id,duration,start_timestamp,end_timestamp,hash,hidden,is_group,title,was_competitive,'
-                'random_assignment_questions,is_proctored_exam,whole_course_access,lecture_slot_id,lecture_id,'
-                'original_assignment_type,send_breach_parameter,'
+                'INSERT INTO assignments (assignment_id, parent_assignment_id, assignment_sub_type, '
+                'assignment_type, course_id, created_at,'
+                'created_by_id, duration, start_timestamp,'
+                'end_timestamp, hash, hidden, is_group, title, was_competitive,'
+                'random_assignment_questions, is_proctored_exam,'
+                'whole_course_access, lecture_slot_id, lecture_id,'
+                'original_assignment_type, send_breach_parameter,'
                 'plagiarism_check_analysis,parent_module_assignment_id, question_count)'
-                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                'on conflict (assignment_id) do update set start_timestamp = EXCLUDED.start_timestamp,'
-                'plagiarism_check_analysis = EXCLUDED.plagiarism_check_analysis,'
-                'title = EXCLUDED.title,'
+                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'on conflict (assignment_id) do update set parent_assignment_id = EXCLUDED.parent_assignment_id,'
+                'assignment_sub_type = EXCLUDED.assignment_sub_type,'
+                'assignment_type = EXCLUDED.assignment_type,'
+                'course_id = EXCLUDED.course_id,'
+                'created_at = EXCLUDED.created_at,'
+                'created_by_id = EXCLUDED.created_by_id,'
+                'duration = EXCLUDED.duration,'
+                'start_timestamp = EXCLUDED.start_timestamp,'
                 'end_timestamp = EXCLUDED.end_timestamp,'
-                'question_count = EXCLUDED.question_count ;',
+                'hash = EXCLUDED.hash,'
+                'hidden = EXCLUDED.hidden,'
+                'is_group = EXCLUDED.is_group,'
+                'title = EXCLUDED.title,'
+                'was_competitive = EXCLUDED.was_competitive,'
+                'randon_assignment_questions = EXCLUDED.randon_assignment_questions,'
+                'is_proctored_exam = EXCLUDED.is_proctored_exam,'
+                'whole_course_access = EXCLUDED.whole_course_access,'
+                'lecture_slot_id = EXCLUDED.lecture_slot_id,'
+                'lecture_id = EXCLUDED.lecture_id,'
+                'original_assignment_type = EXCLUDED.original_assignment_type,'
+                'send_breach_parameter = EXCLUDED.send_breach_parameter,'
+                'plagiarism_check_analysis = EXCLUDED.plagiarism_check_analysis,'
+                'parent_module_assignment_id = EXCLUDED.parent_module_assignment_id,'
+                'question_count = EXCLUDED.question_count;',
                 (
                     transform_row[0],
                     transform_row[1],
