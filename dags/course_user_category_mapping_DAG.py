@@ -1,13 +1,9 @@
 from airflow import DAG
-# from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.models import Variable
-from airflow.utils.task_group import TaskGroup
 from datetime import datetime
 
-from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 
 default_args = {
     'owner': 'airflow',
@@ -17,7 +13,6 @@ default_args = {
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
-
 
 def extract_data_to_nested(**kwargs):
     def clean_input(data_type, data_value):
@@ -39,8 +34,8 @@ def extract_data_to_nested(**kwargs):
             'course_structure_class, user_id,'
             'course_user_mapping_status, label_mapping_status,'
             'completed_module_count, count_of_a, student_category, student_name, lead_type, activity_status_7_days,'
-            'activity_status_14_days, activity_status_30_days)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'activity_status_14_days, activity_status_30_days, user_placement_status)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
             'course_user_mapping_status = EXCLUDED.course_user_mapping_status,'
@@ -52,7 +47,8 @@ def extract_data_to_nested(**kwargs):
             'lead_type = EXCLUDED.lead_type,'
             'activity_status_7_days = EXCLUDED.activity_status_7_days,'
             'activity_status_14_days = EXCLUDED.activity_status_14_days,'
-            'activity_status_30_days = EXCLUDED.activity_status_30_days;',
+            'activity_status_30_days = EXCLUDED.activity_status_30_days,'
+            'user_placement_status = EXCLUDED.user_placement_status;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -69,6 +65,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[12],
                 transform_row[13],
                 transform_row[14],
+                transform_row[15],
+
             )
         )
     pg_conn.commit()
@@ -104,7 +102,8 @@ create_table = PostgresOperator(
             lead_type text,
             activity_status_7_days text,
             activity_status_14_days text,
-            activity_status_30_days text
+            activity_status_30_days text,
+            user_placement_status text
         );
     ''',
     dag=dag
@@ -114,119 +113,120 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
     sql='''
-select
-        concat(course_id, user_id, course_id) as table_unique_key,
-        course_id,
-        course_name,
-        course_structure_class,
-        user_id,
-        course_user_mapping_status,
-        label_mapping_status,
-        comp_module_count as completed_module_count,
-        count_of_a,
-        case
-            when comp_module_count <> 0 and (count_of_a * 1.0 / comp_module_count) >= 1 then 'A1'
-            when comp_module_count <> 0 and (count_of_a * 1.0 / comp_module_count) >= 0.5 and (count_of_a * 1.0 / comp_module_count) < 1 then 'A2'
-            when comp_module_count <> 0 and (count_of_a * 1.0 / comp_module_count) > 0 and (count_of_a * 1.0 / comp_module_count) < 0.5 then 'A3'
-            when comp_module_count <> 0 and (count_of_a * 1.0 / comp_module_count) <= 0 then 'B'
-            else null
-        end as student_category,
-        student_name,
-        lead_type,
-        activity_status_7_days,
-        activity_status_14_days,
-        activity_status_30_days
-    from
-        (with batch_module_mapping as
-            (select 
-                id as table_uk,
-                course_id,
-                course_name,
-                topic_pool_id,
-                module_name,
-                module_completion_status 
-            from
-                batch_module_completion_status bmcs 
-            where module_completion_status = true),
-        
-        completed_module_count as 
-            (select
-                course_id,
-                course_name,
-                count(distinct topic_pool_id) filter (where module_completion_status is true) as comp_module_count
-            from
-                batch_module_completion_status bmcs
-            group by 1,2),
-        
-        required_user_data as 
-           (select 
-                aur.course_id,
-                aur.course_name,
-                aur.course_structure_class,
-                aur.user_id,
-                aur.course_user_mapping_status,
-                aur.label_mapping_status,
-                aur.topic_pool_id,
-                batch_module_mapping.table_uk,
-                batch_module_mapping.module_completion_status,
-                aur.template_name,
-                rating,
-                plagiarised_rating,
-                mock_rating,
-                module_cutoff,
-                required_rating,
-                grade_obtained,
-                assignment_rating,
-                contest_rating,
-                milestone_rating,
-                proctored_contest_rating,
-                quiz_rating,
-                plagiarised_assignment_rating,
-                plagiarised_contest_rating,
-                plagiarised_proctored_contest_rating
-            from 
-                arl_user_ratings aur
-            join batch_module_mapping
-                on batch_module_mapping.course_id = aur.course_id and aur.topic_pool_id = batch_module_mapping.topic_pool_id
-            where aur.course_structure_id <> 32)
-            
-            
-        select 
-            c.course_id,
-            c.course_name,
-            c.course_structure_class,
-            cum.user_id,
-            concat(ui.first_name,' ',ui.last_name) as student_name,
-            cum.status as course_user_mapping_status,
-            case 
-                when cum.label_id is null and cum.status in (8,9) then 'Enrolled Student'
-                when cum.label_id is not null and cum.status in (8,9) then 'Label Marked Student'
-                when c.course_structure_id in (1,18) and cum.status in (11,12) then 'ISA Cancelled Student'
-                when c.course_structure_id not in (1,18) and cum.status in (30) then 'Deferred Student'
-                when c.course_structure_id not in (1,18) and cum.status in (11) then 'Foreclosed Student'
-                when c.course_structure_id not in (1,18) and cum.status in (12) then 'Reject by NS-Ops'
-                else 'Mapping Error'
-            end as label_mapping_status,
-            completed_module_count.comp_module_count,
-            count(distinct topic_pool_id) filter (where grade_obtained like 'A') as count_of_a,
-            ui.lead_type,
-            uasm.activity_status_7_days,
-            uasm.activity_status_14_days,
-            uasm.activity_status_30_days
+        select
+            concat(course_id, user_id, course_id) as table_unique_key,
+            course_id,
+            course_name,
+            course_structure_class,
+            user_id,
+            course_user_mapping_status,
+            label_mapping_status,
+            comp_module_count as completed_module_count,
+            count_of_a,
+            case
+                when comp_module_count <> 0 and (count_of_a * 1.0 / comp_module_count) >= 1 then 'A1'
+                when comp_module_count <> 0 and (count_of_a * 1.0 / comp_module_count) >= 0.5 and (count_of_a * 1.0 / comp_module_count) < 1 then 'A2'
+                when comp_module_count <> 0 and (count_of_a * 1.0 / comp_module_count) > 0 and (count_of_a * 1.0 / comp_module_count) < 0.5 then 'A3'
+                when comp_module_count <> 0 and (count_of_a * 1.0 / comp_module_count) <= 0 then 'B'
+                else null
+            end as student_category,
+            student_name,
+            lead_type,
+            activity_status_7_days,
+            activity_status_14_days,
+            activity_status_30_days,
+            user_placement_status
         from
-            course_user_mapping cum 
-        join courses c 
-            on c.course_id = cum.course_id and cum.status in (8,9,11,12,30)
-        left join users_info ui
-            	on ui.user_id = cum.user_id
-        left join required_user_data
-            on required_user_data.user_id = cum.user_id and cum.course_id = required_user_data.course_id
-        left join completed_module_count
-            on completed_module_count.course_id = c.course_id
-        left join user_activity_status_mapping uasm 
-        	on uasm.user_id = cum.user_id
-        group by 1,2,3,4,5,6,7,8,10,11,12,13) final_query
-    order by 2 desc, 5;
+            (with batch_module_mapping as
+                (select 
+                    id as table_uk,
+                    course_id,
+                    course_name,
+                    topic_pool_id,
+                    module_name,
+                    module_completion_status 
+                from
+                    batch_module_completion_status bmcs 
+                where module_completion_status = true),
+            
+            completed_module_count as 
+                (select
+                    course_id,
+                    course_name,
+                    count(distinct topic_pool_id) filter (where module_completion_status is true) as comp_module_count
+                from
+                    batch_module_completion_status bmcs
+                group by 1,2),
+            
+            required_user_data as 
+               (select 
+                    aur.course_id,
+                    aur.course_name,
+                    aur.course_structure_class,
+                    aur.user_id,
+                    aur.course_user_mapping_status,
+                    aur.label_mapping_status,
+                    aur.topic_pool_id,
+                    batch_module_mapping.table_uk,
+                    batch_module_mapping.module_completion_status,
+                    aur.template_name,
+                    rating,
+                    plagiarised_rating,
+                    mock_rating,
+                    module_cutoff,
+                    required_rating,
+                    grade_obtained,
+                    assignment_rating,
+                    contest_rating,
+                    milestone_rating,
+                    proctored_contest_rating,
+                    quiz_rating,
+                    plagiarised_assignment_rating,
+                    plagiarised_contest_rating,
+                    plagiarised_proctored_contest_rating
+                from 
+                    arl_user_ratings aur
+                join batch_module_mapping
+                    on batch_module_mapping.course_id = aur.course_id and aur.topic_pool_id = batch_module_mapping.topic_pool_id
+                where aur.course_structure_id <> 32)
+                
+                
+            select 
+                c.course_id,
+                c.course_name,
+                c.course_structure_class,
+                cum.user_id,
+                concat(ui.first_name,' ',ui.last_name) as student_name,
+                cum.status as course_user_mapping_status,
+                case 
+                    when cum.label_id is null and cum.status in (8,9) then 'Enrolled Student'
+                    when cum.label_id is not null and cum.status in (8,9) then 'Label Marked Student'
+                    when c.course_structure_id in (1,18) and cum.status in (11,12) then 'ISA Cancelled Student'
+                    when c.course_structure_id not in (1,18) and cum.status in (30) then 'Deferred Student'
+                    when c.course_structure_id not in (1,18) and cum.status in (11) then 'Foreclosed Student'
+                    when c.course_structure_id not in (1,18) and cum.status in (12) then 'Reject by NS-Ops'
+                    else 'Mapping Error'
+                end as label_mapping_status,
+                completed_module_count.comp_module_count,
+                count(distinct topic_pool_id) filter (where grade_obtained like 'A') as count_of_a,
+                ui.lead_type,
+                uasm.activity_status_7_days,
+                uasm.activity_status_14_days,
+                uasm.activity_status_30_days,
+                cum.user_placement_status
+            from
+                course_user_mapping cum 
+            join courses c 
+                on c.course_id = cum.course_id and cum.status in (8,9,11,12,30)
+            left join users_info ui
+                    on ui.user_id = cum.user_id
+            left join required_user_data
+                on required_user_data.user_id = cum.user_id and cum.course_id = required_user_data.course_id
+            left join completed_module_count
+                on completed_module_count.course_id = c.course_id
+            left join user_activity_status_mapping uasm 
+                on uasm.user_id = cum.user_id
+            group by 1,2,3,4,5,6,7,8,10,11,12,13,14) final_query;
         ''',
     dag=dag
 )
