@@ -31,7 +31,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='Table at user, lecture level for all users with cum.status in (8,9,11,12,30)',
-    schedule_interval='45 1 * * *',
+    schedule_interval='45 3 * * *',
     catchup=False
 )
 

@@ -144,7 +144,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='An Analytics Reporting Layer DAG for assignments per user per assignment data',
-    schedule_interval='35 0 * * *',
+    schedule_interval='55 1 * * *',
     catchup=False
 )
 

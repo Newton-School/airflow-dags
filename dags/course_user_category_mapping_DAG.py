@@ -79,7 +79,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='assigns category from (A1,A2,A3,B) to each user_id with cum.status in (8,9,11,12,30) per course_id',
-    schedule_interval='15 1 * * *',
+    schedule_interval='0 2 * * *',
     catchup=False
 )
 
