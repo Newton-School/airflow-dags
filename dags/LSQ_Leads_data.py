@@ -241,8 +241,8 @@ transform_data = PostgresOperator(
                     THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
                       WHERE (message->>'Key')::varchar = 'Status' LIMIT 1 )ELSE null END) AS call_connection_status
                 
-            FROM leadsquareactivity l
-            left join leadsquareleadsdata l2 on l2.prospectid = l.relatedprospectid 
+            FROM leadsquareleadsdata l2
+            left join leadsquareactivity l on l2.prospectid = l.relatedprospectid 
             where date(l2.createdon) >= 'May 1,2023'
             order by 2,5;
         ''',
