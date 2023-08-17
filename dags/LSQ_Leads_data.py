@@ -141,7 +141,7 @@ create_table = PostgresOperator(
             current_owner varchar(256),
             has_attachments boolean,
             call_status varchar(256),
-            follow_up_date TIMESTAMP,
+            follow_up_date varchar(256),
             call_connection_status varchar(256),
             not_interested_reason varchar(256),
             not_eligible_reason varchar(256),
