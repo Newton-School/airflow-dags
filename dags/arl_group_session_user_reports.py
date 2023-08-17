@@ -60,8 +60,9 @@ def extract_data_to_nested(**kwargs):
             'mentor_total_time_in_seconds,'
             'mentor_total_time_in_mintues,'
             'total_overlap_time_in_seconds,'
-            'total_overlap_time_in_mintues)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'total_overlap_time_in_mintues,'
+            'user_placement_status)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set session_name = EXCLUDED.session_name,'
             'session_date = EXCLUDED.session_date,'
             'mentor_name = EXCLUDED.mentor_name,'
@@ -83,7 +84,8 @@ def extract_data_to_nested(**kwargs):
             'mentor_total_time_in_seconds = EXCLUDED.mentor_total_time_in_seconds,'
             'mentor_total_time_in_mintues = EXCLUDED.mentor_total_time_in_mintues,'
             'total_overlap_time_in_seconds = EXCLUDED.total_overlap_time_in_seconds,'
-            'total_overlap_time_in_mintues = EXCLUDED.total_overlap_time_in_mintues;',
+            'total_overlap_time_in_mintues = EXCLUDED.total_overlap_time_in_mintues,'
+            'user_placement_status = EXCLUDED.user_placement_status;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -113,6 +115,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[25],
                 transform_row[26],
                 transform_row[27],
+                transform_row[28],
             )
         )
     pg_conn.commit()
@@ -161,7 +164,8 @@ create_table = PostgresOperator(
             mentor_total_time_in_seconds real, 
             mentor_total_time_in_mintues real,
             total_overlap_time_in_seconds real,
-            total_overlap_time_in_mintues real
+            total_overlap_time_in_mintues real,
+            user_placement_status text
         );
     ''',
     dag=dag
@@ -249,7 +253,8 @@ transform_data = PostgresOperator(
             total_time_in_seconds as mentor_total_time_in_seconds,
             total_time_in_seconds / 60 as mentor_total_time_in_mintues,
             sum(gscur.overlapping_time_seconds) as total_overlap_time_in_seconds,
-            sum(gscur.overlapping_time_minutes) as total_overlap_time_in_mintues
+            sum(gscur.overlapping_time_minutes) as total_overlap_time_in_mintues,
+            cum.user_placement_status
         from
             group_sessions gs
         join courses c 
@@ -273,7 +278,7 @@ transform_data = PostgresOperator(
             on batch_strength_details.course_id = c.course_id 
         left join mentor_data
             on mentor_data.meeting_id = gs.meeting_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,29
         order by 4 desc, 2, 5, 10;
         ''',
     dag=dag
