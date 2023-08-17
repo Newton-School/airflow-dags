@@ -64,8 +64,10 @@ def extract_data_to_nested(**kwargs):
             'total_expert_time_mins,'
             'total_user_time_mins,'
             'total_overlapping_time_mins,'
-            'cancel_reason)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'cancel_reason,'
+            'user_placement_status)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
             'lead_type = EXCLUDED.lead_type,'
             'student_category = EXCLUDED.student_category,'
@@ -109,7 +111,8 @@ def extract_data_to_nested(**kwargs):
             'total_expert_time_mins = EXCLUDED.total_expert_time_mins,'
             'total_user_time_mins = EXCLUDED.total_user_time_mins,'
             'total_overlapping_time_mins = EXCLUDED.total_overlapping_time_mins,'
-            'cancel_reason = EXCLUDED.cancel_reason;',
+            'cancel_reason = EXCLUDED.cancel_reason,'
+            'user_placement_status = EXCLUDED.user_placement_status;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -163,6 +166,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[49],
                 transform_row[50],
                 transform_row[51],
+                transform_row[52],
 
             )
         )
@@ -236,7 +240,8 @@ create_table = PostgresOperator(
             total_expert_time_mins real,
             total_user_time_mins real,
             total_overlapping_time_mins real,
-            cancel_reason text
+            cancel_reason text,
+            user_placement_status text
         );
     ''',
     dag=dag
@@ -412,7 +417,8 @@ transform_data = PostgresOperator(
             time_data.total_expert_time_mins,
             time_data.total_user_time_mins,
             total_overlapping_time_mins,
-            one_to_one.cancel_reason 
+            one_to_one.cancel_reason,
+            course_user_mapping.user_placement_status
         from
             courses c
         join course_user_mapping
@@ -434,7 +440,7 @@ transform_data = PostgresOperator(
         	on time_data.one_to_one_id = one_to_one.one_to_one_id
         		and time_data.student_user_id = course_user_mapping.user_id
         			and time_data.expert_user_id = one_to_one.expert_user_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,42,43,44,45,46,47,48,49,50,51,52;
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,42,43,44,45,46,47,48,49,50,51,52,53;
         ''',
     dag=dag
 )
