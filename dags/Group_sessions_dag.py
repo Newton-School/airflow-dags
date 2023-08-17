@@ -97,7 +97,7 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS group_sessions (
             id serial,
-            table_unique_key not null text,
+            table_unique_key text not null PRIMARY KEY,
             meeting_id int,
             booked_by_id bigint,
             mentee_user_id bigint,
