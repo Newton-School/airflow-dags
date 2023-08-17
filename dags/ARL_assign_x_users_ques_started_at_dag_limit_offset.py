@@ -70,7 +70,8 @@ create_table = PostgresOperator(
             question_completed_at timestamp,
             max_test_case_passed int,
             all_test_case_passed boolean,
-            plagiarism_score real
+            plagiarism_score real,
+            user_placement_status text
         );
     ''',
     dag=dag
@@ -119,8 +120,9 @@ def extract_data_to_nested(**kwargs):
             'question_completed_at,'
             'max_test_case_passed,'
             'all_test_case_passed,'
-            'plagiarism_score)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'plagiarism_score,'
+            'user_placement_status)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
             'student_category = EXCLUDED.student_category,'
             'lead_type = EXCLUDED.lead_type,'
@@ -146,7 +148,8 @@ def extract_data_to_nested(**kwargs):
             'question_completed_at = EXCLUDED.question_completed_at,'
             'max_test_case_passed = EXCLUDED.max_test_case_passed,'
             'all_test_case_passed = EXCLUDED.all_test_case_passed,'
-            'plagiarism_score = EXCLUDED.plagiarism_score;',
+            'plagiarism_score = EXCLUDED.plagiarism_score,'
+            'user_placement_status = EXCLUDED.user_placement_status;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -179,6 +182,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[28],
                 transform_row[29],
                 transform_row[30],
+                transform_row[31],
             )
         )
         pg_conn.commit()
@@ -254,7 +258,8 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                     question_completed_at,
                     max_test_case_passed,
                     aqum.all_test_case_passed,
-                    aqum.plagiarism_score
+                    aqum.plagiarism_score,
+                    cum.user_placement_status
                 from
                     assignments a 
                 join courses c 
@@ -282,13 +287,13 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                 left join topics t 
                     on aq.topic_id  = t.topic_id 
                         and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
-                group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30)
+                group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31)
                 
             select 
                 concat(user_id, assignment_id, topic_template_id, question_id) as table_unique_key,
                 *
             from questions_details
-            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31) final_query
+            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32) final_query
         ) query_rows;
             ''' % (start_assignment_id, end_assignment_id),
     )
@@ -382,7 +387,8 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                 question_completed_at,
                 max_test_case_passed,
                 aqum.all_test_case_passed,
-                aqum.plagiarism_score
+                aqum.plagiarism_score,
+                cum.user_placement_status
             from
                 assignments a 
             join courses c 
@@ -410,13 +416,13 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
             left join topics t 
                 on aq.topic_id  = t.topic_id 
                     and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
-            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30)
+            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31)
             
         select 
             concat(user_id, assignment_id, topic_template_id, question_id) as table_unique_key,
             *
         from questions_details
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31) final_query
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32) final_query
         limit {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').limit }} 
         offset {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').offset }}
         ;
