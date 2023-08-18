@@ -65,9 +65,11 @@ def extract_data_to_nested(**kwargs):
             'total_user_time_mins,'
             'total_overlapping_time_mins,'
             'cancel_reason,'
-            'user_placement_status)'
+            'user_placement_status,'
+            'answer_rating,'
+            'rating_feedback_answer)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
-            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
             'lead_type = EXCLUDED.lead_type,'
             'student_category = EXCLUDED.student_category,'
@@ -112,7 +114,9 @@ def extract_data_to_nested(**kwargs):
             'total_user_time_mins = EXCLUDED.total_user_time_mins,'
             'total_overlapping_time_mins = EXCLUDED.total_overlapping_time_mins,'
             'cancel_reason = EXCLUDED.cancel_reason,'
-            'user_placement_status = EXCLUDED.user_placement_status;',
+            'user_placement_status = EXCLUDED.user_placement_status,'
+            'answer_rating = EXCLUDED.answer_rating,'
+            'rating_feedback_answer = EXCLUDED.rating_feedback_answer;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -167,6 +171,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[50],
                 transform_row[51],
                 transform_row[52],
+                transform_row[53],
+                transform_row[54],
 
             )
         )
@@ -241,7 +247,9 @@ create_table = PostgresOperator(
             total_user_time_mins real,
             total_overlapping_time_mins real,
             cancel_reason text,
-            user_placement_status text
+            user_placement_status text,
+            answer_rating int,
+            rating_feedback_answer text
         );
     ''',
     dag=dag
@@ -301,7 +309,25 @@ transform_data = PostgresOperator(
         left join vscur
             on vscur.one_to_one_id = oto.one_to_one_id
         group by 1,2,3,4,5,6,7
-        order by 5 desc)
+        order by 5 desc),
+        
+        one_on_one_csat as 
+			(select
+				user_id,
+				entity_object_id as one_to_one_id,
+			    case
+			        when ffar.feedback_answer = 'Awesome' then 5
+			        when ffar.feedback_answer = 'Good' then 4
+			        when ffar.feedback_answer = 'Average' then 3
+			        when ffar.feedback_answer = 'Poor' then 2
+			        when ffar.feedback_answer = 'Very Poor' then 1
+			    end as answer_rating,
+			    feedback_answer as rating_feedback_answer
+			from
+				feedback_form_all_responses_new ffar
+			where ffar.feedback_form_id = 4414 
+				and ffar.feedback_question_id = 262
+			group by 1,2,3,4)
     
 
     select distinct 
@@ -418,7 +444,9 @@ transform_data = PostgresOperator(
             time_data.total_user_time_mins,
             total_overlapping_time_mins,
             one_to_one.cancel_reason,
-            course_user_mapping.user_placement_status
+            course_user_mapping.user_placement_status,
+            one_on_one_csat.answer_rating,
+            one_on_one_csat.rating_feedback_answer
         from
             courses c
         join course_user_mapping
@@ -440,7 +468,10 @@ transform_data = PostgresOperator(
         	on time_data.one_to_one_id = one_to_one.one_to_one_id
         		and time_data.student_user_id = course_user_mapping.user_id
         			and time_data.expert_user_id = one_to_one.expert_user_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,42,43,44,45,46,47,48,49,50,51,52,53;
+        left join one_on_one_csat 
+        	on one_on_one_csat.one_to_one_id = one_to_one.one_to_one_id 
+        		and one_to_one.student_user_id = one_on_one_csat.user_id
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,42,43,44,45,46,47,48,49,50,51,52,53,54,55;
         ''',
     dag=dag
 )
