@@ -49,7 +49,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS apply_form_course_user_question_mapping (
-            id int not null PRIMARY KEY,
+            id bigint not null PRIMARY KEY,
             user_id bigint,
             course_id int,
             apply_form_question_mapping_id int,
