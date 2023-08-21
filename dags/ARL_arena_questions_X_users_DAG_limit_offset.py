@@ -23,7 +23,7 @@ total_number_of_sub_dags = Variable.get("total_number_of_sub_dags", 5)
 total_number_of_extraction_cps_dags = Variable.get("total_number_of_extraction_cps_dags", 10)
 
 dag = DAG(
-    'arl_arena_questions_x_users_dag',
+    'arl_arena_questions_x_users_dag_new',
     default_args=default_args,
     concurrency=4,
     max_active_tasks=6,
