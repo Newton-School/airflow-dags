@@ -1,5 +1,4 @@
 from airflow import DAG
-# from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -7,7 +6,6 @@ from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from datetime import datetime
 
-from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 
 default_args = {
     'owner': 'airflow',
@@ -41,7 +39,7 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS assessment_question_user_mapping (
         id serial not null,
-        table_unique_key double precision not null PRIMARY KEY,
+        table_unique_key text not null PRIMARY KEY,
         course_user_assessment_mapping_id bigint,
         assessment_id bigint,
         user_id bigint,
@@ -77,14 +75,15 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor = pg_conn.cursor()
         pg_cursor.execute(
-            'INSERT INTO assessment_question_user_mapping (table_unique_key,course_user_assessment_mapping_id,assessment_id,'
-        'user_id,course_user_mapping_id,assessment_completed,assessment_completed_at,user_assessment_level_hash,'
-        'assessment_late_completed,marks_obtained,assessment_started_at,cheated,'
-        'cheated_marked_at,mcq_id,option_marked_at,marked_choice,correct_choice,user_question_level_hash)'
-        'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+        'INSERT INTO assessment_question_user_mapping (table_unique_key, course_user_assessment_mapping_id,'
+        'assessment_attempt_number, assessment_id,'
+        'user_id, course_user_mapping_id, assessment_completed, assessment_completed_at,'
+        'user_assessment_level_hash, assessment_late_completed, marks_obtained, '
+        'assessment_started_at, cheated, cheated_marked_at, mcq_id, '
+        'option_marked_at, marked_choice, correct_choice, user_question_level_hash)'
+        'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
         'on conflict (table_unique_key) do update set course_user_assessment_mapping_id = EXCLUDED.course_user_assessment_mapping_id,'
-        'assessment_id = EXCLUDED.assessment_id,'
-        'course_user_mapping_id = EXCLUDED.course_user_mapping_id,'
+        'assessment_attempt_number = EXCLUDED.assessment_attempt_number,'
         'assessment_completed = EXCLUDED.assessment_completed,'
         'assessment_completed_at = EXCLUDED.assessment_completed_at,'
         'user_assessment_level_hash = EXCLUDED.user_assessment_level_hash,'
@@ -117,6 +116,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[15],
                 transform_row[16],
                 transform_row[17],
+                transform_row[18],
             )
         )
         pg_conn.commit()
@@ -131,34 +131,38 @@ def number_of_rows_per_assignment_sub_dag_func(start_assessment_id, end_assessme
         dag=dag,
         sql=''' select count(table_unique_key) from
         (select
-        cast(concat(assessments_courseuserassessmentmapping.id, assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id, courses_courseusermapping.user_id) as double precision) as table_unique_key,
-        assessments_courseuserassessmentmapping.id as course_user_assessment_mapping_id,
-        assessments_courseuserassessmentmapping.assessment_id,
-        courses_courseusermapping.user_id,
-        assessments_courseuserassessmentmapping.course_user_mapping_id,
-        assessments_courseuserassessmentmapping.completed as assessment_completed,
-        assessments_courseuserassessmentmapping.completed_at as assessment_completed_at,
-        assessments_courseuserassessmentmapping.hash as user_assessment_level_hash,
-        assessments_courseuserassessmentmapping.late_completed as assessment_late_completed,
-        assessments_courseuserassessmentmapping.marks as marks_obtained,
-        assessments_courseuserassessmentmapping.started_at as assessment_started_at,
-        assessments_courseuserassessmentmapping.cheated,
-        assessments_courseuserassessmentmapping.cheated_marked_at,
-        assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id as mcq_id,
-        assessments_multiplechoicequestioncourseusermapping.marked_at as option_marked_at,
-        assessments_multiplechoicequestioncourseusermapping.marked_choice,
-        assessments_multiplechoicequestion.correct_choice,
-        assessments_multiplechoicequestioncourseusermapping.hash as user_question_level_hash
-    from
-        assessments_courseuserassessmentmapping
-    join assessments_assessment
-        on assessments_assessment.id = assessments_courseuserassessmentmapping.assessment_id and (assessments_courseuserassessmentmapping.assessment_id between %d and %d)
-    join courses_courseusermapping
-        on courses_courseusermapping.id = assessments_courseuserassessmentmapping.course_user_mapping_id
-    join assessments_multiplechoicequestioncourseusermapping
-        on assessments_multiplechoicequestioncourseusermapping.course_user_assessment_mapping_id = assessments_courseuserassessmentmapping.id
-    left join assessments_multiplechoicequestion
-        on assessments_multiplechoicequestion.id = assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id
+            concat(assessments_assessment.id, courses_courseusermapping.user_id, courses_courseusermapping.id, assessments_courseuserassessmentmapping.attempt, assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id) as table_unique_key,
+            assessments_courseuserassessmentmapping.id as course_user_assessment_mapping_id,
+            assessments_courseuserassessmentmapping.attempt as assessment_attempt_number,
+            assessments_courseuserassessmentmapping.assessment_id,
+            courses_courseusermapping.user_id,
+            assessments_courseuserassessmentmapping.course_user_mapping_id,
+            assessments_courseuserassessmentmapping.completed as assessment_completed,
+            assessments_courseuserassessmentmapping.completed_at as assessment_completed_at,
+            assessments_courseuserassessmentmapping.hash as user_assessment_level_hash,
+            assessments_courseuserassessmentmapping.late_completed as assessment_late_completed,
+            assessments_courseuserassessmentmapping.marks as marks_obtained,
+            assessments_courseuserassessmentmapping.started_at as assessment_started_at,
+            assessments_courseuserassessmentmapping.cheated,
+            assessments_courseuserassessmentmapping.cheated_marked_at,
+            assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id as mcq_id,
+            assessments_multiplechoicequestioncourseusermapping.marked_at as option_marked_at,
+            assessments_multiplechoicequestioncourseusermapping.marked_choice,
+            assessments_multiplechoicequestion.correct_choice,
+            assessments_multiplechoicequestioncourseusermapping.hash as user_question_level_hash
+        from
+            assessments_assessment
+        join courses_course
+            on courses_course.id = assessments_assessment.course_id
+        join courses_courseusermapping
+            on courses_courseusermapping.course_id = courses_course.id
+        join assessments_courseuserassessmentmapping
+            on assessments_assessment.id = assessments_courseuserassessmentmapping.assessment_id
+                and courses_courseusermapping.id = assessments_courseuserassessmentmapping.course_user_mapping_id and (assessments_assessment.id between %d and %d)
+        left join assessments_multiplechoicequestioncourseusermapping
+            on assessments_multiplechoicequestioncourseusermapping.course_user_assessment_mapping_id = assessments_courseuserassessmentmapping.id
+        left join assessments_multiplechoicequestion
+            on assessments_multiplechoicequestion.id = assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id
         ) query_rows;
             ''' % (start_assessment_id, end_assessment_id),
     )
@@ -191,34 +195,38 @@ def transform_data_per_query(start_assessment_id, end_assessment_id, cps_sub_dag
         },
         sql=''' select * from
         (select
-        cast(concat(assessments_courseuserassessmentmapping.id, assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id, courses_courseusermapping.user_id) as double precision) as table_unique_key,
-        assessments_courseuserassessmentmapping.id as course_user_assessment_mapping_id,
-        assessments_courseuserassessmentmapping.assessment_id,
-        courses_courseusermapping.user_id,
-        assessments_courseuserassessmentmapping.course_user_mapping_id,
-        assessments_courseuserassessmentmapping.completed as assessment_completed,
-        assessments_courseuserassessmentmapping.completed_at as assessment_completed_at,
-        assessments_courseuserassessmentmapping.hash as user_assessment_level_hash,
-        assessments_courseuserassessmentmapping.late_completed as assessment_late_completed,
-        assessments_courseuserassessmentmapping.marks as marks_obtained,
-        assessments_courseuserassessmentmapping.started_at as assessment_started_at,
-        assessments_courseuserassessmentmapping.cheated,
-        assessments_courseuserassessmentmapping.cheated_marked_at,
-        assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id as mcq_id,
-        assessments_multiplechoicequestioncourseusermapping.marked_at as option_marked_at,
-        assessments_multiplechoicequestioncourseusermapping.marked_choice,
-        assessments_multiplechoicequestion.correct_choice,
-        assessments_multiplechoicequestioncourseusermapping.hash as user_question_level_hash
-    from
-        assessments_courseuserassessmentmapping
-    join assessments_assessment
-        on assessments_assessment.id = assessments_courseuserassessmentmapping.assessment_id and (assessments_courseuserassessmentmapping.assessment_id between %d and %d)
-    join courses_courseusermapping
-        on courses_courseusermapping.id = assessments_courseuserassessmentmapping.course_user_mapping_id
-    join assessments_multiplechoicequestioncourseusermapping
-        on assessments_multiplechoicequestioncourseusermapping.course_user_assessment_mapping_id = assessments_courseuserassessmentmapping.id
-    left join assessments_multiplechoicequestion
-        on assessments_multiplechoicequestion.id = assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id
+            concat(assessments_assessment.id, courses_courseusermapping.user_id, courses_courseusermapping.id, assessments_courseuserassessmentmapping.attempt, assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id) as table_unique_key,
+            assessments_courseuserassessmentmapping.id as course_user_assessment_mapping_id,
+            assessments_courseuserassessmentmapping.attempt as assessment_attempt_number,
+            assessments_courseuserassessmentmapping.assessment_id,
+            courses_courseusermapping.user_id,
+            assessments_courseuserassessmentmapping.course_user_mapping_id,
+            assessments_courseuserassessmentmapping.completed as assessment_completed,
+            assessments_courseuserassessmentmapping.completed_at as assessment_completed_at,
+            assessments_courseuserassessmentmapping.hash as user_assessment_level_hash,
+            assessments_courseuserassessmentmapping.late_completed as assessment_late_completed,
+            assessments_courseuserassessmentmapping.marks as marks_obtained,
+            assessments_courseuserassessmentmapping.started_at as assessment_started_at,
+            assessments_courseuserassessmentmapping.cheated,
+            assessments_courseuserassessmentmapping.cheated_marked_at,
+            assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id as mcq_id,
+            assessments_multiplechoicequestioncourseusermapping.marked_at as option_marked_at,
+            assessments_multiplechoicequestioncourseusermapping.marked_choice,
+            assessments_multiplechoicequestion.correct_choice,
+            assessments_multiplechoicequestioncourseusermapping.hash as user_question_level_hash
+        from
+            assessments_assessment
+        join courses_course
+            on courses_course.id = assessments_assessment.course_id
+        join courses_courseusermapping
+            on courses_courseusermapping.course_id = courses_course.id
+        join assessments_courseuserassessmentmapping
+            on assessments_assessment.id = assessments_courseuserassessmentmapping.assessment_id
+                and courses_courseusermapping.id = assessments_courseuserassessmentmapping.course_user_mapping_id and (assessments_assessment.id between %d and %d)
+        left join assessments_multiplechoicequestioncourseusermapping
+            on assessments_multiplechoicequestioncourseusermapping.course_user_assessment_mapping_id = assessments_courseuserassessmentmapping.id
+        left join assessments_multiplechoicequestion
+            on assessments_multiplechoicequestion.id = assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id
         ) final_query
         limit {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').limit }} 
         offset {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').offset }}
