@@ -63,8 +63,11 @@ def extract_data_to_nested(**kwargs):
             'activity_status_7_days,'
             'activity_status_14_days,'
             'activity_status_30_days,'
-            'user_placement_status)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'user_placement_status,'
+            'admin_course_id,'
+            'admin_unit_name)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_id = EXCLUDED.course_id,'
             'course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
@@ -96,7 +99,9 @@ def extract_data_to_nested(**kwargs):
             'activity_status_7_days = EXCLUDED.activity_status_7_days,'
             'activity_status_14_days = EXCLUDED.activity_status_14_days,'
             'activity_status_30_days = EXCLUDED.activity_status_30_days,'
-            'user_placement_status = EXCLUDED.user_placement_status;',
+            'user_placement_status = EXCLUDED.user_placement_status,'
+            'admin_course_id = EXCLUDED.admin_course_id,'
+            'admin_unit_name = EXCLUDED.admin_unit_name;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -131,6 +136,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[30],
                 transform_row[31],
                 transform_row[32],
+                transform_row[33],
+                transform_row[34],
 
             )
         )
@@ -185,7 +192,9 @@ create_table = PostgresOperator(
             activity_status_7_days text,
             activity_status_14_days text,
             activity_status_30_days text,
-            user_placement_status text
+            user_placement_status text,
+            admin_course_id int,
+            admin_unit_name text
 
         );
     ''',
@@ -261,7 +270,9 @@ transform_data = PostgresOperator(
               uasm.activity_status_7_days,
               uasm.activity_status_14_days,
               uasm.activity_status_30_days,
-              cum.user_placement_status
+              cum.user_placement_status,
+              cum.admin_course_id,
+              cum.admin_unit_name
             from
                 assignments a 
             join courses c 
@@ -296,7 +307,7 @@ transform_data = PostgresOperator(
                 where topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
                 group by 1,2,3) module_mapping
                     on module_mapping.assignment_id = a.assignment_id
-            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,23,30,31,32,33;
+            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,23,30,31,32,33,34,35;
         ''',
     dag=dag
 )
