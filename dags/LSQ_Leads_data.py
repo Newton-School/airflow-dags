@@ -360,7 +360,7 @@ transform_data = PostgresOperator(
 delete_table = PostgresOperator(
     task_id='delete_table',
     postgres_conn_id='postgres_result_db',
-    sql='''delete TABLE IF EXISTS lsq_leads_x_activities where activity_id is null;
+    sql='''delete IF EXISTS lsq_leads_x_activities where activity_id is null;
     ''',
     dag=dag
 )
