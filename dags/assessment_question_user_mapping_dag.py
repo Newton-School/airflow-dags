@@ -154,12 +154,12 @@ def number_of_rows_per_assignment_sub_dag_func(start_assessment_id, end_assessme
         from
             assessments_assessment
         join courses_course
-            on courses_course.id = assessments_assessment.course_id
+            on courses_course.id = assessments_assessment.course_id and (assessments_assessment.id between %d and %d)
         join courses_courseusermapping
             on courses_courseusermapping.course_id = courses_course.id
         join assessments_courseuserassessmentmapping
             on assessments_assessment.id = assessments_courseuserassessmentmapping.assessment_id
-                and courses_courseusermapping.id = assessments_courseuserassessmentmapping.course_user_mapping_id and (assessments_assessment.id between %d and %d)
+                and courses_courseusermapping.id = assessments_courseuserassessmentmapping.course_user_mapping_id
         left join assessments_multiplechoicequestioncourseusermapping
             on assessments_multiplechoicequestioncourseusermapping.course_user_assessment_mapping_id = assessments_courseuserassessmentmapping.id
         left join assessments_multiplechoicequestion
@@ -218,12 +218,12 @@ def transform_data_per_query(start_assessment_id, end_assessment_id, cps_sub_dag
         from
             assessments_assessment
         join courses_course
-            on courses_course.id = assessments_assessment.course_id
+            on courses_course.id = assessments_assessment.course_id and (assessments_assessment.id between %d and %d)
         join courses_courseusermapping
             on courses_courseusermapping.course_id = courses_course.id
         join assessments_courseuserassessmentmapping
             on assessments_assessment.id = assessments_courseuserassessmentmapping.assessment_id
-                and courses_courseusermapping.id = assessments_courseuserassessmentmapping.course_user_mapping_id and (assessments_assessment.id between %d and %d)
+                and courses_courseusermapping.id = assessments_courseuserassessmentmapping.course_user_mapping_id
         left join assessments_multiplechoicequestioncourseusermapping
             on assessments_multiplechoicequestioncourseusermapping.course_user_assessment_mapping_id = assessments_courseuserassessmentmapping.id
         left join assessments_multiplechoicequestion
