@@ -36,9 +36,10 @@ def extract_data_to_nested(**kwargs):
             'previous_owner,current_owner,has_attachments,call_status,follow_up_date,call_connection_status,'
             'not_interested_reason,not_eligible_reason,call_comments,work_experience,salary_range,'
             'tech_domain,highest_qualification,reason_for_upskilling,college_name,graduation_degree,'
-            'post_graduation_degree,prospect_details)'
+            'post_graduation_degree,prospect_details,department,convinced_about_data_science,'
+            'trust_factor_for_newton_school)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
-            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set prospect_stage=EXCLUDED.prospect_stage,'
             'lead_owner = EXCLUDED.lead_owner,'
             'lead_sub_status=EXCLUDED.lead_sub_status,lead_last_call_status=EXCLUDED.lead_last_call_status,'
@@ -91,6 +92,9 @@ def extract_data_to_nested(**kwargs):
                 transform_row[43],
                 transform_row[44],
                 transform_row[45],
+                transform_row[46],
+                transform_row[47],
+                transform_row[48],
             )
         )
     pg_conn.commit()
@@ -154,7 +158,10 @@ create_table = PostgresOperator(
             college_name varchar(256),
             graduation_degree varchar(256),
             post_graduation_degree varchar(256),
-            prospect_details varchar(256)
+            prospect_details varchar(256),
+            department varchar(256),
+            convinced_about_data_science varchar(256),
+            trust_factor_for_newton_school varchar(256)
         );
     ''',
     dag=dag
@@ -326,7 +333,22 @@ transform_data = PostgresOperator(
                 (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
                       FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_14')
                     THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_14' LIMIT 1 )ELSE null END) AS prospect_details
+                      WHERE (message->>'Key')::varchar = 'mx_Custom_14' LIMIT 1 )ELSE null END) AS prospect_details,
+                      
+                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_15')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                      WHERE (message->>'Key')::varchar = 'mx_Custom_15' LIMIT 1 )ELSE null END) AS department,
+                      
+                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_16')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                      WHERE (message->>'Key')::varchar = 'mx_Custom_16' LIMIT 1 )ELSE null END) AS convinced_about_data_science,
+                      
+                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_17')
+                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                      WHERE (message->>'Key')::varchar = 'mx_Custom_17' LIMIT 1 )ELSE null END) AS trust_factor_for_newton_school                      
                 
             FROM leadsquareleadsdata l2
             left join leadsquareactivity l on l2.prospectid = l.relatedprospectid 
@@ -335,7 +357,13 @@ transform_data = PostgresOperator(
         ''',
     dag=dag
 )
-
+delete_table = PostgresOperator(
+    task_id='delete_table',
+    postgres_conn_id='postgres_result_db',
+    sql='''delete TABLE IF EXISTS lsq_leads_x_activities where activity_id is null;
+    ''',
+    dag=dag
+)
 extract_python_data = PythonOperator(
     task_id='extract_python_data',
     python_callable=extract_data_to_nested,
@@ -343,4 +371,4 @@ extract_python_data = PythonOperator(
     dag=dag
 )
 
-create_table >> transform_data >> extract_python_data
+delete_table >> create_table >> transform_data >> extract_python_data
