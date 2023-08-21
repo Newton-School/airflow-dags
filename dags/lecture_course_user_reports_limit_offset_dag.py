@@ -69,7 +69,9 @@ create_table = PostgresOperator(
             activity_status_7_days text,
             activity_status_14_days text,
             activity_status_30_days text,
-            user_placement_status text
+            user_placement_status text,
+            admin_course_id int, 
+            admin_unit_name text
         );
     ''',
     dag=dag
@@ -98,8 +100,10 @@ def extract_data_to_nested(**kwargs):
             'activity_status_7_days,'
             'activity_status_14_days,'
             'activity_status_30_days,'
-            'user_placement_status)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'user_placement_status,'
+            'admin_course_id,'
+            'admin_unit_name)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
             'lead_type = EXCLUDED.lead_type,'
             'student_category = EXCLUDED.student_category,'
@@ -123,7 +127,9 @@ def extract_data_to_nested(**kwargs):
             'activity_status_7_days = EXCLUDED.activity_status_7_days,'
             'activity_status_14_days = EXCLUDED.activity_status_14_days,'
             'activity_status_30_days = EXCLUDED.activity_status_30_days,'
-            'user_placement_status = EXCLUDED.user_placement_status;',
+            'user_placement_status = EXCLUDED.user_placement_status,'
+            'admin_course_id = EXCLUDED.admin_course_id,'
+            'admin_unit_name = EXCLUDED.admin_unit_name;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -155,6 +161,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[27],
                 transform_row[28],
                 transform_row[29],
+                transform_row[30],
+                transform_row[31],
             )
         )
         pg_conn.commit()
@@ -285,7 +293,9 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
             uasm.activity_status_7_days,
             uasm.activity_status_14_days,
             uasm.activity_status_30_days,
-            cum.user_placement_status
+            cum.user_placement_status,
+            cum.admin_course_id,
+            cum.admin_unit_name
         from
             courses c
         join course_user_mapping cum
@@ -316,7 +326,7 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
         		and lecture_rating.user_id = cum.user_id
         left join user_activity_status_mapping uasm 
         	on uasm.user_id = cum.user_id 
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,23,24,25,26,27,28,29,30) count_query;
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,23,24,25,26,27,28,29,30,31,32) count_query;
         ''' % (start_lecture_id, end_lecture_id),
     )
 
@@ -462,7 +472,9 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
             uasm.activity_status_7_days,
             uasm.activity_status_14_days,
             uasm.activity_status_30_days,
-            cum.user_placement_status
+            cum.user_placement_status,
+            cum.admin_course_id,
+            cum.admin_unit_name
         from
             courses c
         join course_user_mapping cum
@@ -493,7 +505,7 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
         		and lecture_rating.user_id = cum.user_id
         left join user_activity_status_mapping uasm 
         	on uasm.user_id = cum.user_id 
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,23,24,25,26,27,28,29,30;
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,23,24,25,26,27,28,29,30,31,32;
             ''' % (start_lecture_id, end_lecture_id),
     )
 
