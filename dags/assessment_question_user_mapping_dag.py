@@ -41,6 +41,7 @@ create_table = PostgresOperator(
         id serial not null,
         table_unique_key text not null PRIMARY KEY,
         course_user_assessment_mapping_id bigint,
+        assessment_attempt_number int,
         assessment_id bigint,
         user_id bigint,
         course_user_mapping_id bigint,
