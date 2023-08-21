@@ -77,9 +77,11 @@ def extract_data_to_nested(**kwargs):
             'activity_status_7_days,'
             'activity_status_14_days,'
             'activity_status_30_days,'
-            'user_placement_status)'
+            'user_placement_status,'
+            'admin_course_id,'
+            'admin_unit_name)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
-            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_id = EXCLUDED.course_id,'
             'course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
@@ -118,7 +120,9 @@ def extract_data_to_nested(**kwargs):
             'activity_status_7_days = EXCLUDED.activity_status_7_days,'
             'activity_status_14_days = EXCLUDED.activity_status_14_days,'
             'activity_status_30_days = EXCLUDED.activity_status_30_days,'
-            'user_placement_status = EXCLUDED.user_placement_status;',
+            'user_placement_status = EXCLUDED.user_placement_status,'
+            'admin_course_id = EXCLUDED.admin_course_id,'
+            'admin_unit_name = EXCLUDED.admin_unit_name;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -163,7 +167,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[40],
                 transform_row[41],
                 transform_row[42],
-
+                transform_row[43],
+                transform_row[44],
             )
         )
     pg_conn.commit()
@@ -227,7 +232,9 @@ create_table = PostgresOperator(
             activity_status_7_days text,
             activity_status_14_days text,
             activity_status_30_days text,
-            user_placement_status text
+            user_placement_status text,
+            admin_course_id int,
+            admin_unit_name text
         );
     ''',
     dag=dag
@@ -236,135 +243,137 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_result_db',
-    sql='''select 
-            concat(a.course_id, a.assignment_id, cum.user_id, topic_template_id) as table_unique_key,
-            a.course_id,
-            c.course_name,
-            c.course_structure_class,
-            a.assignment_id,
-            a.title as assignment_title,
-            case 
-                when a.is_group = true then 'Group Contest'
-	            when a.assignment_sub_type = 1 and a.is_group = false then 'Weekend Contest'
-                when a.assignment_sub_type = 4 and a.is_group = false then 'Module Contest'
-                else 'Contest Mapping Error'
-            end as contest_type,
-            module_mapping.topic_template_id,
-            module_mapping.module_name,
-            date(a.start_timestamp) as assignment_release_date,
-            a.hidden,
-            cum.user_id,
-            concat(ui.first_name,' ', ui.last_name) as student_name,
-            ui.lead_type,
-            case 
-                when cum.label_id is null and cum.status in (8,9) then 'Enrolled Student'
-                when cum.label_id is not null and cum.status in (8,9) then 'Label Marked Student'
-                when c.course_structure_id in (1,18) and cum.status in (11,12) then 'ISA Cancelled Student'
-                when c.course_structure_id not in (1,18) and cum.status in (30) then 'Deferred Student'
-                when c.course_structure_id not in (1,18) and cum.status in (11) then 'Foreclosed Student'
-                when c.course_structure_id not in (1,18) and cum.status in (12) then 'Reject by NS-Ops'
-                else 'Mapping Error'
-           end as label_mapping_status,
-           cucm.student_category,
-           a.question_count,
-           count(distinct aqum.question_id) filter(where a.end_timestamp >= aqum.question_started_at  and aqum.question_started_at  >= a.start_timestamp) as opened_questions,
-           count(distinct aqum.question_id) filter(where aqum.max_test_case_passed is not null and a.end_timestamp >= aqum.question_started_at  and aqum.question_started_at  >= a.start_timestamp) as attempted_questions,
-           count(distinct aqum.question_id) filter (where aqum.all_test_case_passed = 'true' and a.end_timestamp >= aqum.question_started_at  and aqum.question_started_at  >= a.start_timestamp) as completed_questions,
-           count(distinct aqum.question_id) filter (where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 1) as beginner_completed_questions,
-           count(distinct aqum.question_id) filter (where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 2) as easy_completed_questions,
-           count(distinct aqum.question_id) filter (where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 3) as medium_completed_questions,
-           count(distinct aqum.question_id) filter (where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 4) as hard_completed_questions,
-           count(distinct aqum.question_id) filter (where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 5) as challenge_completed_questions,
-           count(distinct aqum.question_id) filter (where plagiarism_score >= 0.90 and aqum.all_test_case_passed = 'true' and a.end_timestamp >= aqum.question_started_at  and aqum.question_started_at  >= a.start_timestamp) as questions_with_plag_score_90,
-           count(distinct aqum.question_id) filter (where plagiarism_score >= 0.95 and aqum.all_test_case_passed = 'true' and a.end_timestamp >= aqum.question_started_at  and aqum.question_started_at  >= a.start_timestamp) as questions_with_plag_score_95,
-           count(distinct aqum.question_id) filter (where plagiarism_score >= 0.99 and aqum.all_test_case_passed = 'true' and a.end_timestamp >= aqum.question_started_at  and aqum.question_started_at  >= a.start_timestamp) as questions_with_plag_score_99,
-          case
-                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then count(distinct aqum.question_id)
-                else null
-           end as opened_questions_unique,
-          case
-                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter (where aqum.max_test_case_passed is not null))
-                else null
-           end as attempted_questions_unique,
-           case 
-                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true'))
-                else null
-           end as completed_questions_unique,
-           
-           case 
-                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 1))
-                else null
-           end as beginner_completed_questions_unique,
-           
-               case 
-                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 2))
-                else null
-           end as easy_completed_questions_unique,
-    
-               case 
-                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 3))
-                else null
-           end as medium_completed_questions_unique,
-    
-               case 
-                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 4))
-                else null
-           end as hard_completed_questions_unique,
-    
-               case 
-                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 5))
-                else null
-           end as challenge_completed_questions_unique,
-    
-           
-           case 
-                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter (where plagiarism_score >= 0.99))
-                else null
-           end as plag_score_99_unique,
-           
-           case 
-                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter (where plagiarism_score >= 0.95))
-                else null
-           end as plag_score_95_unique,
-           
-          case 
-                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter (where plagiarism_score >= 0.90))
-                else null
-           end as plag_score_90_unique,
-           uasm.activity_status_7_days,
-           uasm.activity_status_14_days,
-           uasm.activity_status_30_days,
-           cum.user_placement_status
-        from
-            assignments a
-        join courses c
-            on c.course_id = a.course_id and a.original_assignment_type in (3,4) and date(a.start_timestamp) >= '2022-06-01'
-                and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34)
-        join course_user_mapping cum 
-            on cum.course_id = c.course_id and cum.status in (8,9,11,12,30)
-        left join users_info ui
-            on ui.user_id = cum.user_id 
-        left join course_user_category_mapping cucm 
-            on cucm.user_id = cum.user_id and cum.course_id = cucm.course_id 
-        left join user_activity_status_mapping uasm 
-        	on uasm.user_id = cum.user_id
-        left join assignment_question_user_mapping_new aqum
-            on aqum.user_id = cum.user_id and a.assignment_id = aqum.assignment_id
-        left join assignment_question aq
-            on aq.assignment_question_id = aqum.question_id
-        left join 
-            (select
-                atm.assignment_id,
-                t.topic_template_id,
-                t.template_name as module_name
-            from 
-                assignment_topic_mapping atm 
-            left join topics t 
-                on atm.topic_id  = t.topic_id 
-            where topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
-            group by 1,2,3) module_mapping
-                on module_mapping.assignment_id = a.assignment_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,40,41,42,43;
+    sql='''select
+	            concat(a.course_id, a.assignment_id, cum.user_id, topic_template_id) as table_unique_key,
+	            a.course_id,
+	            c.course_name,
+	            c.course_structure_class,
+	            a.assignment_id,
+	            a.title as assignment_title,
+	            case 
+	                when a.is_group = true then 'Group Contest'
+		            when a.assignment_sub_type = 1 and a.is_group = false then 'Weekend Contest'
+	                when a.assignment_sub_type = 4 and a.is_group = false then 'Module Contest'
+	                else 'Contest Mapping Error'
+	            end as contest_type,
+	            module_mapping.topic_template_id,
+	            module_mapping.module_name,
+	            date(a.start_timestamp) as assignment_release_date,
+	            a.hidden,
+	            cum.user_id,
+	            concat(ui.first_name,' ', ui.last_name) as student_name,
+	            ui.lead_type,
+	            case 
+	                when cum.label_id is null and cum.status in (8,9) then 'Enrolled Student'
+	                when cum.label_id is not null and cum.status in (8,9) then 'Label Marked Student'
+	                when c.course_structure_id in (1,18) and cum.status in (11,12) then 'ISA Cancelled Student'
+	                when c.course_structure_id not in (1,18) and cum.status in (30) then 'Deferred Student'
+	                when c.course_structure_id not in (1,18) and cum.status in (11) then 'Foreclosed Student'
+	                when c.course_structure_id not in (1,18) and cum.status in (12) then 'Reject by NS-Ops'
+	                else 'Mapping Error'
+	           end as label_mapping_status,
+	           cucm.student_category,
+	           a.question_count,
+	           count(distinct aqum.question_id) filter(where a.end_timestamp >= aqum.question_started_at  and aqum.question_started_at  >= a.start_timestamp) as opened_questions,
+	           count(distinct aqum.question_id) filter(where aqum.max_test_case_passed is not null and a.end_timestamp >= aqum.question_started_at  and aqum.question_started_at  >= a.start_timestamp) as attempted_questions,
+	           count(distinct aqum.question_id) filter (where aqum.all_test_case_passed = 'true' and a.end_timestamp >= aqum.question_started_at  and aqum.question_started_at  >= a.start_timestamp) as completed_questions,
+	           count(distinct aqum.question_id) filter (where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 1) as beginner_completed_questions,
+	           count(distinct aqum.question_id) filter (where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 2) as easy_completed_questions,
+	           count(distinct aqum.question_id) filter (where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 3) as medium_completed_questions,
+	           count(distinct aqum.question_id) filter (where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 4) as hard_completed_questions,
+	           count(distinct aqum.question_id) filter (where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 5) as challenge_completed_questions,
+	           count(distinct aqum.question_id) filter (where plagiarism_score >= 0.90 and aqum.all_test_case_passed = 'true' and a.end_timestamp >= aqum.question_started_at  and aqum.question_started_at  >= a.start_timestamp) as questions_with_plag_score_90,
+	           count(distinct aqum.question_id) filter (where plagiarism_score >= 0.95 and aqum.all_test_case_passed = 'true' and a.end_timestamp >= aqum.question_started_at  and aqum.question_started_at  >= a.start_timestamp) as questions_with_plag_score_95,
+	           count(distinct aqum.question_id) filter (where plagiarism_score >= 0.99 and aqum.all_test_case_passed = 'true' and a.end_timestamp >= aqum.question_started_at  and aqum.question_started_at  >= a.start_timestamp) as questions_with_plag_score_99,
+	          case
+	                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then count(distinct aqum.question_id)
+	                else null
+	           end as opened_questions_unique,
+	          case
+	                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter (where aqum.max_test_case_passed is not null))
+	                else null
+	           end as attempted_questions_unique,
+	           case 
+	                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true'))
+	                else null
+	           end as completed_questions_unique,
+	           
+	           case 
+	                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 1))
+	                else null
+	           end as beginner_completed_questions_unique,
+	           
+	               case 
+	                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 2))
+	                else null
+	           end as easy_completed_questions_unique,
+	    
+	               case 
+	                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 3))
+	                else null
+	           end as medium_completed_questions_unique,
+	    
+	               case 
+	                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 4))
+	                else null
+	           end as hard_completed_questions_unique,
+	    
+	               case 
+	                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter(where aqum.all_test_case_passed = 'true' and (a.end_timestamp >= aqum.question_completed_at) and aq.difficulty_type = 5))
+	                else null
+	           end as challenge_completed_questions_unique,
+	    
+	           
+	           case 
+	                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter (where plagiarism_score >= 0.99))
+	                else null
+	           end as plag_score_99_unique,
+	           
+	           case 
+	                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter (where plagiarism_score >= 0.95))
+	                else null
+	           end as plag_score_95_unique,
+	           
+	          case 
+	                when dense_rank () over (partition by a.assignment_id, cum.user_id order by topic_template_id) = 1 then (count(distinct aqum.question_id) filter (where plagiarism_score >= 0.90))
+	                else null
+	           end as plag_score_90_unique,
+	           uasm.activity_status_7_days,
+	           uasm.activity_status_14_days,
+	           uasm.activity_status_30_days,
+	           cum.user_placement_status,
+	           cum.admin_course_id,
+	           cum.admin_unit_name 
+	        from
+	            assignments a
+	        join courses c
+	            on c.course_id = a.course_id and a.original_assignment_type in (3,4) and date(a.start_timestamp) >= '2022-06-01'
+	                and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34)
+	        join course_user_mapping cum 
+	            on cum.course_id = c.course_id and cum.status in (8,9,11,12,30)
+	        left join users_info ui
+	            on ui.user_id = cum.user_id 
+	        left join course_user_category_mapping cucm 
+	            on cucm.user_id = cum.user_id and cum.course_id = cucm.course_id 
+	        left join user_activity_status_mapping uasm 
+	        	on uasm.user_id = cum.user_id
+	        left join assignment_question_user_mapping_new aqum
+	            on aqum.user_id = cum.user_id and a.assignment_id = aqum.assignment_id
+	        left join assignment_question aq
+	            on aq.assignment_question_id = aqum.question_id
+	        left join 
+	            (select
+	                atm.assignment_id,
+	                t.topic_template_id,
+	                t.template_name as module_name
+	            from 
+	                assignment_topic_mapping atm 
+	            left join topics t 
+	                on atm.topic_id  = t.topic_id 
+	            where topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
+	            group by 1,2,3) module_mapping
+	                on module_mapping.assignment_id = a.assignment_id
+	        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,40,41,42,43,44,45	        ;
         ''',
     dag=dag
 )
