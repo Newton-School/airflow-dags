@@ -127,7 +127,7 @@ transform_data = PostgresOperator(
             on assignments_assignmentquestion.id = assignments_milestoneuserquestionmapping.assignment_question_id
             
         left join playgrounds_codingplaygroundsubmission pcps 
-            on pcps.coding_playground_id = assignments_milestoneuserquestionmapping.coding_playground_id and pcps.all_test_cases_passing = true
+            on pcps.coding_playground_id = assignments_milestoneuserquestionmapping.coding_playground_id
             
         left join playgrounds_playgroundplagiarismreport as plag_coding 
             on plag_coding.object_id = pcps.id and plag_coding.content_type_id = 70
