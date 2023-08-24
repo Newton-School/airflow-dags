@@ -34,8 +34,8 @@ def extract_data_to_nested(**kwargs):
             'course_structure_class, user_id,'
             'course_user_mapping_status, label_mapping_status,'
             'completed_module_count, count_of_a, student_category, student_name, lead_type, activity_status_7_days,'
-            'activity_status_14_days, activity_status_30_days, user_placement_status)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'activity_status_14_days, activity_status_30_days, user_placement_status, email)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_name = EXCLUDED.course_name,'
             'course_structure_class = EXCLUDED.course_structure_class,'
             'course_user_mapping_status = EXCLUDED.course_user_mapping_status,'
@@ -48,7 +48,8 @@ def extract_data_to_nested(**kwargs):
             'activity_status_7_days = EXCLUDED.activity_status_7_days,'
             'activity_status_14_days = EXCLUDED.activity_status_14_days,'
             'activity_status_30_days = EXCLUDED.activity_status_30_days,'
-            'user_placement_status = EXCLUDED.user_placement_status;',
+            'user_placement_status = EXCLUDED.user_placement_status,'
+            'email = EXCLUDED.email;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -66,6 +67,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[13],
                 transform_row[14],
                 transform_row[15],
+                transform_row[16],
 
             )
         )
@@ -103,7 +105,8 @@ create_table = PostgresOperator(
             activity_status_7_days text,
             activity_status_14_days text,
             activity_status_30_days text,
-            user_placement_status text
+            user_placement_status text,
+            email text
         );
     ''',
     dag=dag
@@ -135,9 +138,11 @@ transform_data = PostgresOperator(
             activity_status_7_days,
             activity_status_14_days,
             activity_status_30_days,
-            user_placement_status
+            user_placement_status,
+            email
         from
             (with batch_module_mapping as
+            
                 (select 
                     id as table_uk,
                     course_id,
@@ -149,7 +154,8 @@ transform_data = PostgresOperator(
                     batch_module_completion_status bmcs 
                 where module_completion_status = true),
             
-            completed_module_count as 
+            completed_module_count as
+            
                 (select
                     course_id,
                     course_name,
@@ -159,6 +165,7 @@ transform_data = PostgresOperator(
                 group by 1,2),
             
             required_user_data as 
+            
                (select 
                     aur.course_id,
                     aur.course_name,
@@ -189,8 +196,7 @@ transform_data = PostgresOperator(
                 join batch_module_mapping
                     on batch_module_mapping.course_id = aur.course_id and aur.topic_pool_id = batch_module_mapping.topic_pool_id
                 where aur.course_structure_id <> 32)
-                
-                
+
             select 
                 c.course_id,
                 c.course_name,
@@ -213,7 +219,8 @@ transform_data = PostgresOperator(
                 uasm.activity_status_7_days,
                 uasm.activity_status_14_days,
                 uasm.activity_status_30_days,
-                cum.user_placement_status
+                cum.user_placement_status,
+                ui.email
             from
                 course_user_mapping cum 
             join courses c 
@@ -226,7 +233,7 @@ transform_data = PostgresOperator(
                 on completed_module_count.course_id = c.course_id
             left join user_activity_status_mapping uasm 
                 on uasm.user_id = cum.user_id
-            group by 1,2,3,4,5,6,7,8,10,11,12,13,14) final_query;
+            group by 1,2,3,4,5,6,7,8,10,11,12,13,14,15) final_query;
         ''',
     dag=dag
 )
