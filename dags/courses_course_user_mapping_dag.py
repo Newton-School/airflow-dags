@@ -71,7 +71,7 @@ dag = DAG(
     'courses_cum_dag',
     default_args=default_args,
     description='Course user mapping detailed version',
-    schedule_interval='0 21 * * *',
+    schedule_interval='0 20 * * *',
     catchup=False
 )
 
