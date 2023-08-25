@@ -29,7 +29,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='per user per feedback question response',
-    schedule_interval='45 21 * * *',
+    schedule_interval='15 21 * * *',
     catchup=False
 )
 
