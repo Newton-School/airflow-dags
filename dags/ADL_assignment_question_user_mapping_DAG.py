@@ -31,7 +31,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='Assignment Question User Mapping Table DAG with latest submission and max plagiarism value',
-    schedule_interval='0 21 * * *',
+    schedule_interval='0 22 * * *',
     catchup=False
 )
 
