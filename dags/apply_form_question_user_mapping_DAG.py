@@ -41,7 +41,7 @@ dag = DAG(
     'apply_form_course_user_question_mapping_DAG',
     default_args=default_args,
     description='DAG for apply form question x user mapping',
-    schedule_interval='30 20 * * *',
+    schedule_interval='0 19 * * *',
     catchup=False
 )
 

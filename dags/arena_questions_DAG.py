@@ -51,7 +51,7 @@ dag = DAG(
     'arena_question_user_mapping_dag',
     default_args=default_args,
     description='Arena questions cross users details',
-    schedule_interval='35 20 * * *',
+    schedule_interval='30 19 * * *',
     catchup=False
 )
 
