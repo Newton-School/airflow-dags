@@ -30,7 +30,7 @@ dag = DAG(
     max_active_tasks=6,
     max_active_runs=6,
     description='An Analytics Reporting Layer DAG for assignments per user per assignment question data at started_at and release date level',
-    schedule_interval='15 2 * * *',
+    schedule_interval='0 2 * * *',
     catchup=False
 )
 
