@@ -254,7 +254,7 @@ transform_data = PostgresOperator(
                         and feedback_form_id = 4428
                 join courses c 
                     on c.course_id = cum.course_id and lower(c.unit_type) like 'learning' 
-                        and c.course_structure_id in (1,6,8,11,12,14,18,19,20,22,23,26)
+                        and c.course_structure_id in (1,6,7,8,11,12,14,18,19,20,22,23,26,44)
                 left join users_info ui
                     on ui.user_id = ffar.user_id
                 left join course_user_category_mapping cucm 
