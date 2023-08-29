@@ -87,6 +87,7 @@ def extract_data_to_nested(**kwargs):
             'course_structure_class = EXCLUDED.course_structure_class,'
             'assignment_title = EXCLUDED.assignment_title,'
             'contest_type = EXCLUDED.contest_type,'
+            'topic_template_id = EXCLUDED.topic_template_id,'
             'module_name = EXCLUDED.module_name,'
             'assignment_release_date = EXCLUDED.assignment_release_date,'
             'hidden = EXCLUDED.hidden,'
