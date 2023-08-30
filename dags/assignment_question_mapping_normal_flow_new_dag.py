@@ -71,7 +71,8 @@ transform_data = PostgresOperator(
             distinct cast(concat(assignments_assignment.id, courses_course.id, aaq.id) as double precision) as table_unique_key,
             courses_course.id as course_id,
             assignments_assignment.id as assignment_id,
-            aaq.id as question_id
+            aaq.id as question_id,
+            null as is_deleted
         from 
             assignments_assignment
         join courses_course
