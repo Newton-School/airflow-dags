@@ -76,7 +76,7 @@ dag = DAG(
     'new_assignment_questions_released_normal_flow_DAG',
     default_args=default_args,
     description='A DAG for assignment questions released through the normal flow',
-    schedule_interval='30 20 * * FRI',
+    schedule_interval='30 20 * * *',
     catchup=False
 )
 
