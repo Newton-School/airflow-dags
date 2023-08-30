@@ -27,10 +27,14 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO assignment_question_mapping (table_unique_key,course_id,assignment_id,question_id)'
+            'INSERT INTO assignment_question_mapping (table_unique_key,'
+            'course_id,'
+            'assignment_id,'
+            'question_id)'
             'VALUES (%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_id = EXCLUDED.course_id,'
-            'assignment_id=EXCLUDED.assignment_id,question_id=EXCLUDED.question_id ;',
+            'assignment_id=EXCLUDED.assignment_id,'
+            'question_id=EXCLUDED.question_id ;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -53,7 +57,7 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS assignment_question_mapping (
             id serial not null,
-            table_unique_key double precision not null PRIMARY KEY, 
+            table_unique_key text not null PRIMARY KEY, 
             course_id bigint,
             assignment_id bigint,
             question_id bigint
@@ -65,7 +69,7 @@ transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
     sql='''select
-            distinct cast(concat(assignments_assignment.id, courses_course.id, aaq.id) as double precision) as table_unique_key,
+            distinct concat(assignments_assignment.id, courses_course.id, aaq.id) as table_unique_key,
             courses_course.id as course_id,
             assignments_assignment.id as assignment_id,
             aaq.id as question_id
