@@ -27,7 +27,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO assignment_question_mapping (table_unique_key,'
+            'INSERT INTO assignment_question_mapping_new_logic (table_unique_key,'
             'course_id,'
             'assignment_id,'
             'question_id)'
