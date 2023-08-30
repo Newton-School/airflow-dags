@@ -54,7 +54,7 @@ dag = DAG(
 create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE IF NOT EXISTS assignment_question_mapping (
+    sql='''CREATE TABLE IF NOT EXISTS assignment_question_mapping_new_logic (
             id serial not null,
             table_unique_key double precision not null PRIMARY KEY, 
             course_id bigint,
