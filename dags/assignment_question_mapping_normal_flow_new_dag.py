@@ -73,10 +73,10 @@ def cleanup_assignment_question_mapping(**kwargs):
 
 
 dag = DAG(
-    'assignment_questions_released_normal_flow_DAG',
+    'new_assignment_questions_released_normal_flow_DAG',
     default_args=default_args,
     description='A DAG for assignment questions released through the normal flow',
-    schedule_interval='30 20 * * *',
+    schedule_interval='30 20 * * FRI',
     catchup=False
 )
 
