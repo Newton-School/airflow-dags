@@ -9,7 +9,7 @@ default_args = {
     'depends_on_past': False,
     'start_date': datetime(2023, 3, 16),
 }
-def extract_data_to_nested(**kwargs):
+def update_deleted_mappings(**kwargs):
     def clean_input(data_type, data_value):
         if data_type == 'string':
             return 'null' if not data_value else f'\"{data_value}\"'
@@ -29,7 +29,7 @@ def extract_data_to_nested(**kwargs):
     result_cursor.execute("""
         select distinct table_unique_key from assignment_question_mapping;
             """)
-    existing_mappings = set(row[0] for row in pg_cursor.fetchall())
+    existing_mappings = set(row[0] for row in result_cursor.fetchall())
 
     transform_data_output = kwargs['ti'].xcom_pull(task_ids='transform_data')
     new_mappings = set(str(transform_row[0]) for transform_row in transform_data_output)
