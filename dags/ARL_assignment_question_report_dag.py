@@ -179,7 +179,7 @@ transform_data = PostgresOperator(
                     question_id,
                     null as user_id
                 from
-                    assignment_question_mapping aqm 
+                    assignment_question_mapping_new_logic aqm 
                 union 
                 select 
                     'Random Assignment' as assignment_flow_type,

@@ -218,7 +218,7 @@ transform_data = PostgresOperator(
                             t.template_name,
                             count(distinct aqm.question_id) as total_questions
                         from 
-                            assignment_question_mapping aqm
+                            assignment_question_mapping_new_logic aqm
                         join assignments a 
                             on a.assignment_id = aqm.assignment_id and a.hidden = false
                                 and a.original_assignment_type = 1
@@ -248,7 +248,7 @@ transform_data = PostgresOperator(
                     join total_questions
                         on total_questions.course_id = aaxuqsa.course_id
                             and aaxuqsa.module_name = total_questions.template_name
-                    join assignment_question_mapping aqm
+                    join assignment_question_mapping_new_logic aqm
                         on aqm.assignment_id = aaxuqsa.assignment_id
                             and aqm.question_id = aaxuqsa.question_id 
                     left join course_user_mapping cum

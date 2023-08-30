@@ -292,7 +292,7 @@ transform_data = PostgresOperator(
                     aqm.assignment_id,
                     count(distinct aqm.question_id) as assignment_question_count
                 from 
-                    assignment_question_mapping aqm 
+                    assignment_question_mapping_new_logic aqm 
                 group by 1) all_assignment_questions
                     on all_assignment_questions.assignment_id = a.assignment_id
             left join 

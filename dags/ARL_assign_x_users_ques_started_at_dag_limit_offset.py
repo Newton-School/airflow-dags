@@ -275,7 +275,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                     on uasm.user_id = cum.user_id 
                 left join users_info ui 
                     on ui.user_id = cum.user_id 
-                join assignment_question_mapping aqm 
+                join assignment_question_mapping_new_logic aqm 
                     on aqm.assignment_id = a.assignment_id 
                 left join assignment_question_user_mapping_new aqum
                     on a.assignment_id = aqum.assignment_id and aqum.user_id = cum.user_id
@@ -404,7 +404,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                 on uasm.user_id = cum.user_id 
             left join users_info ui 
                 on ui.user_id = cum.user_id 
-            join assignment_question_mapping aqm 
+            join assignment_question_mapping_new_logic aqm 
                 on aqm.assignment_id = a.assignment_id 
             left join assignment_question_user_mapping_new aqum
                 on a.assignment_id = aqum.assignment_id and aqum.user_id = cum.user_id
