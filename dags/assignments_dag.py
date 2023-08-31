@@ -23,9 +23,9 @@ def extract_data_to_nested(**kwargs):
                 'end_timestamp, hash, hidden, is_group, title, was_competitive,'
                 'random_assignment_questions, is_proctored_exam,'
                 'whole_course_access, lecture_slot_id, lecture_id,'
-                'original_assignment_type, send_breach_parameter,'
+                'original_assignment_type,'
                 'plagiarism_check_analysis,parent_module_assignment_id, question_count)'
-                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (assignment_id) do update set parent_assignment_id = EXCLUDED.parent_assignment_id,'
                 'assignment_sub_type = EXCLUDED.assignment_sub_type,'
                 'assignment_type = EXCLUDED.assignment_type,'
@@ -46,7 +46,6 @@ def extract_data_to_nested(**kwargs):
                 'lecture_slot_id = EXCLUDED.lecture_slot_id,'
                 'lecture_id = EXCLUDED.lecture_id,'
                 'original_assignment_type = EXCLUDED.original_assignment_type,'
-                'send_breach_parameter = EXCLUDED.send_breach_parameter,'
                 'plagiarism_check_analysis = EXCLUDED.plagiarism_check_analysis,'
                 'parent_module_assignment_id = EXCLUDED.parent_module_assignment_id,'
                 'question_count = EXCLUDED.question_count;',
@@ -75,7 +74,6 @@ def extract_data_to_nested(**kwargs):
                     transform_row[21],
                     transform_row[22],
                     transform_row[23],
-                    transform_row[24],
 
                 )
         )
@@ -115,7 +113,6 @@ create_table = PostgresOperator(
             lecture_slot_id bigint,
             lecture_id bigint,
             original_assignment_type int,
-            send_breach_parameter boolean,
             plagiarism_check_analysis boolean,
             parent_module_assignment_id bigint,
             question_count int 
@@ -149,7 +146,6 @@ transform_data = PostgresOperator(
     assignments_assignment.lecture_slot_id,
     video_sessions_lecture.id as lecture_id,
     assignments_assignment.original_assignment_type,
-    assignments_assignment.send_breach_parameter,
     assignments_assignment.plagiarism_check_analysis,
     assignments_assignment.parent_module_assignment_id,
     question_count.question_count
