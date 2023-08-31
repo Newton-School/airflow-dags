@@ -392,7 +392,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
             from
                 assignments a 
             join courses c 
-                on c.course_id = a.course_id and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34)
+                on c.course_id = a.course_id and c.course_structure_id in (1,6,7,8,11,12,13,14,18,19,20,22,23,26,34,44)
                     and a.original_assignment_type = 1 and a.hidden = false
                         and (a.assignment_id between %d and %d)
             join course_user_mapping cum 
