@@ -67,9 +67,11 @@ def extract_data_to_nested(**kwargs):
             'cancel_reason,'
             'user_placement_status,'
             'answer_rating,'
-            'rating_feedback_answer)'
+            'rating_feedback_answer,'
+            'admin_course_id,'
+            'admin_unit_name)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
-            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
             'lead_type = EXCLUDED.lead_type,'
             'student_category = EXCLUDED.student_category,'
@@ -116,7 +118,9 @@ def extract_data_to_nested(**kwargs):
             'cancel_reason = EXCLUDED.cancel_reason,'
             'user_placement_status = EXCLUDED.user_placement_status,'
             'answer_rating = EXCLUDED.answer_rating,'
-            'rating_feedback_answer = EXCLUDED.rating_feedback_answer;',
+            'rating_feedback_answer = EXCLUDED.rating_feedback_answer,'
+            'admin_course_id = EXCLUDED.admin_course_id,'
+            'admin_unit_name = EXCLUDED.admin_unit_name;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -173,6 +177,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[52],
                 transform_row[53],
                 transform_row[54],
+                transform_row[55],
+                transform_row[56],
 
             )
         )
@@ -249,7 +255,9 @@ create_table = PostgresOperator(
             cancel_reason text,
             user_placement_status text,
             answer_rating int,
-            rating_feedback_answer text
+            rating_feedback_answer text,
+            admin_course_id int,
+            admin_unit_name text
         );
     ''',
     dag=dag
@@ -352,17 +360,22 @@ transform_data = PostgresOperator(
             one_to_one.one_to_one_id,
             one_to_one.title as session_title,
             date(one_to_one.one_to_one_start_timestamp) as one_to_one_date,
-            case
-                when one_to_one.one_to_one_type = 1 then 'Mock Technical Interview'
-                when one_to_one.one_to_one_type = 2 then 'Mock HR Interview'
-                when one_to_one.one_to_one_type = 3 then 'Mock Project'
-                when one_to_one.one_to_one_type = 4 then 'Mock DSA'
-                when one_to_one.one_to_one_type = 5 then 'Mock Full Stack'
+            case 
+                when one_to_one.one_to_one_type = 1 then 'Technical Mock'	
+                when one_to_one.one_to_one_type = 2 then 'HR Mock'
+                when one_to_one.one_to_one_type = 3 then 'Project Mock'
+                when one_to_one.one_to_one_type = 4 then 'DSA Mock' 
+                when one_to_one.one_to_one_type = 5 then 'Mock Full stack'
                 when one_to_one.one_to_one_type = 6 then 'Entrance Interview'
-                when one_to_one.one_to_one_type = 7 then 'Mentor Catch Up'
+                when one_to_one.one_to_one_type = 7 then 'One-On-One Session'
                 when one_to_one.one_to_one_type = 8 then 'Interview Coaching'
-                when one_to_one.one_to_one_type = 9 then 'Mock Data Science'
+                when one_to_one.one_to_one_type = 9 then 'Data Science - Mock'
                 when one_to_one.one_to_one_type = 10 then 'General Interview'
+                when one_to_one.one_to_one_type = 11 then 'Mentor Help - Doubt Session'
+                when one_to_one.one_to_one_type = 12 then 'FrontEnd - Mock Interview'
+                when one_to_one.one_to_one_type = 13 then 'BackEnd - Mock Interview'
+                when one_to_one.one_to_one_type = 14 then 'FrontEnd - JS Mock Interview'
+                when one_to_one.one_to_one_type = 15 then 'FrontEnd - ReactJS Mock Interview'
             end as one_to_one_type,
             one_to_one_topic_mapping.topic_pool_id,
             topic_pool_mapping.topic_pool_title,
@@ -446,7 +459,9 @@ transform_data = PostgresOperator(
             one_to_one.cancel_reason,
             course_user_mapping.user_placement_status,
             one_on_one_csat.answer_rating,
-            one_on_one_csat.rating_feedback_answer
+            one_on_one_csat.rating_feedback_answer,
+            course_user_mapping.admin_course_id,
+            course_user_mapping.admin_unit_name
         from
             courses c
         join course_user_mapping
@@ -471,7 +486,7 @@ transform_data = PostgresOperator(
         left join one_on_one_csat 
         	on one_on_one_csat.one_to_one_id = one_to_one.one_to_one_id 
         		and one_to_one.student_user_id = one_on_one_csat.user_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,42,43,44,45,46,47,48,49,50,51,52,53,54,55;
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57;
         ''',
     dag=dag
 )

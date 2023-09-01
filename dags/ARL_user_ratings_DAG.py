@@ -1,13 +1,8 @@
 from airflow import DAG
-# from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.models import Variable
-from airflow.utils.task_group import TaskGroup
 from datetime import datetime
-
-from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 
 default_args = {
     'owner': 'airflow',
@@ -40,8 +35,8 @@ def extract_data_to_nested(**kwargs):
             'template_name, module_cutoff, rating, plagiarised_rating, mock_rating,'
             'required_rating, grade_obtained, assignment_rating, contest_rating,'
             'milestone_rating, proctored_contest_rating, quiz_rating, plagiarised_assignment_rating,'
-            'plagiarised_contest_rating, plagiarised_proctored_contest_rating)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'plagiarised_contest_rating, plagiarised_proctored_contest_rating, admin_course_id, admin_unit_name)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_structure_id = EXCLUDED.course_structure_id,'
             'course_structure_class = EXCLUDED.course_structure_class,'
             'course_name = EXCLUDED.course_name,'
@@ -62,7 +57,9 @@ def extract_data_to_nested(**kwargs):
             'quiz_rating = EXCLUDED.quiz_rating,'
             'plagiarised_assignment_rating = EXCLUDED.plagiarised_assignment_rating,'
             'plagiarised_contest_rating = EXCLUDED.plagiarised_contest_rating,'
-            'plagiarised_proctored_contest_rating = EXCLUDED.plagiarised_proctored_contest_rating;',
+            'plagiarised_proctored_contest_rating = EXCLUDED.plagiarised_proctored_contest_rating,'
+            'admin_course_id = EXCLUDED.admin_course_id,'
+            'admin_unit_name = EXCLUDED.admin_unit_name;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -88,6 +85,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[21],
                 transform_row[22],
                 transform_row[23],
+                transform_row[24],
+                transform_row[25],
             )
         )
     pg_conn.commit()
@@ -132,7 +131,9 @@ create_table = PostgresOperator(
             quiz_rating int,
             plagiarised_assignment_rating int,
             plagiarised_contest_rating int,
-            plagiarised_proctored_contest_rating int
+            plagiarised_proctored_contest_rating int,
+            admin_course_id int,
+            admin_unit_name text
         );
     ''',
     dag=dag
@@ -165,6 +166,8 @@ transform_data = PostgresOperator(
                     WHEN template_name LIKE 'NON-LINEAR DSA 3' THEN 100
                     ELSE 0
                 END AS module_cutoff,
+                cum.admin_course_id,
+                cum.admin_unit_name,
                 max(rating) as rating,
                 max(plagiarised_rating) as plagiarised_rating,
                 max(mock_rating) as mock_rating,
@@ -184,7 +187,7 @@ transform_data = PostgresOperator(
             join courses c 
                 on c.course_id = cum.course_id and c.course_structure_id in (1,6,8,11,12,14,18,19,20,22,23,26,32)
                     and lower(c.unit_type) like 'learning'
-            group by 1,2,3,4,5,6,7,8,9,10)
+            group by 1,2,3,4,5,6,7,8,9,10,11,12)
             
         select
             concat(student_id, course_id, topic_pool_id) as table_unique_key,
@@ -223,7 +226,9 @@ transform_data = PostgresOperator(
             quiz_rating,
             plagiarised_assignment_rating,
             plagiarised_contest_rating,
-            plagiarised_proctored_contest_rating
+            plagiarised_proctored_contest_rating,
+            admin_course_id,
+            admin_unit_name
         from
             processed_data
         where module_cutoff <> 0;
