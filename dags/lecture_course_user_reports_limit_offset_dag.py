@@ -54,7 +54,7 @@ create_table = PostgresOperator(
             lecture_title text,
             lecture_type text,
             mandatory boolean,
-            lecture_start_timestamp,
+            lecture_start_timestamp timestamp,
             topic_template_id int,
             template_name text,
             inst_min_join_time timestamp,
