@@ -30,8 +30,8 @@ def extract_data_to_nested(**kwargs):
                 'one_to_one_start_timestamp, one_to_one_end_timestamp, hash, one_to_one_created_at,'
                 'one_to_one_confirmed_at, one_to_one_cancel_timestamp, one_to_one_status, one_to_one_type,'
                 'final_call, cancel_reason, rating, reports_pulled, title,'
-                'video_session_using, one_to_one_token_id, difficulty_level)'
-                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'video_session_using, one_to_one_token_id, difficulty_level,is_ai_enabled)'
+                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (one_to_one_id) do update set student_user_id = EXCLUDED.student_user_id,'
                 'course_id = EXCLUDED.course_id,'
                 'expert_user_id = EXCLUDED.expert_user_id,'
@@ -50,7 +50,8 @@ def extract_data_to_nested(**kwargs):
                 'title = EXCLUDED.title,'
                 'video_session_using = EXCLUDED.video_session_using,'
                 'one_to_one_token_id = EXCLUDED.one_to_one_token_id,'
-                'difficulty_level=EXCLUDED.difficulty_level;',
+                'difficulty_level=EXCLUDED.difficulty_level,'
+                'is_ai_enabled = EXCLUDED.is_ai_enabled;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -72,6 +73,7 @@ def extract_data_to_nested(**kwargs):
                     transform_row[17],
                     transform_row[18],
                     transform_row[19],
+                    transform_row[20],
                  )
         )
     pg_conn.commit()
@@ -108,7 +110,8 @@ create_table = PostgresOperator(
             title text,
             video_session_using int,
             one_to_one_token_id bigint,
-            difficulty_level int
+            difficulty_level int,
+            is_ai_enabled boolean
         );
     ''',
     dag=dag
@@ -137,7 +140,8 @@ transform_data = PostgresOperator(
         video_sessions_onetoone.title,
         video_sessions_onetoone.video_session_using,
         video_sessions_onetoone.one_to_one_token_id,
-        video_sessions_onetoonetoken.difficulty_level
+        video_sessions_onetoonetoken.difficulty_level,
+        video_sessions_onetoone.is_ai_enabled
     from
         video_sessions_onetoone
     left join video_sessions_onetoonetoken
