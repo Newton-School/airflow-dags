@@ -201,7 +201,7 @@ transform_data = PostgresOperator(
                             max(vscur.join_time) filter (where vscur.overlapping_time_minutes >= 1) as last_one_to_one_attended_on
                         from
                             users_info ui
-                        left join video_sessions_course_user_reports vscur 
+                        left join video_sessions_one_to_one_course_user_reports vscur 
                             on vscur.user_id = ui.user_id
                         where one_to_one_type <> 7
                         group by 1),
@@ -212,7 +212,7 @@ transform_data = PostgresOperator(
                             max(vscur.join_time) filter (where vscur.overlapping_time_minutes >= 1) as last_one_to_one_attended_on
                         from
                             users_info ui
-                        left join video_sessions_course_user_reports vscur 
+                        left join video_sessions_one_to_one_course_user_reports vscur 
                             on vscur.user_id = ui.user_id
                         where one_to_one_type = 7
                         group by 1),

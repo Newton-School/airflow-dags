@@ -281,7 +281,7 @@ transform_data = PostgresOperator(
                     overlapping_time_seconds,
                     overlapping_time_minutes
                 from
-                    video_sessions_course_user_reports vscur 
+                    video_sessions_one_to_one_course_user_reports vscur 
                 group by 1,2,3,4,5,6,7,8,9,10)
     
         select

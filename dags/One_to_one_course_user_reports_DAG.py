@@ -72,7 +72,7 @@ def fetch_data_and_preprocess(**kwargs):
     result_cursor = result_conn.cursor()
 
     result_cursor.execute("""
-    select distinct one_to_one_id from video_sessions_course_user_reports;
+    select distinct one_to_one_id from video_sessions_one_to_one_course_user_reports;
         """)
 
     inserted_one_to_one_id = list(result_cursor.fetchall())
@@ -211,7 +211,7 @@ def insert_preprocessed_data(**kwargs):
     for _, row in df_cleaned.iterrows():
         print("Insert Pre Processed Data", row)
         pg_cursor.execute(
-        'INSERT INTO video_sessions_course_user_reports (one_to_one_id, user_id, stakeholder_name,'
+        'INSERT INTO video_sessions_one_to_one_course_user_reports (one_to_one_id, user_id, stakeholder_name,'
         'course_user_mapping_id, join_time, leave_time, report_type, one_to_one_type,'
         'stakeholder_type, overlapping_time_seconds, overlapping_time_minutes)'
         'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
@@ -248,7 +248,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql="""
-    CREATE TABLE IF NOT EXISTS video_sessions_course_user_reports (
+    CREATE TABLE IF NOT EXISTS video_sessions_one_to_one_course_user_reports (
         id serial not null PRIMARY KEY,
         one_to_one_id bigint,
         user_id bigint,
