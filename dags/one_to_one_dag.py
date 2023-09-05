@@ -30,7 +30,7 @@ def extract_data_to_nested(**kwargs):
                 'one_to_one_start_timestamp, one_to_one_end_timestamp, hash, one_to_one_created_at,'
                 'one_to_one_confirmed_at, one_to_one_cancel_timestamp, one_to_one_status, one_to_one_type,'
                 'final_call, cancel_reason, rating, reports_pulled, title,'
-                'video_session_using, one_to_one_token_id, difficulty_level,is_ai_enabled)'
+                'video_session_using, one_to_one_token_id, difficulty_level, is_ai_enabled)'
                 'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (one_to_one_id) do update set student_user_id = EXCLUDED.student_user_id,'
                 'course_id = EXCLUDED.course_id,'
