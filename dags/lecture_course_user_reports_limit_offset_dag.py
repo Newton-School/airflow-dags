@@ -137,7 +137,7 @@ def extract_data_to_nested(**kwargs):
         'inst_max_leave_time = EXCLUDED.inst_max_leave_time,'
         'inst_total_time_in_mins = EXCLUDED.inst_total_time_in_mins,'
         'inst_user_id = EXCLUDED.inst_user_id,'
-        'instructor_name = EXCLUDED.instructor_name'
+        'instructor_name = EXCLUDED.instructor_name,'
         'lecture_date = EXCLUDED.lecture_date,'
         'live_attendance = EXCLUDED.live_attendance,'
         'recorded_attendance = EXCLUDED.recorded_attendance,'
