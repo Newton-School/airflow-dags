@@ -349,7 +349,7 @@ transform_data = PostgresOperator(
                     assignments a
                 join courses c
                     on c.course_id = a.course_id and a.original_assignment_type in (3,4) and date(a.start_timestamp) >= '2022-06-01'
-                        and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34)
+                        and c.course_structure_id in (1,6,7,8,11,12,13,14,18,19,20,22,23,26,34,44)
                 join course_user_mapping cum 
                     on cum.course_id = c.course_id and cum.status in (8,9,11,12,30)
                 left join users_info ui
