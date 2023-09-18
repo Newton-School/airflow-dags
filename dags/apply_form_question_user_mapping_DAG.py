@@ -78,7 +78,7 @@ transform_data = PostgresOperator(
         response,
         created_at
         from apply_forms_courseuserapplyformquestionmapping
-        where date(created_at) <= 'January 1,2023' ;
+        where date(created_at) < 'January 1,2023' ;
         ''',
     dag=dag
 )
