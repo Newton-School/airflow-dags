@@ -19,10 +19,10 @@ def extract_data_to_nested(**kwargs):
         pg_cursor.execute(
                 'INSERT INTO apply_form_course_user_question_mapping (id,user_id,course_id,'
                 'apply_form_question_mapping_id,course_user_mapping_id,course_user_apply_form_mapping_id,'
-                'apply_form_question_id,response)'
-                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s)'
+                'apply_form_question_id,response,created_at)'
+                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)'
                 'on conflict (id) do update set course_user_mapping_id = EXCLUDED.course_user_mapping_id,'
-                'response = EXCLUDED.response;',
+                'response = EXCLUDED.response,created_at=EXCLUDED.created_at;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -32,6 +32,7 @@ def extract_data_to_nested(**kwargs):
                     transform_row[5],
                     transform_row[6],
                     transform_row[7],
+                    transform_row[8],
                 )
         )
     pg_conn.commit()
@@ -56,7 +57,8 @@ create_table = PostgresOperator(
             course_user_mapping_id bigint,
             course_user_apply_form_mapping_id bigint,
             apply_form_question_id int,
-            response text
+            response text,
+            created_at TIMESTAMP
         );
     ''',
     dag=dag
@@ -73,7 +75,8 @@ transform_data = PostgresOperator(
         course_user_mapping_id,
         course_user_apply_form_mapping_id,
         apply_form_question_id,
-        response
+        response,
+        created_at
         from apply_forms_courseuserapplyformquestionmapping;
         ''',
     dag=dag
