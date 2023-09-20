@@ -4,7 +4,6 @@ from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from datetime import datetime
 
-from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
 
 default_args = {
     'owner': 'airflow',
@@ -50,8 +49,9 @@ def extract_data_to_nested(**kwargs):
             'test_cases_missing_or_wrong,'
             'topic_template_id,'
             'module_name,'
-            'user_type)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'user_type,'
+            'subjective_answer)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set user_id = EXCLUDED.user_id,'
             'course_id = EXCLUDED.course_id,'
             'assignment_id = EXCLUDED.assignment_id,'
@@ -71,7 +71,8 @@ def extract_data_to_nested(**kwargs):
             'test_cases_missing_or_wrong = EXCLUDED.test_cases_missing_or_wrong,'
             'topic_template_id = EXCLUDED.topic_template_id,'
             'module_name = EXCLUDED.module_name,'
-            'user_type = EXCLUDED.user_type;',
+            'user_type = EXCLUDED.user_type,'
+            'subjective_answer = EXCLUDED.subjective_answer;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -94,6 +95,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[18],
                 transform_row[19],
                 transform_row[20],
+                transform_row[21],
             )
         )
     pg_conn.commit()
@@ -135,7 +137,8 @@ create_table = PostgresOperator(
             test_cases_missing_or_wrong varchar(16),
             topic_template_id int,
             module_name text,
-            user_type text
+            user_type text,
+            subjective_answer text
         );
     ''',
     dag=dag
