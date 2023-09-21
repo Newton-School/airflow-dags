@@ -71,7 +71,8 @@ create_table = PostgresOperator(
             max_test_case_passed int,
             all_test_case_passed boolean,
             plagiarism_score real,
-            user_placement_status text
+            user_placement_status text,
+            admin_course_id int
         );
     ''',
     dag=dag
