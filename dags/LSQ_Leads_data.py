@@ -35,15 +35,22 @@ def extract_data_to_nested(**kwargs):
             'notable_event_description,previous_stage,current_stage,call_type,caller,duration,call_notes,'
             'previous_owner,current_owner,has_attachments,mx_custom_1,mx_custom_2,mx_custom_status,'
             'mx_custom_3,mx_custom_4,mx_custom_5,mx_custom_6,mx_custom_7,mx_custom_8,mx_custom_9,'
-            'mx_custom_10,mx_custom_11,mx_custom_12,mx_custom_13,mx_custom_14,mx_custom_15,mx_custom_16,mx_custom_17,mx_priority_status)'
+            'mx_custom_10,mx_custom_11,mx_custom_12,mx_custom_13,mx_custom_14,mx_custom_15,'
+            'mx_custom_16,mx_custom_17,mx_priority_status,mx_rfd_date,'
+            'mx_total_fees, mx_total_revenue, mx_doc_approved, mx_doc_collected, mx_cibil_check)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
-            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set prospect_stage=EXCLUDED.prospect_stage,'
             'lead_owner = EXCLUDED.lead_owner,'
             'lead_sub_status=EXCLUDED.lead_sub_status,lead_last_call_status=EXCLUDED.lead_last_call_status,'
             'lead_last_call_sub_status=EXCLUDED.lead_last_call_sub_status,'
             'lead_last_call_connection_status=EXCLUDED.lead_last_call_connection_status,'
-            'mx_priority_status = EXCLUDED.mx_priority_status;',
+            'mx_priority_status = EXCLUDED.mx_priority_status,'
+            'mx_rfd_date=EXCLUDED.mx_rfd_date, mx_total_fees=EXCLUDED.mx_total_fees, '
+            'mx_total_revenue=EXCLUDED.mx_total_revenue,'
+            'mx_doc_approved = EXCLUDED.mx_doc_approved,'
+            'mx_doc_collected=EXCLUDED.mx_doc_collected,'
+            'mx_cibil_check=EXCLUDED.mx_cibil_check;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -95,6 +102,12 @@ def extract_data_to_nested(**kwargs):
                 transform_row[47],
                 transform_row[48],
                 transform_row[49],
+                transform_row[50],
+                transform_row[51],
+                transform_row[52],
+                transform_row[53],
+                transform_row[54],
+                transform_row[55],
             )
         )
     pg_conn.commit()
@@ -162,7 +175,13 @@ create_table = PostgresOperator(
             mx_custom_15 varchar(256),
             mx_custom_16 varchar(256),
             mx_custom_17 varchar(256),
-            mx_priority_status varchar(256)
+            mx_priority_status varchar(256),
+            mx_rfd_date varchar(256),
+            mx_total_fees varchar(256),
+            mx_total_revenue varchar(256),
+            mx_doc_approved varchar(256),
+            mx_doc_collected varchar(256),
+            mx_cibil_check varchar(256)
         );
     ''',
     dag=dag
@@ -351,11 +370,17 @@ transform_data = PostgresOperator(
                     THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
                       WHERE (message->>'Key')::varchar = 'mx_Custom_17' LIMIT 1 )ELSE null END) AS mx_custom_17,
                 
-                l2.mx_priority_status                    
+                l2.mx_priority_status,
+                l2.mx_rfd_date, 
+                l2.mx_total_fees,
+                l2.mx_total_revenue,
+                l2.mx_doc_approved,
+                l2.mx_doc_collected,
+                l2.mx_cibil_check               
                 
             FROM leadsquareleadsdata l2
             left join leadsquareactivity l on l2.prospectid = l.relatedprospectid 
-            where date(l.createdon) >= 'July 1,2023'
+            where date(l2.createdon) < 'January 1,2023'
             order by 2,5;
         ''',
     dag=dag
