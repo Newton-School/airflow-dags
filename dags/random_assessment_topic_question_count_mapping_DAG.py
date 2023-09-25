@@ -58,6 +58,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS random_assessment_topic_question_count (
+            id serial not null,
             table_unique_key bigint NOT NULL PRIMARY KEY,
             assessment_id bigint,
             topic_id int,
