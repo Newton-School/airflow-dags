@@ -42,6 +42,38 @@ def extract_data_to_nested(**kwargs):
         )
     pg_conn.commit()
 
+def cleanup_assignment_question_mapping(**kwargs):
+    pg_hook_read_replica = PostgresHook(postgres_conn_id='postgres_read_replica')  # Use the read replica connection
+    pg_conn_read_replica = pg_hook_read_replica.get_conn()
+    pg_cursor_read_replica = pg_conn_read_replica.cursor()
+
+    pg_cursor_read_replica.execute('''
+        select 
+            technologies_topicnode.id as topic_node_id
+        from
+            technologies_topic
+        join technologies_topicnode
+            on technologies_topicnode.topic_id = technologies_topic.id
+        join technologies_topictemplate
+            on technologies_topictemplate.id = technologies_topicnode.topic_template_id and technologies_topictemplate.course_template = false 
+                and technologies_topictemplate.master_template = false and technologies_topictemplate.is_deleted = false
+        group by 1
+    ''')
+
+    unique_keys = [row[0] for row in pg_cursor_read_replica.fetchall()]
+    pg_conn_read_replica.close()
+
+    pg_hook_result_db = PostgresHook(postgres_conn_id='postgres_result_db')
+    pg_conn_result_db = pg_hook_result_db.get_conn()
+    pg_cursor_result_db = pg_conn_result_db.cursor()
+
+    pg_cursor_result_db.execute(f'''
+        DELETE FROM topics
+        WHERE topic_node_id NOT IN ({','.join(['%s'] * len(unique_keys))})
+    ''', unique_keys)
+
+    pg_conn_result_db.commit()
+
 
 dag = DAG(
     'Topics_and_Template_mapping',
@@ -76,7 +108,7 @@ transform_data = PostgresOperator(
     technologies_topictemplate.title as template_name
 from
     technologies_topic
-left join technologies_topicnode
+join technologies_topicnode
     on technologies_topicnode.topic_id = technologies_topic.id
 join technologies_topictemplate
     on technologies_topictemplate.id = technologies_topicnode.topic_template_id and technologies_topictemplate.course_template = false 
@@ -92,4 +124,12 @@ extract_python_data = PythonOperator(
     provide_context=True,
     dag=dag
 )
-create_table >> transform_data >> extract_python_data
+
+cleanup_data = PythonOperator(
+    task_id='cleanup_data',
+    python_callable=cleanup_assignment_question_mapping,
+    provide_context=True,
+    dag=dag
+)
+
+create_table >> transform_data >> extract_python_data >> cleanup_data
