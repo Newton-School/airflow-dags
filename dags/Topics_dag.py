@@ -30,7 +30,8 @@ def extract_data_to_nested(**kwargs):
             'INSERT INTO topics (topic_node_id,topic_id,topic_name,'
             'topic_template_id,template_name) '
             'VALUES (%s,%s,%s,%s,%s)'
-            'on conflict (topic_node_id) do nothing;',
+            'on conflict (topic_node_id) do update set topic_name = EXCLUDED.topic_name,'
+            'template_name = EXCLUDED.template_name;',
             (
                 transform_row[0],
                 transform_row[1],
