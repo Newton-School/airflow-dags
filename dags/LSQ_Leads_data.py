@@ -37,9 +37,9 @@ def extract_data_to_nested(**kwargs):
             'mx_custom_3,mx_custom_4,mx_custom_5,mx_custom_6,mx_custom_7,mx_custom_8,mx_custom_9,'
             'mx_custom_10,mx_custom_11,mx_custom_12,mx_custom_13,mx_custom_14,mx_custom_15,'
             'mx_custom_16,mx_custom_17,mx_priority_status,mx_rfd_date,'
-            'mx_total_fees, mx_total_revenue, mx_doc_approved, mx_doc_collected, mx_cibil_check)'
+            'mx_total_fees, mx_total_revenue, mx_doc_approved, mx_doc_collected, mx_cibil_check,mx_bucket)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
-            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set prospect_stage=EXCLUDED.prospect_stage,'
             'lead_owner = EXCLUDED.lead_owner,'
             'lead_sub_status=EXCLUDED.lead_sub_status,lead_last_call_status=EXCLUDED.lead_last_call_status,'
@@ -50,7 +50,8 @@ def extract_data_to_nested(**kwargs):
             'mx_total_revenue=EXCLUDED.mx_total_revenue,'
             'mx_doc_approved = EXCLUDED.mx_doc_approved,'
             'mx_doc_collected=EXCLUDED.mx_doc_collected,'
-            'mx_cibil_check=EXCLUDED.mx_cibil_check;',
+            'mx_cibil_check=EXCLUDED.mx_cibil_check,'
+            'mx_bucket=EXCLUDED.mx_bucket;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -108,6 +109,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[53],
                 transform_row[54],
                 transform_row[55],
+                transform_row[56],
             )
         )
     pg_conn.commit()
@@ -181,7 +183,8 @@ create_table = PostgresOperator(
             mx_total_revenue varchar(256),
             mx_doc_approved varchar(256),
             mx_doc_collected varchar(256),
-            mx_cibil_check varchar(256)
+            mx_cibil_check varchar(256),
+            mx_bucket varchar(256)
         );
     ''',
     dag=dag
@@ -376,11 +379,12 @@ transform_data = PostgresOperator(
                 l2.mx_total_revenue,
                 l2.mx_doc_approved,
                 l2.mx_doc_collected,
-                l2.mx_cibil_check               
+                l2.mx_cibil_check,
+                l2.mx_bucket
                 
             FROM leadsquareleadsdata l2
             left join leadsquareactivity l on l2.prospectid = l.relatedprospectid 
-            where date(l.createdon) >= 'July 1,2023'
+            where date(l2.createdon) < 'January 1,2023'
             order by 2,5;
         ''',
     dag=dag
