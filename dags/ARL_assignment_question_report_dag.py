@@ -31,10 +31,6 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO arl_assignment_reported_question (table_unique_key, user_id,'
-            'course_id,'
-            'assignment_id,'
-            'assignment_release_date,'
-            'assignment_release_date_week,'
             'question_report_date,'
             'question_report_date_week,'
             'assignment_question_id,'
@@ -47,21 +43,12 @@ def extract_data_to_nested(**kwargs):
             'required_topics_not_taught,'
             'expected_output_is_inaccurate,'
             'test_cases_missing_or_wrong,'
+            'subjective_answer,'
             'topic_template_id,'
             'module_name,'
-            'user_type,'
-            'subjective_answer)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set user_id = EXCLUDED.user_id,'
-            'course_id = EXCLUDED.course_id,'
-            'assignment_id = EXCLUDED.assignment_id,'
-            'assignment_release_date = EXCLUDED.assignment_release_date,'
-            'assignment_release_date_week = EXCLUDED.assignment_release_date_week,'
-            'question_report_date = EXCLUDED.question_report_date,'
-            'question_report_date_week = EXCLUDED.question_report_date_week,'
-            'assignment_question_id = EXCLUDED.assignment_question_id,'
-            'question_title = EXCLUDED.question_title,'
-            'feedback_question_id = EXCLUDED.feedback_question_id,'
+            'user_type)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (table_unique_key) do update set question_title = EXCLUDED.question_title,'
             'question_text = EXCLUDED.question_text,'
             'inaccurate_difficulty = EXCLUDED.inaccurate_difficulty,'
             'question_description_not_clear = EXCLUDED.question_description_not_clear,'
@@ -69,10 +56,10 @@ def extract_data_to_nested(**kwargs):
             'required_topics_not_taught = EXCLUDED.required_topics_not_taught,'
             'expected_output_is_inaccurate = EXCLUDED.expected_output_is_inaccurate,'
             'test_cases_missing_or_wrong = EXCLUDED.test_cases_missing_or_wrong,'
+            'subjective_answer = EXCLUDED.subjective_answer,'
             'topic_template_id = EXCLUDED.topic_template_id,'
             'module_name = EXCLUDED.module_name,'
-            'user_type = EXCLUDED.user_type,'
-            'subjective_answer = EXCLUDED.subjective_answer;',
+            'user_type = EXCLUDED.user_type;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -92,10 +79,6 @@ def extract_data_to_nested(**kwargs):
                 transform_row[15],
                 transform_row[16],
                 transform_row[17],
-                transform_row[18],
-                transform_row[19],
-                transform_row[20],
-                transform_row[21],
             )
         )
     pg_conn.commit()
@@ -107,7 +90,7 @@ dag = DAG(
     concurrency=4,
     max_active_tasks=6,
     max_active_runs=6,
-    description='An ARL DAG for reported assignment questions',
+    description='An ARL DAG for reported assignment questions and responses given by the user(s)',
     schedule_interval='35 1 * * *',
     catchup=False
 )
@@ -119,10 +102,6 @@ create_table = PostgresOperator(
             id serial,
             table_unique_key text not null PRIMARY KEY,
             user_id bigint,
-            course_id int,
-            assignment_id bigint,
-            assignment_release_date date,
-            assignment_release_date_week timestamp,
             question_report_date date,
             question_report_date_week timestamp,
             assignment_question_id bigint,
@@ -135,10 +114,10 @@ create_table = PostgresOperator(
             required_topics_not_taught varchar(16),
             expected_output_is_inaccurate varchar(16),
             test_cases_missing_or_wrong varchar(16),
+            subjective_answer text,
             topic_template_id int,
             module_name text,
-            user_type text,
-            subjective_answer text
+            user_type text  
         );
     ''',
     dag=dag
@@ -166,52 +145,16 @@ transform_data = PostgresOperator(
             feedback_form_all_responses_new ffar 
         join feedback_forms_and_questions ffaq 
             on ffaq.feedback_form_id = ffar.feedback_form_id
-                and ffar.feedback_form_id = 4419
+                and ffar.feedback_form_id = 4419 -- and ffar.user_id = 1002156
         join assignment_question aq
             on aq.assignment_question_id = ffar.entity_object_id 
                 and entity_content_type_id = 62
         where ffaq.feedback_question_id in (335, 336)
-        order by completed_at desc),
-
-
-        question_release_date as 
-            (with question_data as 
-                (select 
-                    'Normal Assignment' as assignment_flow_type,
-                    assignment_id,
-                    course_id,
-                    question_id,
-                    null as user_id
-                from
-                    assignment_question_mapping_new_logic aqm 
-                union 
-                select 
-                    'Random Assignment' as assignment_flow_type,
-                    assignment_id,
-                    course_id,
-                    question_id,
-                    user_id
-                from
-                    assignment_random_question_mapping arqm)
+        order by completed_at desc)
                 
-                
-            select 
-                question_data.*,
-                date(a.start_timestamp) as assignment_release_date
-            from
-                question_data
-            join assignments a 
-                on a.assignment_id = question_data.assignment_id
-                    and a.hidden = false
-            order by 2 desc, 1)
-        
         select
-            concat(extract('month' from question_report_date), extract('day' from question_report_date), assignments.assignment_id, feedback_raw.user_id,'1' ,feedback_raw.assignment_question_id, course_user_mapping.course_id) as table_unique_key,
+        	concat(feedback_raw.user_id,'_',feedback_raw.assignment_question_id,'_',feedback_raw.feedback_question_id,'_',question_report_date) as table_unique_key,
             feedback_raw.user_id,
-            course_user_mapping.course_id,
-            assignments.assignment_id,
-            date(assignments.start_timestamp) as assignment_release_date,
-            date_trunc('week', assignments.start_timestamp) as assignment_release_date_week,
             question_report_date,
             date_trunc('week', question_report_date) as question_report_date_week,
             feedback_raw.assignment_question_id,
@@ -224,35 +167,28 @@ transform_data = PostgresOperator(
             max(required_topics_not_taught) as required_topics_not_taught,
             max(expected_output_is_inaccurate) as expected_output_is_inaccurate,
             max(test_cases_missing_or_wrong) as test_cases_missing_or_wrong,
+            max(subjective_answer) as subjective_answer,
             t.topic_template_id,
             t.template_name as module_name,
             case
-            	when course_user_mapping.status in (5,8,9) then 'Enrolled Student'
-            	when course_user_mapping.status in (13) then 'Mentor'
-            	when course_user_mapping.status in (27) then 'Instructor'
-            	when course_user_mapping.status in (25) then 'Mock Interviewer'
-            	when course_user_mapping.status is null then 'Free User'
-            	else 'Other' 
-            end as user_type,
-            subjective_answer
+            	
+            	when feedback_raw.user_id in (select distinct user_id from course_user_mapping where status = 27) then 'Instructor'
+            	when feedback_raw.user_id in (select distinct user_id from course_user_mapping where status = 13) then 'Mentor'
+            	when feedback_raw.user_id in (select distinct user_id from course_user_mapping where status = 25) then 'Mock Interviewer'
+            	when feedback_raw.user_id in (select distinct user_id from course_user_mapping where status in (5,8,9)) then 'Enrolled Student'
+            	else 'Other'
+            end as user_type
+            
         from
             feedback_raw
         left join course_user_mapping
             on course_user_mapping.user_id = feedback_raw.user_id
-        left join assignments
-            on assignments.course_id = course_user_mapping.course_id
-                and assignments.hidden = false 
-        left join question_release_date
-            on assignments.assignment_id = question_release_date.assignment_id 
-                and feedback_raw.assignment_question_id = question_release_date.question_id 
-                    and course_user_mapping.course_id = question_release_date.course_id
     	left join assignment_question aq 
 			on aq.assignment_question_id = feedback_raw.assignment_question_id
 	    left join topics t 
-		    on aq.topic_id  = t.topic_id 
+		    on aq.topic_id  = t.topic_id
 		    	and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410)
-
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,19,20,21,22;
+        group by 1,2,3,4,5,6,7,8,16,17,18;
         ''',
     dag=dag
 )
