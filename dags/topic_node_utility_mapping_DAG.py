@@ -12,67 +12,58 @@ default_args = {
 
 
 def extract_data_to_nested(**kwargs):
-    def clean_input(data_type, data_value):
-        if data_type == 'string':
-            return 'null' if not data_value else f'\"{data_value}\"'
-        elif data_type == 'datetime':
-            return 'null' if not data_value else f'CAST(\'{data_value}\' As TIMESTAMP)'
-        else:
-            return data_value
-
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
-        pass
-    pg_cursor.execute(
-        'INSERT INTO topic_node_utility_mapping (table_unique_key,'
-        'lecture_id,'
-        'course_id,'
-        'lecture_slot_id,'
-        'start_timestamp,'
-        'end_timestamp,'
-        'mandatory,'
-        'child_video_session,'
-        'is_topic_tree_independent,'
-        'lecture_slot_is_deleted,'
-        'topic_marked_completed,'
-        'topic_node_id,'
-        'activity_type,'
-        'activity_sub_type,'
-        'question_count)'
-        'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-        'on conflict (table_unique_key) do update set lecture_slot_id = EXCLUDED.lecture_slot_id,'
-        'start_timestamp = EXCLUDED.start_timestamp,'
-        'end_timestamp = EXCLUDED.end_timestamp,'
-        'mandatory = EXCLUDED.mandatory,'
-        'child_video_session = EXCLUDED.child_video_session,'
-        'is_topic_tree_independent = EXCLUDED.is_topic_tree_independent,'
-        'lecture_slot_is_deleted = EXCLUDED.lecture_slot_is_deleted,'
-        'topic_marked_completed = EXCLUDED.topic_marked_completed,'
-        'activity_type = EXCLUDED.activity_type,'
-        'activity_sub_type = EXCLUDED.activity_sub_type,'
-        'question_count = EXCLUDED.question_count;',
-        (
-            transform_row[0],
-            transform_row[1],
-            transform_row[2],
-            transform_row[3],
-            transform_row[4],
-            transform_row[5],
-            transform_row[6],
-            transform_row[7],
-            transform_row[8],
-            transform_row[9],
-            transform_row[10],
-            transform_row[11],
-            transform_row[12],
-            transform_row[13],
-            transform_row[14],
+        pg_cursor.execute(
+            'INSERT INTO topic_node_utility_mapping (table_unique_key,'
+            'lecture_id,'
+            'course_id,'
+            'lecture_slot_id,'
+            'start_timestamp,'
+            'end_timestamp,'
+            'mandatory,'
+            'child_video_session,'
+            'is_topic_tree_independent,'
+            'lecture_slot_is_deleted,'
+            'topic_marked_completed,'
+            'topic_node_id,'
+            'activity_type,'
+            'activity_sub_type,'
+            'question_count)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (table_unique_key) do update set lecture_slot_id = EXCLUDED.lecture_slot_id,'
+            'start_timestamp = EXCLUDED.start_timestamp,'
+            'end_timestamp = EXCLUDED.end_timestamp,'
+            'mandatory = EXCLUDED.mandatory,'
+            'child_video_session = EXCLUDED.child_video_session,'
+            'is_topic_tree_independent = EXCLUDED.is_topic_tree_independent,'
+            'lecture_slot_is_deleted = EXCLUDED.lecture_slot_is_deleted,'
+            'topic_marked_completed = EXCLUDED.topic_marked_completed,'
+            'activity_type = EXCLUDED.activity_type,'
+            'activity_sub_type = EXCLUDED.activity_sub_type,'
+            'question_count = EXCLUDED.question_count;',
+            (
+                transform_row[0],
+                transform_row[1],
+                transform_row[2],
+                transform_row[3],
+                transform_row[4],
+                transform_row[5],
+                transform_row[6],
+                transform_row[7],
+                transform_row[8],
+                transform_row[9],
+                transform_row[10],
+                transform_row[11],
+                transform_row[12],
+                transform_row[13],
+                transform_row[14],
+            )
         )
-    )
     pg_conn.commit()
 
 def cleanup_assignment_question_mapping(**kwargs):
@@ -194,6 +185,4 @@ cleanup_data = PythonOperator(
     dag=dag
 )
 
-create_table >> transform_data >> extract_python_data
-
-# >> cleanup_data
+create_table >> transform_data >> extract_python_data >> cleanup_data
