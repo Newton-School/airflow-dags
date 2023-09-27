@@ -145,7 +145,8 @@ transform_data = PostgresOperator(
             feedback_form_all_responses_new ffar 
         join feedback_forms_and_questions ffaq 
             on ffaq.feedback_form_id = ffar.feedback_form_id
-                and ffar.feedback_form_id = 4419 -- and ffar.user_id = 1002156
+                and ffar.feedback_form_id = 4419
+                	and ffar.feedback_question_id = ffaq.feedback_question_id
         join assignment_question aq
             on aq.assignment_question_id = ffar.entity_object_id 
                 and entity_content_type_id = 62
@@ -178,7 +179,6 @@ transform_data = PostgresOperator(
             	when feedback_raw.user_id in (select distinct user_id from course_user_mapping where status in (5,8,9)) then 'Enrolled Student'
             	else 'Other'
             end as user_type
-            
         from
             feedback_raw
         left join course_user_mapping
