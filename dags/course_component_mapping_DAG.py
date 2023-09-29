@@ -67,7 +67,7 @@ def extract_data_to_nested(**kwargs):
 dag = DAG(
     'course_component_topic_module_mapping_dag',
     default_args=default_args,
-    description='Course component mapping at module and topic (module accdng to normal nomenclature) and with technologies_topics.id level',
+    description='Course component mapping at module and topic (module accdng to normal nomenclature) and with technologies_topic_id level',
     schedule_interval='30 20 * * *',
     catchup=False
 )
