@@ -32,7 +32,7 @@ def extract_data_to_nested(**kwargs):
             'module_clearance_points) '
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_name = EXCLUDED.course_name,'
-            'module_name =EXCLUDED.module_name,'
+            'module_name = EXCLUDED.module_name,'
             'topic_name = EXCLUDED.topic_name,'
             'topic_deadline_timestamp = EXCLUDED.topic_deadline_timestamp,'
             'topic_unlock_timestamp = EXCLUDED.topic_unlock_timestamp,'
@@ -74,6 +74,7 @@ create_table = PostgresOperator(
             id serial,
             table_unique_key text not null PRIMARY KEY,
             course_id int, 
+            course_name text,
             course_component_id int,
             module_name text,
             topic_template_id int,
