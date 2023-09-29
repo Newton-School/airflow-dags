@@ -78,11 +78,11 @@ create_table = PostgresOperator(
             module_name text,
             topic_template_id int,
             topic_name text,
-            topic_deadline_timestamp, 
-            topic_unlock_timestamp,
+            topic_deadline_timestamp timestamp, 
+            topic_unlock_timestamp timestamp,
             topic_clearance_points int,
-            module_deadline_timestamp,
-            module_unlock_timestamp,
+            module_deadline_timestamp timestamp,
+            module_unlock_timestamp timestamp,
             module_clearance_points int
         );
     ''',
