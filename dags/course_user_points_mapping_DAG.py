@@ -32,12 +32,15 @@ def extract_data_to_nested(**kwargs):
             'assignment_course_user_question_mapping_id,'
             'one_to_one_id,'
             'milestone_user_question_mapping_id,'
+            'mcq_id,'
+            'assignment_question_id,'
+            'arena_assignment_question_id,'
             'points,'
             'is_deleted,'
             'points_version,'
             'topic_id,'
             'point_type)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_name = EXCLUDED.course_name,'
             'course_start_timestamp = EXCLUDED.course_start_timestamp,'
             'course_end_timestamp = EXCLUDED.course_end_timestamp,'
@@ -65,6 +68,9 @@ def extract_data_to_nested(**kwargs):
                 transform_row[15],
                 transform_row[16],
                 transform_row[17],
+                transform_row[18],
+                transform_row[19],
+                transform_row[20],
             )
         )
     pg_conn.commit()
@@ -84,7 +90,7 @@ create_table = PostgresOperator(
     sql='''CREATE TABLE IF NOT EXISTS course_user_point_mapping (
             id serial,
             table_unique_key text NOT NULL PRIMARY KEY,
-            course_id bigint,
+            course_id int,
             course_name text,
             course_start_timestamp timestamp,
             course_end_timestamp timestamp,
@@ -96,6 +102,9 @@ create_table = PostgresOperator(
             assignment_course_user_question_mapping_id bigint,
             one_to_one_id bigint,
             milestone_user_question_mapping_id bigint,
+            mcq_id int,
+            assignment_question_id int,
+            arena_assignment_question_id int,
             points int,
             is_deleted boolean,
             points_version text, 
@@ -119,22 +128,29 @@ transform_data = PostgresOperator(
             courses_courseuserpointmapping.user_id,
             courses_courseuserpointmapping.created_at,
             case
-                when content_type_id = 26 then 'Assessments'
-                when content_type_id = 46 then 'Lectures'
-                when content_type_id = 64 then 'Assignments'
-                when content_type_id = 100 then 'One to One'
-                when content_type_id = 119 then 'Arena'
+                when courses_courseuserpointmapping.content_type_id = 26 then 'Assessments'
+                when courses_courseuserpointmapping.content_type_id = 46 then 'Lectures'
+                when courses_courseuserpointmapping.content_type_id = 64 then 'Assignments'
+                when courses_courseuserpointmapping.content_type_id = 100 then 'One to One'
+                when courses_courseuserpointmapping.content_type_id = 119 then 'Arena'
             end as content_type,
             case
-                when content_type_id = 26 then courses_courseuserpointmapping.object_id end as mcq_course_user_mapping_id,
+                when courses_courseuserpointmapping.content_type_id = 26 then courses_courseuserpointmapping.object_id end as mcq_course_user_mapping_id,
             case    
-                when content_type_id = 46 then courses_courseuserpointmapping.object_id end as lecture_id,
+                when courses_courseuserpointmapping.content_type_id = 46 then courses_courseuserpointmapping.object_id end as lecture_id,
             case    
-                when content_type_id = 64 then courses_courseuserpointmapping.object_id end as assignment_course_user_question_mapping_id,
+                when courses_courseuserpointmapping.content_type_id = 64 then courses_courseuserpointmapping.object_id end as assignment_course_user_question_mapping_id,
             case    
-                when content_type_id = 100 then courses_courseuserpointmapping.object_id end as one_to_one_id,
+                when courses_courseuserpointmapping.content_type_id = 100 then courses_courseuserpointmapping.object_id end as one_to_one_id,
             case    
-                when content_type_id = 119 then courses_courseuserpointmapping.object_id end as milestone_user_question_mapping_id,
+                when courses_courseuserpointmapping.content_type_id = 119 then courses_courseuserpointmapping.object_id end as milestone_user_question_mapping_id,
+                
+            case
+                when courses_courseuserpointmapping.content_type_id = 26 then assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id end as mcq_id,
+            case    
+                when courses_courseuserpointmapping.content_type_id = 64 then assignments_assignmentcourseuserquestionmapping.assignment_question_id end as assignment_question_id,
+            case    
+                when courses_courseuserpointmapping.content_type_id = 119 then assignments_milestoneuserquestionmapping.assignment_question_id end as arena_assignment_question_id,
             courses_courseuserpointmapping.points,
             is_deleted,
             case
@@ -150,7 +166,22 @@ transform_data = PostgresOperator(
         left join courses_courseusermapping
             on courses_courseusermapping.course_id = courses_course.id
                 and courses_courseusermapping.user_id = courses_courseuserpointmapping.user_id
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18;
+        left join assignments_assignmentcourseuserquestionmapping
+            on assignments_assignmentcourseuserquestionmapping.id = courses_courseuserpointmapping.object_id 
+                and courses_courseuserpointmapping.content_type_id = 64
+        left join video_sessions_lecture
+            on video_sessions_lecture.id = courses_courseuserpointmapping.object_id 
+                and courses_courseuserpointmapping.content_type_id = 46
+        left join video_sessions_onetoone
+            on video_sessions_onetoone.id = courses_courseuserpointmapping.object_id 
+                and courses_courseuserpointmapping.content_type_id = 100
+        left join assessments_multiplechoicequestioncourseusermapping
+            on assessments_multiplechoicequestioncourseusermapping.id = courses_courseuserpointmapping.object_id
+                and courses_courseuserpointmapping.content_type_id = 26
+        left join assignments_milestoneuserquestionmapping
+            on assignments_milestoneuserquestionmapping.id = courses_courseuserpointmapping.object_id 
+                and courses_courseuserpointmapping.content_type_id = 119
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21;
         ''',
     dag=dag
 )
