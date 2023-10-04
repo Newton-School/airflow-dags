@@ -33,6 +33,7 @@ def extract_data_to_nested(**kwargs):
             'one_to_one_id,'
             'milestone_user_question_mapping_id,'
             'mcq_id,'
+            'assignment_id,'
             'assignment_question_id,'
             'arena_assignment_question_id,'
             'points,'
@@ -40,7 +41,7 @@ def extract_data_to_nested(**kwargs):
             'points_version,'
             'topic_id,'
             'point_type)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set course_name = EXCLUDED.course_name,'
             'course_start_timestamp = EXCLUDED.course_start_timestamp,'
             'course_end_timestamp = EXCLUDED.course_end_timestamp,'
@@ -71,6 +72,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[18],
                 transform_row[19],
                 transform_row[20],
+                transform_row[21],
             )
         )
     pg_conn.commit()
@@ -103,6 +105,7 @@ create_table = PostgresOperator(
             one_to_one_id bigint,
             milestone_user_question_mapping_id bigint,
             mcq_id int,
+            assignment_id int,
             assignment_question_id int,
             arena_assignment_question_id int,
             points int,
@@ -147,6 +150,7 @@ transform_data = PostgresOperator(
                 
             case
                 when courses_courseuserpointmapping.content_type_id = 26 then assessments_multiplechoicequestioncourseusermapping.multiple_choice_question_id end as mcq_id,
+                assignments_assignmentcourseusermapping.assignment_id,
             case    
                 when courses_courseuserpointmapping.content_type_id = 64 then assignments_assignmentcourseuserquestionmapping.assignment_question_id end as assignment_question_id,
             case    
@@ -169,6 +173,8 @@ transform_data = PostgresOperator(
         left join assignments_assignmentcourseuserquestionmapping
             on assignments_assignmentcourseuserquestionmapping.id = courses_courseuserpointmapping.object_id 
                 and courses_courseuserpointmapping.content_type_id = 64
+        left join assignments_assignmentcourseusermapping
+            on assignments_assignmentcourseusermapping.id = assignments_assignmentcourseuserquestionmapping.assignment_course_user_mapping_id
         left join video_sessions_lecture
             on video_sessions_lecture.id = courses_courseuserpointmapping.object_id 
                 and courses_courseuserpointmapping.content_type_id = 46
@@ -182,7 +188,7 @@ transform_data = PostgresOperator(
             on assignments_milestoneuserquestionmapping.id = courses_courseuserpointmapping.object_id 
                 and courses_courseuserpointmapping.content_type_id = 119
         where courses_courseuserpointmapping.created_at >= '2023-07-01'
-        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21;
+        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22;
         ''',
     dag=dag
 )
