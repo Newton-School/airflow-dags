@@ -181,6 +181,7 @@ transform_data = PostgresOperator(
         left join assignments_milestoneuserquestionmapping
             on assignments_milestoneuserquestionmapping.id = courses_courseuserpointmapping.object_id 
                 and courses_courseuserpointmapping.content_type_id = 119
+        where courses_courseuserpointmapping.created_at >= '2023-07-01'
         group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21;
         ''',
     dag=dag
