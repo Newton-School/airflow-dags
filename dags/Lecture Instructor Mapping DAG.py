@@ -29,7 +29,7 @@ def extract_data_to_nested(**kwargs):
         pg_cursor.execute(
             'INSERT INTO lecture_instructor_mapping (lecture_id,'
             'inst_course_user_mapping_id,report_type,inst_min_join_time,'
-            'inst_max_leave_time,duration_time_in_mins)'
+            'inst_max_leave_time,duration_time_in_mins,instructor_user_id,instructor_name)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (lecture_id) do update set inst_course_user_mapping_id = EXCLUDED.inst_course_user_mapping_id,'
             'inst_min_join_time = EXCLUDED.inst_min_join_time,'
