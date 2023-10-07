@@ -67,7 +67,7 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS ai_chat_messages (
             id serial,
-            table_id int,
+            table_id int not null PRIMARY KEY,
             user_id bigint,
             created_at timestamp,
             sender_id bigint,
