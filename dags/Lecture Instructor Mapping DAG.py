@@ -34,14 +34,18 @@ def extract_data_to_nested(**kwargs):
             'on conflict (lecture_id) do update set inst_course_user_mapping_id = EXCLUDED.inst_course_user_mapping_id,'
             'inst_min_join_time = EXCLUDED.inst_min_join_time,'
             'inst_max_leave_time = EXCLUDED.inst_max_leave_time,'
-            'duration_time_in_mins = EXCLUDED.duration_time_in_mins;',
+            'duration_time_in_mins = EXCLUDED.duration_time_in_mins,'
+            'instructor_user_id = EXCLUDED.instructor_user_id,'
+            'instructor_name = EXCLUDED.instructor_name;',
             (
                 transform_row[0],
                 transform_row[1],
                 transform_row[2],
                 transform_row[3],
                 transform_row[4],
-                transform_row[5]
+                transform_row[5],
+                transform_row[6],
+                transform_row[7],
             )
         )
     pg_conn.commit()
@@ -59,12 +63,15 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS lecture_instructor_mapping (
+            id serial,
             lecture_id bigint not null PRIMARY KEY,
             inst_course_user_mapping_id bigint,
             report_type int,
             inst_min_join_time timestamp,
             inst_max_leave_time timestamp,
-            duration_time_in_mins int
+            duration_time_in_mins int,
+            instructor_user_id bigint,
+            instructor_name text
     );
     ''',
     dag=dag
@@ -81,12 +88,16 @@ transform_data = PostgresOperator(
         report_type,
         inst_min_join_time,
         inst_max_leave_time,
-        (duration_time_in_secs/60) as duration_time_in_mins
+        (duration_time_in_secs/60) as duration_time_in_mins,
+        instructor_user_id,
+        instructor_name
+
     from
             (with raw_mapping as
 
                     (select 
                         trainers_courseinstructormapping.course_id,
+                        concat(auth_user.first_name, ' ', auth_user.last_name) as instructor_name,
                         trainers_instructor.user_id,
                         courses_courseusermapping.status,
                         courses_courseusermapping.id as cum_id
@@ -98,7 +109,7 @@ transform_data = PostgresOperator(
                         on courses_courseusermapping.user_id = trainers_instructor.user_id and courses_courseusermapping.course_id = trainers_courseinstructormapping.course_id
                     left join auth_user
                         on auth_user.id = trainers_instructor.user_id
-                    group by 1,2,3,4),
+                    group by 1,2,3,4,5),
 
 
             lectures as 
@@ -106,7 +117,9 @@ transform_data = PostgresOperator(
             (select 
                 video_sessions_lecture.id as lecture_id,
                 date(video_sessions_lecture.start_timestamp) as lecture_date,
+                raw_mapping.user_id as instructor_user_id,
                 video_sessions_lecturecourseuserreport.course_user_mapping_id,
+                instructor_name,
                 video_sessions_lecturecourseuserreport.report_type,
                 min(video_sessions_lecturecourseuserreport.join_time) as inst_min_join_time,
                 max(video_sessions_lecturecourseuserreport.leave_time) as inst_max_leave_time,
@@ -117,7 +130,7 @@ transform_data = PostgresOperator(
                 on video_sessions_lecturecourseuserreport.lecture_id = video_sessions_lecture.id
             join raw_mapping
                 on raw_mapping.cum_id = video_sessions_lecturecourseuserreport.course_user_mapping_id and video_sessions_lecture.course_id = raw_mapping.course_id
-            group by 1,2,3,4)
+            group by 1,2,3,4,5,6)
 
 
             select
@@ -130,7 +143,7 @@ transform_data = PostgresOperator(
     where d_rank = 1
     order by 1)
     
-select * from inst_time;
+select * from inst_time;;
         ''',
     dag=dag
 )
