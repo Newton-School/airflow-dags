@@ -32,7 +32,11 @@ def extract_data_to_nested(**kwargs):
                 'is_system_generated_nudge,'
                 'selected_response,'
                 'correct_option) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                'on conflict (table_id) do nothing;',
+                'on conflict (table_id) senders_response = EXCLUDED.senders_response,'
+                'failed_response = EXCLUDED.failed_response,'
+                'is_system_generated_nudge = EXCLUDED.is_system_generated_nudge,'
+                'selected_response = EXCLUDED.selected_response,'
+                'correct_option = EXCLUDED.correct_option;',
                 (
                     transform_row[0],
                     transform_row[1],
