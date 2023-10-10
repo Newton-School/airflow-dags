@@ -203,7 +203,8 @@ transform_data = PostgresOperator(
                 when assessments.sub_type = 1 then 'General'
                 when assessments.sub_type = 2 then 'In-Class'
                 when assessments.sub_type = 3 then 'Post-Class'
-                when assessments.sub_type = 4 then 'Classroom-Quiz'
+                when assessments.sub_type = 4 then 'Module Contest'
+                when assessments.sub_type = 5 then 'Placement Contest'
             end as assessment_sub_type,
             case 
             	when assessments.generation_and_creation_type = 1 then 'Fully Automated'
