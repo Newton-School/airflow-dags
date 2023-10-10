@@ -62,7 +62,8 @@ create_table = PostgresOperator(
             solution_length bigint,
             number_of_submissions int,
             error_faced_count int,
-            marks_obtained int
+            marks_obtained int,
+            max_test_case_passed_during_contest int
         );
     ''',
     dag=dag
@@ -89,8 +90,9 @@ def extract_data_to_nested(**kwargs):
             'max_test_case_passed, assignment_started_at,'
             'assignment_completed_at, assignment_cheated_marked_at, cheated,'
             'plagiarism_submission_id, plagiarism_score, solution_length, '
-            'number_of_submissions, error_faced_count, marks_obtained)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'number_of_submissions, error_faced_count, marks_obtained,'
+            'max_test_case_passed_during_contest)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set question_started_at=EXCLUDED.question_started_at,'
             'question_completed_at = EXCLUDED.question_completed_at,'
             'completed=EXCLUDED.completed, all_test_case_passed=EXCLUDED.all_test_case_passed, '
@@ -109,7 +111,8 @@ def extract_data_to_nested(**kwargs):
             'solution_length=EXCLUDED.solution_length, '
             'number_of_submissions=EXCLUDED.number_of_submissions,'
             'error_faced_count=EXCLUDED.error_faced_count,'
-            'marks_obtained = EXCLUDED.marks_obtained;',
+            'marks_obtained = EXCLUDED.marks_obtained,'
+            'max_test_case_passed_during_contest = EXCLUDED.max_test_case_passed_during_contest;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -136,6 +139,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[22],
                 transform_row[23],
                 transform_row[24],
+                transform_row[25],
             )
         )
         pg_conn.commit()
@@ -182,7 +186,12 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                 left join playgrounds_projectplaygroundsubmission ppps on ppps.project_playground_id = ppp.id
                 left join playgrounds_gameplaygroundsubmission pgps on pgps.game_playground_id = pgp.id
                 
-                group by 1,2,assignments_assignmentcourseuserquestionmapping.coding_playground_id,assignments_assignmentcourseuserquestionmapping.front_end_playground_id,assignments_assignmentcourseuserquestionmapping.game_playground_id,assignments_assignmentcourseuserquestionmapping.project_playground_id
+                group by 1,2,
+                assignments_assignmentcourseuserquestionmapping.coding_playground_id,
+                assignments_assignmentcourseuserquestionmapping.front_end_playground_id,
+                assignments_assignmentcourseuserquestionmapping.game_playground_id,
+                assignments_assignmentcourseuserquestionmapping.project_playground_id
+                
                 order by 1,2
                 )
                 select
@@ -247,7 +256,8 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                         when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then count(distinct pcps.id) filter (where pcps.current_status not in (3))
                         when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then count(distinct pfps.id) filter (where pfps.build_status not in (3))
                         when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then count(distinct ppps.id) filter (where pfps.build_status not in (3)) else null end as error_faced_count,
-                        assignments_assignmentcourseusermapping.marks as marks_obtained
+                        assignments_assignmentcourseusermapping.marks as marks_obtained,
+                        assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest
                         from assignments_assignment
                             left join courses_course 
                                     on assignments_assignment.course_id = courses_course.id and (assignments_assignment.id between %d and %d)
@@ -283,11 +293,13 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                             
                             left join playgrounds_gameplaygroundsubmission pgps on pgps.id = latest_submission_game.playground_submission_id
                             left join playgrounds_playgroundplagiarismreport as plag_game on plag_game.object_id = pgps.id and plag_game.content_type_id = 179
-                        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,assignments_assignmentcourseuserquestionmapping.coding_playground_id,
+                        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+                        assignments_assignmentcourseuserquestionmapping.coding_playground_id,
                         assignments_assignmentcourseuserquestionmapping.front_end_playground_id,
                         assignments_assignmentcourseuserquestionmapping.game_playground_id,
                         assignments_assignmentcourseuserquestionmapping.project_playground_id,
-                        assignments_assignmentcourseusermapping.marks) query_rows;
+                        assignments_assignmentcourseusermapping.marks,
+                        assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest) query_rows;
             ''' % (start_assignment_id, end_assignment_id),
     )
 
@@ -352,7 +364,11 @@ left join playgrounds_frontendplaygroundsubmission pfps on pfps.front_end_playgr
 left join playgrounds_projectplaygroundsubmission ppps on ppps.project_playground_id = ppp.id
 left join playgrounds_gameplaygroundsubmission pgps on pgps.game_playground_id = pgp.id
 
-group by 1,2,assignments_assignmentcourseuserquestionmapping.coding_playground_id,assignments_assignmentcourseuserquestionmapping.front_end_playground_id,assignments_assignmentcourseuserquestionmapping.game_playground_id,assignments_assignmentcourseuserquestionmapping.project_playground_id
+group by 1,2,
+assignments_assignmentcourseuserquestionmapping.coding_playground_id,
+assignments_assignmentcourseuserquestionmapping.front_end_playground_id,
+assignments_assignmentcourseuserquestionmapping.game_playground_id,
+assignments_assignmentcourseuserquestionmapping.project_playground_id
 order by 1,2
 )
 select
@@ -417,7 +433,8 @@ select
             when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then count(distinct pcps.id) filter (where pcps.current_status not in (3))
             when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then count(distinct pfps.id) filter (where pfps.build_status not in (3))
             when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then count(distinct ppps.id) filter (where pfps.build_status not in (3)) else null end as error_faced_count,
-            assignments_assignmentcourseusermapping.marks as marks_obtained
+            assignments_assignmentcourseusermapping.marks as marks_obtained,
+            assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest
             
             from assignments_assignment
                 left join courses_course 
@@ -458,7 +475,8 @@ select
             assignments_assignmentcourseuserquestionmapping.front_end_playground_id,
             assignments_assignmentcourseuserquestionmapping.game_playground_id,
             assignments_assignmentcourseuserquestionmapping.project_playground_id,
-            assignments_assignmentcourseusermapping.marks
+            assignments_assignmentcourseusermapping.marks,
+            assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest
         ) final_query
         limit {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').limit }} 
         offset {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').offset }}
