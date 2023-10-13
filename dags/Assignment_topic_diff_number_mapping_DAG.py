@@ -70,7 +70,7 @@ create_table = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS assignment_topic_difficulty_number_mapping (
             id serial,
-            assignment_topic_diff_mapping_id not null PRIMARY KEY,
+            assignment_topic_diff_mapping_id bigint not null PRIMARY KEY,
             assignment_id int,
             course_id int,
             start_timestamp timestamp,
