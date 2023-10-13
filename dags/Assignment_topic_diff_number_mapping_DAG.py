@@ -58,9 +58,9 @@ def extract_data_to_nested(**kwargs):
 
 
 dag = DAG(
-    'courses_dag',
+    'assignment_topic_diff_number_mapping_dag',
     default_args=default_args,
-    description='Courses Details, a version of courses_course',
+    description='Raw table for random assignments data, topic mapping and question count',
     schedule_interval='30 20 * * *',
     catchup=False
 )
