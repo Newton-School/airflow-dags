@@ -29,7 +29,7 @@ def extract_data_to_nested(**kwargs):
         pg_cursor.execute(
             'INSERT INTO transcripts_data (id,prospect_id,created_at,sent_to_lead_squared,'
             'transcript_with_speaker_info,)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s) ;',
+            'VALUES (%s,%s,%s,%s,%s,%s,%s);',
             (
                 transform_row[0],
                 transform_row[1],
@@ -123,8 +123,7 @@ transform_data = PostgresOperator(
             sum(words_count) filter (where words_array = '{SPEAKER_01}') as speaker_01_count
             from calc
             group by 1,2,3,4,5
-            order by 2
-            ;
+            order by 2;
         ''',
     dag=dag
 )
