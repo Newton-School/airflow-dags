@@ -55,13 +55,13 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS transcripts_data (
-            id as int,
-            prospect_id as varchar(512),
-            created_at as TIMESTAMP,
-            sent_to_lead_squared as boolean,
-            transcript_with_speaker_info as text[],
-            speaker_00_count as int,
-            speaker_01_count as int
+            id int,
+            prospect_id varchar(512),
+            created_at TIMESTAMP,
+            sent_to_lead_squared boolean,
+            transcript_with_speaker_info text[],
+            speaker_00_count int,
+            speaker_01_count int
         );
     ''',
     dag=dag
