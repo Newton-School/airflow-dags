@@ -28,7 +28,7 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO transcripts_data (id,prospect_id,created_at,sent_to_lead_squared,'
-            'transcript_with_speaker_info,)'
+            'transcript_with_speaker_info,speaker_00_count,speaker_01_count)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s);',
             (
                 transform_row[0],
@@ -55,7 +55,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS transcripts_data (
-            id int,
+            id int not null PRIMARY KEY,
             prospect_id varchar(512),
             created_at TIMESTAMP,
             sent_to_lead_squared boolean,
