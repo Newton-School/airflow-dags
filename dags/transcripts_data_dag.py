@@ -122,6 +122,7 @@ transform_data = PostgresOperator(
             sum(words_count) filter (where words_array = '{SPEAKER_00}') as speaker_00_count,
             sum(words_count) filter (where words_array = '{SPEAKER_01}') as speaker_01_count
             from calc
+            where id = 895
             group by 1,2,3,4,5
             order by 2;
         ''',
