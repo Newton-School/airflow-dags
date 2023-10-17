@@ -155,9 +155,10 @@ transform_data = PostgresOperator(
                 c.course_structure_id,
                 c.course_structure_class,
                 CASE
-                    WHEN template_name LIKE 'LINEAR DSA 1' THEN 550
-                    WHEN template_name LIKE 'LINEAR DSA 2' THEN 150
-                    WHEN template_name LIKE 'Frontend Track - HTML,CSS' THEN 275
+                    WHEN template_name LIKE 'LINEAR DSA 1' THEN 470
+                    WHEN template_name LIKE 'LINEAR DSA 2' THEN 270
+                    WHEN template_name LIKE 'HTML Template' THEN 137
+                    WHEN template_name LIKE 'CSS Template' THEN 137
                     WHEN template_name LIKE 'Backend Track -> Node, Express, Mongo, SQL, System Design' THEN 250
                     WHEN template_name LIKE 'React' THEN 250
                     WHEN template_name LIKE 'JS' THEN 250
