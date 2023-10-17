@@ -27,18 +27,37 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO user_ratings (table_unique_key,student_id,date,rating,missing_features,'
-            'successfully_completed,created_at,topic_pool_id,template_name,assignment_rating,'
-            'contest_rating,milestone_rating,mock_rating,proctored_contest_rating,quiz_rating,'
-            'plagiarised_assignment_rating,plagiarised_contest_rating,'
-            'plagiarised_proctored_contest_rating,plagiarised_rating)'
+            'INSERT INTO user_ratings (table_unique_key,'
+            'student_id,'
+            'date,'
+            'rating,'
+            'missing_features,'
+            'successfully_completed,'
+            'created_at,'
+            'topic_pool_id,'
+            'template_name,'
+            'assignment_rating,'
+            'contest_rating,'
+            'milestone_rating,'
+            'mock_rating,'
+            'proctored_contest_rating,'
+            'quiz_rating,'
+            'plagiarised_assignment_rating,'
+            'plagiarised_contest_rating,'
+            'plagiarised_proctored_contest_rating,'
+            'plagiarised_rating)'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set rating = EXCLUDED.rating,'
-            'missing_features = EXCLUDED.missing_features,successfully_completed = EXCLUDED.successfully_completed,'
-            'topic_pool_id = EXCLUDED.topic_pool_id,template_name = EXCLUDED.template_name,'
-            'assignment_rating = EXCLUDED.assignment_rating,contest_rating = EXCLUDED.contest_rating,'
-            'milestone_rating = EXCLUDED.milestone_rating,mock_rating = EXCLUDED.mock_rating,'
-            'proctored_contest_rating = EXCLUDED.proctored_contest_rating,quiz_rating = EXCLUDED.quiz_rating,'
+            'missing_features = EXCLUDED.missing_features,'
+            'successfully_completed = EXCLUDED.successfully_completed,'
+            'topic_pool_id = EXCLUDED.topic_pool_id,'
+            'template_name = EXCLUDED.template_name,'
+            'assignment_rating = EXCLUDED.assignment_rating,'
+            'contest_rating = EXCLUDED.contest_rating,'
+            'milestone_rating = EXCLUDED.milestone_rating,'
+            'mock_rating = EXCLUDED.mock_rating,'
+            'proctored_contest_rating = EXCLUDED.proctored_contest_rating,'
+            'quiz_rating = EXCLUDED.quiz_rating,'
             'plagiarised_assignment_rating = EXCLUDED.plagiarised_assignment_rating,'
             'plagiarised_contest_rating = EXCLUDED.plagiarised_contest_rating,'
             'plagiarised_proctored_contest_rating = EXCLUDED.plagiarised_proctored_contest_rating,'
@@ -80,6 +99,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS user_ratings (
+            id serial,
             table_unique_key bigint not null PRIMARY KEY,
             student_id bigint,
             date TIMESTAMP,
@@ -88,7 +108,7 @@ create_table = PostgresOperator(
             successfully_completed boolean,
             created_at TIMESTAMP,
             topic_pool_id int,
-            template_name varchar(256),
+            template_name text,
             assignment_rating int,
             contest_rating int,
             milestone_rating int,
@@ -127,8 +147,10 @@ transform_data = PostgresOperator(
             user_persona_studentperdayrating.plagiarised_contest_rating,
             user_persona_studentperdayrating.plagiarised_proctored_contest_rating,
             user_persona_studentperdayrating.plagiarised_rating
-            from user_persona_studentperdayrating
-            left join user_persona_template on user_persona_template.id = user_persona_studentperdayrating.topic_pool_id;
+            from 
+                user_persona_studentperdayrating
+            left join user_persona_template 
+                on user_persona_template.id = user_persona_studentperdayrating.topic_pool_id;
         ''',
     dag=dag
 )
