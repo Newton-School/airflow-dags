@@ -57,6 +57,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS courses (
+            id serial, 
             course_id bigint not null PRIMARY KEY,
             course_name varchar(100),
             unit_type varchar(16),
