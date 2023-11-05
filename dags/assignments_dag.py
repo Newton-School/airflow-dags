@@ -92,6 +92,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS assignments (
+            id serial,
             assignment_id bigint not null PRIMARY KEY,
             parent_assignment_id bigint,
             assignment_sub_type int,
