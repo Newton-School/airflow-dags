@@ -60,6 +60,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS assessment_topic_mapping (
+            id serial,
             assessment_topic_mapping_id bigint not null PRIMARY KEY,
             assessment_id bigint,
             topic_id bigint,
