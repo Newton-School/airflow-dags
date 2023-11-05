@@ -24,6 +24,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS users_info (
+            id serial,
             user_id bigint not null PRIMARY KEY,
             first_name varchar(100),
             last_name varchar(100),

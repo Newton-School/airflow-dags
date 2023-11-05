@@ -87,6 +87,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS topics (
+            id serial,
             topic_node_id bigint not null PRIMARY KEY,
             topic_id bigint ,
             topic_name varchar(128),

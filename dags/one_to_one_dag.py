@@ -91,6 +91,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS one_to_one (
+            id serial,
             one_to_one_id bigint not null PRIMARY KEY,
             student_user_id bigint,
             course_id bigint,
