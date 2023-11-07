@@ -27,18 +27,20 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO assignment_topic_mapping (assignment_topic_mapping_id,created_at,assignment_id,created_by_id,'
-            'topic_id,filter_main_topic) '
-            'VALUES (%s,%s,%s,%s,%s,%s)'
+            'INSERT INTO assignment_topic_mapping (assignment_topic_mapping_id,'
+            'created_at,'
+            'assignment_id,'
+            'created_by_id,'
+            'topic_id)'
+            'VALUES (%s,%s,%s,%s,%s)'
             'on conflict (assignment_topic_mapping_id) do update set assignment_id = EXCLUDED.assignment_id, '
-            'topic_id = EXCLUDED.topic_id, filter_main_topic = EXCLUDED.filter_main_topic;',
+            'topic_id = EXCLUDED.topic_id;',
             (
                 transform_row[0],
                 transform_row[1],
                 transform_row[2],
                 transform_row[3],
                 transform_row[4],
-                transform_row[5]
             )
         )
     pg_conn.commit()
@@ -61,8 +63,7 @@ create_table = PostgresOperator(
             created_at timestamp,
             assignment_id bigint,
             created_by_id bigint,
-            topic_id bigint,
-            filter_main_topic boolean
+            topic_id bigint
         );
     ''',
     dag=dag
@@ -76,8 +77,7 @@ transform_data = PostgresOperator(
     created_at,
     assignment_id,
     created_by_id,
-    topic_id,
-    filter_main_topic
+    topic_id
 from
     assignments_assignmenttopicmapping;
         ''',
