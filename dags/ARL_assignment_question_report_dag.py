@@ -187,7 +187,7 @@ transform_data = PostgresOperator(
 			on aq.assignment_question_id = feedback_raw.assignment_question_id
 	    left join topics t 
 		    on aq.topic_id  = t.topic_id
-		    	and t.topic_template_id in 208, 209, 367, 447, 489, 544, 555, 577, 102, 103, 119, 334, 336, 338, 339, 340, 341, 342, 344, 410)
+		    	and t.topic_template_id in (208, 209, 367, 447, 489, 544, 555, 577, 102, 103, 119, 334, 336, 338, 339, 340, 341, 342, 344, 410)
         group by 1,2,3,4,5,6,7,8,16,17,18;
         ''',
     dag=dag
