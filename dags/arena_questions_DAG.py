@@ -120,6 +120,20 @@ transform_data = PostgresOperator(
         from
             assignments_milestoneuserquestionmapping
             
+        join assignments_assignmentquestiontopicmapping
+            on assignments_assignmentquestiontopicmapping.assignment_question_id = assignments_milestoneuserquestionmapping.assignment_question_id 
+                and assignments_assignmentquestiontopicmapping.main_topic = true
+    
+        join technologies_topic
+            on technologies_topic.id = assignments_assignmentquestiontopicmapping.topic_id
+        
+        join technologies_topicnode
+            on technologies_topicnode.topic_id = technologies_topic.id
+        
+        join technologies_topictemplate
+            on technologies_topictemplate.id = technologies_topicnode.topic_template_id 
+                and technologies_topictemplate.id in (208, 209, 367, 447, 489, 544, 555, 577, 102, 103, 119, 334, 336, 338, 339, 340, 341, 342, 344, 410)
+                    
         join auth_user
             on auth_user.id = assignments_milestoneuserquestionmapping.user_id
             
@@ -149,20 +163,7 @@ transform_data = PostgresOperator(
             
         left join playgrounds_playgroundplagiarismreport as plag_game
             on plag_game.object_id = pgps.id and plag_game.content_type_id = 179
-        
-        join assignments_assignmentquestiontopicmapping
-            on assignments_assignmentquestiontopicmapping.assignment_question_id = assignments_milestoneuserquestionmapping.assignment_question_id 
-                and assignments_assignmentquestiontopicmapping.main_topic = true
-    
-        join technologies_topic
-            on technologies_topic.id = assignments_assignmentquestiontopicmapping.topic_id
-        
-        join technologies_topicnode
-            on technologies_topicnode.topic_id = technologies_topic.id
-        
-        join technologies_topictemplate
-            on technologies_topictemplate.id = technologies_topicnode.topic_template_id and technologies_topictemplate.id in (102,103,119,334,336,338,339,340,341,342,344,410)
-    
+
         where assignments_milestoneuserquestionmapping.content_type_id is null
         group by 1,2,3,4,5,6,7,8,9,10,11) a 
         group by 1,2,3,4,5,6,7,8,9,10;
