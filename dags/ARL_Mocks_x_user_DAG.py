@@ -466,7 +466,7 @@ transform_data = PostgresOperator(
             courses c
         join course_user_mapping
             on course_user_mapping.course_id = c.course_id and course_user_mapping.status in (8,9,11,12,30)
-                and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34)
+                and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34,50,51,52,53,54,55,56,57,58,59,60)
         left join one_to_one 
             on c.course_id = one_to_one.course_id and course_user_mapping.user_id = one_to_one.student_user_id
         left join course_user_category_mapping cucm

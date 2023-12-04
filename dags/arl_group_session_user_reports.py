@@ -214,7 +214,7 @@ transform_data = PostgresOperator(
                 courses c 
             join course_user_mapping cum 
                 on cum.course_id = c.course_id and cum.status in (8,9,11,12,30)
-                    and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34)
+                    and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34,50,51,52,53,54,55,56,57,58,59,60)
             group by 1,2)
         
         select 
@@ -259,7 +259,7 @@ transform_data = PostgresOperator(
             group_sessions gs
         join courses c 
             on c.course_id = gs.course_id and gs.with_mentees = true
-                and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34) 
+                and c.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,34,50,51,52,53,54,55,56,57,58,59,60) 
         join course_user_mapping cum 
             on cum.course_id = c.course_id and cum.status in (8,9,11,12,30)
                 and gs.mentee_user_id = cum.user_id

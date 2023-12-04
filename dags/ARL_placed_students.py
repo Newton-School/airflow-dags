@@ -269,7 +269,7 @@ transform_data = PostgresOperator(
             select 
             
             Case when placement.Status in (5,16,17,19,20) and course_structure_id in (1,18,5) then 'Clean' 
-            when placement.Status in (5,16,17,19,20) and course_structure_id in (6,8,11,12,13,19,14,20) then 'University Placement'
+            when placement.Status in (5,16,17,19,20) and course_structure_id in (6,8,11,12,13,19,14,20,50,51,52,53,54,55,56,57,58,59,60) then 'University Placement'
             when placement.Status in (3) and CTC >= ISA then 'Not Contacted'
             when placement.Status in (3) and CTC < ISA then 'Unclean (Below ISA)'
             when placement.Status in (4,18) then 'Confirmation Pending by Student'
@@ -316,7 +316,7 @@ transform_data = PostgresOperator(
             clean as (
             select 
             case when RANK = 1 and course_structure_id in (1,18,5) then 'Clean' 
-            when course_structure_id in (6,8,11,12,13,19,14,20) then 'University Placement'
+            when course_structure_id in (6,8,11,12,13,19,14,20,50,51,52,53,54,55,56,57,58,59,60) then 'University Placement'
             else 'Alum Placement' end as Offer_type,
             Placement_id,
             user_id,

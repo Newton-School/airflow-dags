@@ -104,7 +104,7 @@ transform_data = PostgresOperator(
                 case 
                     when courses_course.course_structure_id in (1,18) then 'PAP'
                     when courses_course.course_structure_id in (8,22,23) then 'Upfront - MIA'
-                    when courses_course.course_structure_id in (14,20) then 'Data Science - Certification'
+                    when courses_course.course_structure_id in (14,20,50,51,52,53,54,55,56,57,58,59,60) then 'Data Science - Certification'
                     when courses_course.course_structure_id in (11,26) then 'Data Science - IU'
                     when courses_course.course_structure_id in (6,12,19) then 'Upfront - FSD'
                 end as course_structure_class,
@@ -120,7 +120,7 @@ transform_data = PostgresOperator(
             from
                 courses_courseusermapping
             join courses_course 
-                on courses_course.id = courses_courseusermapping.course_id and courses_course.course_structure_id in (1,6,8,11,12,14,18,19,20,22,23,26,32)
+                on courses_course.id = courses_courseusermapping.course_id and courses_course.course_structure_id in (1,6,8,11,12,14,18,19,20,22,23,26,32,50,51,52,53,54,55,56,57,58,59,60)
             left join courses_courseuserlabelmapping 
                 on courses_courseuserlabelmapping.course_user_mapping_id = courses_courseusermapping.admin_course_user_mapping_id and label_id = 677
             
@@ -133,7 +133,7 @@ transform_data = PostgresOperator(
                             *,
                             case
                                 when (lu_csid in (1,18) and ((lu_start_date <= current_date) and (au_start_date + interval '15 Days') <= current_date) and au_end_date>= current_date and lu_end_date >= current_date) then 'Active'
-                                when (lu_csid in (6,8,11,12,13,14,19,20,22,23,26,32) and (au_start_date <= current_date) and au_end_date>= current_date and lu_end_date >= current_date) then 'Active'
+                                when (lu_csid in (6,8,11,12,13,14,19,20,22,23,26,32,50,51,52,53,54,55,56,57,58,59,60) and (au_start_date <= current_date) and au_end_date>= current_date and lu_end_date >= current_date) then 'Active'
                                 else 'Inactive' end as batch_active_status_excluding_i2_check,
                             case 
                                 when lu_course_id in (
@@ -191,7 +191,7 @@ transform_data = PostgresOperator(
                         case 
                             when lu_csid in (1,18) then 'PAP'
                             when lu_csid in (6,8,12,13,19,22,23) then 'Upfront - Non Data Science'
-                            when lu_csid in (11,14,20,26) then 'Data Science + IU'
+                            when lu_csid in (11,14,20,26,50,51,52,53,54,55,56,57,58,59,60) then 'Data Science + IU'
                             when lu_csid in (32) then 'Upfront - I2 batches'
                             else 'No Tag' 
                         end as course_type,
