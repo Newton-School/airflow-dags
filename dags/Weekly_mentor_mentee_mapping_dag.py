@@ -10,7 +10,6 @@ default_args = {
     'start_date': datetime(2023, 3, 16),
 }
 
-
 def extract_data_to_nested(**kwargs):
     def clean_input(data_type, data_value):
         if data_type == 'string':
@@ -87,7 +86,7 @@ left join courses_subbatch
 left join courses_subbatchcourseusermapping
     on courses_subbatchcourseusermapping.sub_batch_id = courses_subbatch.id and courses_subbatchcourseusermapping.is_deleted = false
 left join courses_course
-    on courses_course.id = courses_subbatch.course_id and courses_course.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,32)
+    on courses_course.id = courses_subbatch.course_id and courses_course.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,32,50,51,52,53,54,55,56,57,58,59,60)
 left join courses_courseusermapping
     on courses_courseusermapping.course_id = courses_course.id and courses_courseusermapping.id = courses_subbatchcourseusermapping.course_user_mapping_id and courses_courseusermapping.status in (5,8,9)
 left join auth_user au2
@@ -120,7 +119,7 @@ where courses_courseusermapping.id not in
                                     on ccum.admin_course_user_mapping_id = courses_courseusermapping.id
                                 left join courses_course as cc 
                                     on ccum.course_id = cc.id
-                                where ((courses_course.course_structure_id in (6,8,11,12,13,14,19,20,22,23,26) and courses_courseusermapping.status in (8)) or (courses_course.course_structure_id in (1,18) and courses_courseusermapping.status in (5,9)))
+                                where ((courses_course.course_structure_id in (6,8,11,12,13,14,19,20,22,23,26,50,51,52,53,54,55,56,57,58,59,60) and courses_courseusermapping.status in (8)) or (courses_course.course_structure_id in (1,18) and courses_courseusermapping.status in (5,9)))
                                 order by 1)
                                 
                             select distinct

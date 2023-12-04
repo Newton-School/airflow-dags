@@ -89,7 +89,7 @@ transform_data = PostgresOperator(
                     join auth_user
                         on auth_user.id = courses_courseusermapping.user_id
                     where date(courses_course.start_timestamp) < date(current_date)
-                    and courses_course.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26)
+                    and courses_course.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,50,51,52,53,54,55,56,57,58,59,60)
                     and unit_type like 'LEARNING'),
                 
                 non_studying as 
