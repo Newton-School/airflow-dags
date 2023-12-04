@@ -26,8 +26,23 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-                'INSERT INTO courses (course_id,course_name,unit_type,course_structure_id,course_structure_name,course_structure_class,course_start_timestamp,course_end_timestamp,course_type,hash,created_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                'on conflict (course_id) do update set course_name=EXCLUDED.course_name,course_structure_id =EXCLUDED.course_structure_id,course_structure_name = EXCLUDED.course_structure_name,course_structure_class =EXCLUDED.course_structure_class,course_start_timestamp=EXCLUDED.course_start_timestamp,course_end_timestamp=EXCLUDED.course_end_timestamp ;',
+                'INSERT INTO courses (course_id,'
+                'course_name,'
+                'unit_type,'
+                'course_structure_id,'
+                'course_structure_name,'
+                'course_structure_class,'
+                'course_start_timestamp,'
+                'course_end_timestamp,'
+                'course_type,'
+                'hash,'
+                'created_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'on conflict (course_id) do update set course_name = EXCLUDED.course_name,'
+                'course_structure_id = EXCLUDED.course_structure_id,'
+                'course_structure_name = EXCLUDED.course_structure_name,'
+                'course_structure_class = EXCLUDED.course_structure_class,'
+                'course_start_timestamp = EXCLUDED.course_start_timestamp,'
+                'course_end_timestamp = EXCLUDED.course_end_timestamp;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -86,7 +101,7 @@ transform_data = PostgresOperator(
     case 
         when courses_course.course_structure_id in (1,18) then 'PAP'
         when courses_course.course_structure_id in (8,22,23) then 'Upfront - MIA'
-        when courses_course.course_structure_id in (14,20) then 'Data Science - Certification'
+        when courses_course.course_structure_id in (14,20,50,51,52,53,54,55,56,57,58,59,60) then 'Data Science - Certification'
         when courses_course.course_structure_id in (11,26) then 'Data Science - IU'
         when courses_course.course_structure_id in (6,12,19) then 'Upfront - FSD'
         when courses_course.course_structure_id in (32) then 'Upfront - FSD: Instructor - 2'
