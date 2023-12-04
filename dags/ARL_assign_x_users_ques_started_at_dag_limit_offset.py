@@ -215,7 +215,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                     courses c 
                 join course_user_mapping cum 
                     on cum.course_id = c.course_id and cum.status in (8,9,11,12,30)
-                        and c.course_structure_id in (1,6,7,8,11,12,13,14,18,19,20,22,23,26,34,44,47)
+                        and c.course_structure_id in (1,6,7,8,11,12,13,14,18,19,20,22,23,26,34,44,47,50,51,52,53,54,55,56,57,58,59,60)
                 group by 1,2),
                 
             questions_details as
@@ -268,7 +268,7 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                 from
                     assignments a 
                 join courses c 
-                    on c.course_id = a.course_id and c.course_structure_id in (1,6,7,8,11,12,13,14,18,19,20,22,23,26,34,44,47)
+                    on c.course_id = a.course_id and c.course_structure_id in (1,6,7,8,11,12,13,14,18,19,20,22,23,26,34,44,47,50,51,52,53,54,55,56,57,58,59,60)
                         and a.original_assignment_type = 1 and a.hidden = false
                             and (a.assignment_id between %d and %d)
                 join course_user_mapping cum 
@@ -345,7 +345,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                 courses c 
             join course_user_mapping cum 
                 on cum.course_id = c.course_id and cum.status in (8,9,11,12,30)
-                    and c.course_structure_id in (1,6,7,8,11,12,13,14,18,19,20,22,23,26,34,44,47)
+                    and c.course_structure_id in (1,6,7,8,11,12,13,14,18,19,20,22,23,26,34,44,47,50,51,52,53,54,55,56,57,58,59,60)
             group by 1,2),
             
         questions_details as
@@ -398,7 +398,7 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
             from
                 assignments a 
             join courses c 
-                on c.course_id = a.course_id and c.course_structure_id in (1,6,7,8,11,12,13,14,18,19,20,22,23,26,34,44,47)
+                on c.course_id = a.course_id and c.course_structure_id in (1,6,7,8,11,12,13,14,18,19,20,22,23,26,34,44,47,50,51,52,53,54,55,56,57,58,59,60)
                     and a.original_assignment_type = 1 and a.hidden = false
                         and (a.assignment_id between %d and %d)
             join course_user_mapping cum 
