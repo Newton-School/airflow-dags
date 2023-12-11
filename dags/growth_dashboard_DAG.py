@@ -443,7 +443,7 @@ transform_data = PostgresOperator(
             left join responded on responded.email_address = user_level.email
             left join test_taken on test_taken.email = user_level.email
             left join source_mapping on source_mapping.utm_source = user_level.utm_source 
-            group by 1,2,3,4,5,6,7,8,user_level.lead_owner,user_level.mx_priority_status,rfd_date,test_taken.marks_obtained,test_taken.test_date,test_taken.total_mcqs_attempted,utm_source,utm_medium,utm_campaign,source_mapping.source
+            group by 1,2,3,4,5,6,7,8,user_level.lead_owner,user_level.mx_priority_status,rfd_date,test_taken.marks_obtained,test_taken.test_date,test_taken.total_mcqs_attempted,user_level.utm_source,utm_medium,utm_campaign,source_mapping.source
                 
     ;
         ''',
