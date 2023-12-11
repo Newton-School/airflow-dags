@@ -33,8 +33,8 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO growth_dashboard (id,email,course_timeline_flow,cum_created_at,date_joined,cutfm_created_at,prospect_date,course_id,created_at,churned_date,salary,why_do_you_want_to_join,degree,twelfth_marks,graduation_year,life_status,prospect_stage,icp_status,was_prospect,ol,paid_on_product,live_class,lead_owner,number_of_dials_prospect,number_of_dials,number_of_dials_attempted,number_of_connects,paid_on_product_and_organic,docs,responded_for_want_a_call,lead_quality,rfd_date,marks_obtained,test_date,total_mcqs_attempted,'
-            'utm_source,utm_medium,utm_campaign)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
+            'utm_source,utm_medium,utm_campaign,source)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
             (
                 transform_row[0],
                 transform_row[1],
@@ -74,6 +74,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[35],
                 transform_row[36],
                 transform_row[37],
+                transform_row[38],
 
             )
         )
@@ -129,7 +130,8 @@ create_table = PostgresOperator(
             total_mcqs_attempted int,
             utm_source varchar(256),
             utm_medium varchar(256),
-            utm_campaign varchar(256)
+            utm_campaign varchar(256),
+            source varchar(256)
         );
     ''',
     dag=dag
@@ -431,14 +433,16 @@ transform_data = PostgresOperator(
             test_taken.marks_obtained,
             test_taken.test_date,
             test_taken.total_mcqs_attempted,
-            utm_source,
+            user_level.utm_source,
             utm_medium,
-            utm_campaign
+            utm_campaign,
+            source_mapping.source
             from user_level
             left join churned_date_final on churned_date_final.email_address = user_level.email
             left join open_prospect_leads on open_prospect_leads.email_address = user_level.email
             left join responded on responded.email_address = user_level.email
             left join test_taken on test_taken.email = user_level.email
+            left join source_mapping on source_mapping.utm_source = user_level.utm_source 
             group by 1,2,3,4,5,6,7,8,user_level.lead_owner,user_level.mx_priority_status,rfd_date,test_taken.marks_obtained,test_taken.test_date,test_taken.total_mcqs_attempted,utm_source,utm_medium,utm_campaign
                 
     ;
