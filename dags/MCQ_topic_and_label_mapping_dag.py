@@ -92,9 +92,9 @@ create_table = PostgresOperator(
             mcq_created_at timestamp,
             correct_choice int,
             difficulty_level int,
-            hash varchar(32),
+            hash text,
             is_deleted boolean,
-            question_text varchar(8256),
+            question_text text,
             question_type int,
             question_for_assessment_type integer[],
             peer_reviewed boolean,
@@ -103,7 +103,7 @@ create_table = PostgresOperator(
             mcq_utility_type int,
             mcq_relevance int,
             label_id int,
-            label_name varchar(256)
+            label_name text
         );
     ''',
     dag=dag
