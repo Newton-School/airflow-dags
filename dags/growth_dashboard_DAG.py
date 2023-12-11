@@ -207,6 +207,9 @@ transform_data = PostgresOperator(
                 when course_timeline_flow = 11 THEN 'Business Inbound'
                 end as course_timeline_flow,
                 courses.course_id,
+                users_info.utm_source,
+            users_info.utm_medium,
+            users_info.utm_campaign,
             date(course_user_mapping.created_at) as cum_created_at,
             date(course_user_timeline_flow_mapping.created_at) as cutfm_created_at,
             date(users_info.date_joined) as date_joined
@@ -227,6 +230,9 @@ transform_data = PostgresOperator(
             cum_created_at,
             date_joined,
             cutfm_created_at,
+            utm_source,
+            utm_medium,
+            utm_campaign,
             case when question_text = 'What are you doing currently?' then apply_form_response end as "What are you doing currently?",
             case when question_text = 'Graduation Year (College passing out year)' then apply_form_response end as "Graduation Year (College passing out year)",
             case when question_text in ('Designation','How much salary do you get in a month currently?','What is your total yearly salary package? (LPA - Lakh Per Annum)') then apply_form_response end as "salary",
@@ -246,6 +252,9 @@ transform_data = PostgresOperator(
             date_joined,
             cutfm_created_at,
             course_id,
+            utm_source,
+            utm_medium,
+            utm_campaign,
             max("salary") as "salary",
             max("why_do_you_want_to_join") as "why_do_you_want_to_join",
             max("degree") as "degree",
@@ -254,7 +263,7 @@ transform_data = PostgresOperator(
             max("What are you doing currently?") as life_status,
             max(conviction) as conviction
             from b
-            group by 1,2,3,4,5,6
+            group by 1,2,3,4,5,6,7,8,9
             ),
             all_time_prospect as(
             select
@@ -414,13 +423,16 @@ transform_data = PostgresOperator(
             rfd_date,
             test_taken.marks_obtained,
             test_taken.test_date,
-            test_taken.total_mcqs_attempted
+            test_taken.total_mcqs_attempted,
+            utm_source,
+            utm_medium,
+            utm_campaign
             from user_level
             left join churned_date_final on churned_date_final.email_address = user_level.email
             left join open_prospect_leads on open_prospect_leads.email_address = user_level.email
             left join responded on responded.email_address = user_level.email
             left join test_taken on test_taken.email = user_level.email
-            group by 1,2,3,4,5,6,7,8,user_level.lead_owner,user_level.mx_priority_status,rfd_date,test_taken.marks_obtained,test_taken.test_date,test_taken.total_mcqs_attempted
+            group by 1,2,3,4,5,6,7,8,user_level.lead_owner,user_level.mx_priority_status,rfd_date,test_taken.marks_obtained,test_taken.test_date,test_taken.total_mcqs_attempted,utm_source,utm_medium,utm_campaign
                 
     ;
         ''',
