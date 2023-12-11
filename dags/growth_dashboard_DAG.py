@@ -32,9 +32,14 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO growth_dashboard (id,email,course_timeline_flow,cum_created_at,date_joined,cutfm_created_at,prospect_date,course_id,created_at,churned_date,salary,why_do_you_want_to_join,degree,twelfth_marks,graduation_year,life_status,prospect_stage,icp_status,was_prospect,ol,paid_on_product,live_class,lead_owner,number_of_dials_prospect,number_of_dials,number_of_dials_attempted,number_of_connects,paid_on_product_and_organic,docs,responded_for_want_a_call,lead_quality,rfd_date,marks_obtained,test_date,total_mcqs_attempted,'
+            'INSERT INTO growth_dashboard (id,email,course_timeline_flow,cum_created_at,date_joined,'
+            'cutfm_created_at,prospect_date,course_id,created_at,churned_date,salary,why_do_you_want_to_join,'
+            'degree,twelfth_marks,graduation_year,life_status,prospect_stage,icp_status,was_prospect,ol,'
+            'paid_on_product,live_class,lead_owner,number_of_dials_prospect,number_of_dials,'
+            'number_of_dials_attempted,number_of_connects,paid_on_product_and_organic,docs,responded_for_want_a_call,'
+            'lead_quality,rfd_date,marks_obtained,test_date,total_mcqs_attempted,'
             'utm_source,utm_medium,utm_campaign,source)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
             (
                 transform_row[0],
                 transform_row[1],
@@ -74,7 +79,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[35],
                 transform_row[36],
                 transform_row[37],
-
+                transform_row[38],
             )
         )
     pg_conn.commit()
