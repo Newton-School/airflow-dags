@@ -80,7 +80,6 @@ def extract_data_to_nested(**kwargs):
                 transform_row[36],
                 transform_row[37],
                 transform_row[38],
-                transform_row[39],
             )
         )
     pg_conn.commit()
@@ -98,7 +97,7 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE TABLE IF NOT EXISTS growth_dashboard (
-            id serial not null PRIMARY KEY,
+            id serial,
             email varchar(256),
             course_timeline_flow varchar(256), 
             cum_created_at DATE,
