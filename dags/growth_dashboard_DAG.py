@@ -439,7 +439,7 @@ transform_data = PostgresOperator(
             user_level.utm_source,
             utm_medium,
             utm_campaign,
-            source_mapping.source
+            case when source_mapping.source is null then 'Organic' else source_mapping.source end as source 
             from user_level
             left join churned_date_final on churned_date_final.email_address = user_level.email
             left join open_prospect_leads on open_prospect_leads.email_address = user_level.email
