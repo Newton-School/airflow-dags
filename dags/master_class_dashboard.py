@@ -69,7 +69,7 @@ dag = DAG(
     'Master_Class_Dashboard_DAG',
     default_args=default_args,
     description='An Analytics Reporting Layer DAG for Master Class Dashboard',
-    schedule_interval='30 2 * * *',
+    schedule_interval='40 2 * * *',
     catchup=False
 )
 
