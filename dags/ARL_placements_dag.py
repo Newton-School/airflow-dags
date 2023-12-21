@@ -33,8 +33,8 @@ def extract_data_to_nested(**kwargs):
             'user_id,course_id,referral_set,referred_at,placed_at,'
             'round_type,round_start_date,round_end_date,round,no_show,'
             'round_status,company_status,company_status_prod,company_course_user_mapping_id,'
-            'company_course_user_mapping_progress_id,round_new,min_ctc)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'company_course_user_mapping_progress_id,round_new,min_ctc, email, course_structure_class)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set company_name=EXCLUDED.company_name,'
             'company_type=EXCLUDED.company_type,key_account_manager=EXCLUDED.key_account_manager,'
             'sales_poc=EXCLUDED.sales_poc,job_title=EXCLUDED.job_title,'
@@ -45,7 +45,9 @@ def extract_data_to_nested(**kwargs):
             'round=EXCLUDED.round,no_show=EXCLUDED.no_show,round_status=EXCLUDED.round_status,'
             'company_status=EXCLUDED.company_status,company_status_prod=EXCLUDED.company_status_prod,'
             'company_course_user_mapping_progress_id=EXCLUDED.company_course_user_mapping_progress_id,'
-            'round_new=EXCLUDED.round_new,min_ctc=EXCLUDED.min_ctc;',
+            'round_new=EXCLUDED.round_new,min_ctc=EXCLUDED.min_ctc,'
+            'email = EXCLUDED.email,'
+            'course_structure_class = EXCLUDED.course_structure_class;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -75,6 +77,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[25],
                 transform_row[26],
                 transform_row[27],
+                transform_row[28],
+                transform_row[29],
             )
         )
     pg_conn.commit()
@@ -120,7 +124,9 @@ create_table = PostgresOperator(
             company_course_user_mapping_id bigint,
             company_course_user_mapping_progress_id bigint,
             round_new int,
-            min_ctc int
+            min_ctc int,
+            email text,
+            course_structure_class text
         );
     ''',
     dag=dag
@@ -257,7 +263,8 @@ transform_data = PostgresOperator(
                     
                     placements_company_user_mapping.company_course_user_mapping_id,
                     placements_round_progress.company_course_user_mapping_progress_id,
-                    placements_job_openings.min_ctc
+                    placements_job_openings.min_ctc,
+                    ui.email
                     
                     
                     from placements_company_user_mapping
@@ -265,6 +272,8 @@ transform_data = PostgresOperator(
                     left join placements_company on placements_company.company_id = placements_job_openings.company_id
                     left join course_user_mapping on course_user_mapping.course_user_mapping_id = placements_company_user_mapping.course_user_mapping_id
                     left join placements_round_progress on placements_round_progress.company_course_user_mapping_id = placements_company_user_mapping.company_course_user_mapping_id
+                    left join users_info ui 
+                    	on ui.user_id = course_user_mapping.user_id 
                     order by 2,placements_company_user_mapping.company_course_user_mapping_id,placements_round_progress.company_course_user_mapping_progress_id
         ),
         b as(
@@ -324,7 +333,8 @@ transform_data = PostgresOperator(
                     
                     placements_company_user_mapping.company_course_user_mapping_id,
                     cast(null as int) as company_course_user_mapping_progress_id,
-                    placements_job_openings.min_ctc
+                    placements_job_openings.min_ctc,
+                    ui.email
                     
                     
                     
@@ -332,6 +342,9 @@ transform_data = PostgresOperator(
                     left join placements_job_openings on placements_job_openings.job_opening_id = placements_company_user_mapping.job_opening_id
                     left join placements_company on placements_company.company_id = placements_job_openings.company_id
                     left join course_user_mapping on course_user_mapping.course_user_mapping_id = placements_company_user_mapping.course_user_mapping_id
+                    left join users_info ui 
+                    	on ui.user_id = course_user_mapping.user_id 
+
                     where placements_company_user_mapping.status in (3,4,6,11,18,21,5,16,17,19,20,25) and placed_at is not null
                     order by 2,placements_company_user_mapping.company_course_user_mapping_id
         ),
@@ -392,7 +405,8 @@ transform_data = PostgresOperator(
                     
                     placements_company_user_mapping.company_course_user_mapping_id,
                     cast(null as int) as company_course_user_mapping_progress_id,
-                    placements_job_openings.min_ctc
+                    placements_job_openings.min_ctc,
+                    ui.email
                     
                     
                     
@@ -400,6 +414,9 @@ transform_data = PostgresOperator(
                     left join placements_job_openings on placements_job_openings.job_opening_id = placements_company_user_mapping.job_opening_id
                     left join placements_company on placements_company.company_id = placements_job_openings.company_id
                     left join course_user_mapping on course_user_mapping.course_user_mapping_id = placements_company_user_mapping.course_user_mapping_id
+                    left join users_info ui 
+                    	on ui.user_id = course_user_mapping.user_id 
+
                     where referred_at is not null
                     order by 2,placements_company_user_mapping.company_course_user_mapping_id
         
@@ -412,17 +429,49 @@ transform_data = PostgresOperator(
         select * from c
         )
         select 
-        table_unique_key,company_id,company_name,company_type,key_account_manager,sales_poc,job_opening_id,job_title,placement_role_title,number_of_rounds,number_of_openings,user_id,course_id,referral_set,referred_at,placed_at,round_type,round_start_date,round_end_date,round,no_show,round_status,company_status,company_status_prod,company_course_user_mapping_id,company_course_user_mapping_progress_id,
-        case when round = 'Referral' then 1
-        when round = 'Round 1' then 2
-        when round = 'Round 2' then 3
-        when round = 'Round 3' then 4
-        when round = 'Round 4' then 5
-        when round = 'Pre-Final Round' then 6
-        when round = 'Final Round' then 7
-        when round = 'Placed' then 8 end as round_new,
-        min_ctc
-        from d
+			table_unique_key,
+			company_id,
+			company_name,
+			company_type,
+			key_account_manager,
+			sales_poc,
+			job_opening_id,
+			job_title,
+			placement_role_title,
+			number_of_rounds,
+			number_of_openings,
+			user_id,
+			d.course_id,
+			referral_set,
+			referred_at,
+			placed_at,
+			round_type,
+			round_start_date,
+			round_end_date,
+			round,
+			no_show,
+			round_status,
+			company_status,
+			company_status_prod,
+			company_course_user_mapping_id,
+			company_course_user_mapping_progress_id,
+	        case 
+		        when round = 'Referral' then 1
+		        when round = 'Round 1' then 2
+		        when round = 'Round 2' then 3
+		        when round = 'Round 3' then 4
+		        when round = 'Round 4' then 5
+		        when round = 'Pre-Final Round' then 6
+		        when round = 'Final Round' then 7
+		        when round = 'Placed' then 8 
+		    end as round_new,
+	        min_ctc,
+	        email,
+	        ccc.course_structure_class 
+        from 
+        	d
+        left join courses ccc 
+        	on ccc.course_id = d.course_id 
         order by 
         case when round = 'Referral' then 1
         when round = 'Round 1' then 2
