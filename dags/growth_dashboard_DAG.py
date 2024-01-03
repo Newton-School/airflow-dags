@@ -217,6 +217,7 @@ transform_data = PostgresOperator(
                 when course_timeline_flow = 9 THEN 'Product Inbound'
                 when course_timeline_flow = 10 THEN 'One Video'
                 when course_timeline_flow = 11 THEN 'Business Inbound'
+                when course_timeline_flow = 12 THEN 'New Design Experiment Timeline with Master Class Banner'
                 end as course_timeline_flow,
                 courses.course_id,
                 users_info.utm_source,
