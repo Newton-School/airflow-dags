@@ -250,7 +250,7 @@ transform_data = PostgresOperator(
         from
             assessments
         join courses
-            on courses.course_id = assessments.course_id and course_structure_id in (1,6,7,8,11,12,14,18,19,20,22,23,26,34,44,50,51,52,53,54,55,56,57,58,59,60) 
+            on courses.course_id = assessments.course_id and course_structure_id in (1,6,7,8,11,12,14,18,19,20,22,23,26,34,44,50,51,52,53,54,55,56,57,58,59,60,63,64,65,66,67) 
                 and date(assessments.start_timestamp) >= '2022-07-01'
         		    and courses.course_id in (select distinct wab.lu_course_id from wow_active_batches wab)
         join course_user_mapping
