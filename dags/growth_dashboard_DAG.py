@@ -38,8 +38,8 @@ def extract_data_to_nested(**kwargs):
             'paid_on_product,live_class,lead_owner,number_of_dials_prospect,number_of_dials,'
             'number_of_dials_attempted,number_of_connects,paid_on_product_and_organic,docs,responded_for_want_a_call,'
             'lead_quality,rfd_date,marks_obtained,test_date,total_mcqs_attempted,'
-            'utm_source,utm_medium,utm_campaign,source)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
+            'utm_source,utm_medium,utm_campaign,source,lead_last_call_status)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
             (
                 transform_row[0],
                 transform_row[1],
@@ -79,6 +79,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[35],
                 transform_row[36],
                 transform_row[37],
+                transform_row[38],
             )
         )
     pg_conn.commit()
@@ -134,7 +135,8 @@ create_table = PostgresOperator(
             utm_source varchar(256),
             utm_medium varchar(256),
             utm_campaign varchar(256),
-            source varchar(256)
+            source varchar(256),
+            lead_last_call_status varchar(256)
         );
     ''',
     dag=dag
@@ -329,7 +331,8 @@ transform_data = PostgresOperator(
             lsq_leads_x_activities.lead_created_on,
             lsq_leads_x_activities.mx_priority_status,
             case when docs.docs_collected is null then 0 else 1 end as docs_collected,
-            date(lsq_leads_x_activities.mx_rfd_date) as rfd_date
+            date(lsq_leads_x_activities.mx_rfd_date) as rfd_date,
+            lsq_leads_x_activities.lead_last_call_status
             from final
             left join lsq_leads_x_activities on lsq_leads_x_activities.email_address = final.email
             left join all_time_prospect on all_time_prospect.email_address = final.email
@@ -440,14 +443,15 @@ transform_data = PostgresOperator(
             user_level.utm_source,
             utm_medium,
             utm_campaign,
-            case when source_mapping.source is null then 'Organic' else source_mapping.source end as source 
+            case when source_mapping.source is null then 'Organic' else source_mapping.source end as source,
+            lead_last_call_status 
             from user_level
             left join churned_date_final on churned_date_final.email_address = user_level.email
             left join open_prospect_leads on open_prospect_leads.email_address = user_level.email
             left join responded on responded.email_address = user_level.email
             left join test_taken on test_taken.email = user_level.email
             left join source_mapping on source_mapping.utm_source = user_level.utm_source 
-            group by 1,2,3,4,5,6,7,8,user_level.lead_owner,user_level.mx_priority_status,rfd_date,test_taken.marks_obtained,test_taken.test_date,test_taken.total_mcqs_attempted,user_level.utm_source,utm_medium,utm_campaign,source_mapping.source
+            group by 1,2,3,4,5,6,7,8,user_level.lead_owner,user_level.mx_priority_status,rfd_date,test_taken.marks_obtained,test_taken.test_date,test_taken.total_mcqs_attempted,user_level.utm_source,utm_medium,utm_campaign,source_mapping.source,lead_last_call_status
                 
     ;
         ''',
