@@ -63,7 +63,9 @@ create_table = PostgresOperator(
             number_of_submissions int,
             error_faced_count int,
             marks_obtained int,
-            max_test_case_passed_during_contest int
+            max_test_case_passed_during_contest int,
+            project_subjective_feedback text,
+            project_marks_obtained text
         );
     ''',
     dag=dag
@@ -91,8 +93,10 @@ def extract_data_to_nested(**kwargs):
             'assignment_completed_at, assignment_cheated_marked_at, cheated,'
             'plagiarism_submission_id, plagiarism_score, solution_length, '
             'number_of_submissions, error_faced_count, marks_obtained,'
-            'max_test_case_passed_during_contest)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'max_test_case_passed_during_contest,'
+            'project_subjective_feedback,'
+            'project_marks_obtained)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set question_started_at=EXCLUDED.question_started_at,'
             'question_completed_at = EXCLUDED.question_completed_at,'
             'completed=EXCLUDED.completed, all_test_case_passed=EXCLUDED.all_test_case_passed, '
@@ -112,7 +116,9 @@ def extract_data_to_nested(**kwargs):
             'number_of_submissions=EXCLUDED.number_of_submissions,'
             'error_faced_count=EXCLUDED.error_faced_count,'
             'marks_obtained = EXCLUDED.marks_obtained,'
-            'max_test_case_passed_during_contest = EXCLUDED.max_test_case_passed_during_contest;',
+            'max_test_case_passed_during_contest = EXCLUDED.max_test_case_passed_during_contest,'
+            'project_subjective_feedback = EXCLUDED.project_subjective_feedback,'
+            'project_marks_obtained = EXCLUDED.project_marks_obtained;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -140,6 +146,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[23],
                 transform_row[24],
                 transform_row[25],
+                transform_row[26],
+                transform_row[27],
             )
         )
         pg_conn.commit()
@@ -153,49 +161,92 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
         postgres_conn_id='postgres_read_replica',
         dag=dag,
         sql=''' select count(table_unique_key) from
-        (with latest_submission as(
-                select
-                
-                case
-                when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then 'coding'
-                when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then 'frontend'
-                when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then 'game'
-                when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then 'project'
-                when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then 'subjective' else 'other' end as playground_type,
-                
-                case
-                when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then assignments_assignmentcourseuserquestionmapping.coding_playground_id
-                when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then assignments_assignmentcourseuserquestionmapping.front_end_playground_id
-                when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then assignments_assignmentcourseuserquestionmapping.game_playground_id
-                when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then assignments_assignmentcourseuserquestionmapping.project_playground_id
-                when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then assignments_assignmentcourseuserquestionmapping.subjective_id else null end as playground_id,
-                
-                case
-                when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then max(pcps.id)
-                when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then max(pfps.id)
-                when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then max(pgps.id)
-                when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then max(ppps.id) else null end as playground_submission_id
-                
-                from assignments_assignmentcourseuserquestionmapping
-                left join playgrounds_codingplayground pcp on pcp.id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
-                left join playgrounds_frontendplayground pfp on pfp.id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id
-                left join playgrounds_gameplayground pgp on pgp.id = assignments_assignmentcourseuserquestionmapping.game_playground_id
-                left join playgrounds_projectplayground ppp on ppp.id = assignments_assignmentcourseuserquestionmapping.project_playground_id
-                left join playgrounds_codingplaygroundsubmission pcps on pcps.coding_playground_id = pcp.id
-                left join playgrounds_frontendplaygroundsubmission pfps on pfps.front_end_playground_id = pfp.id
-                left join playgrounds_projectplaygroundsubmission ppps on ppps.project_playground_id = ppp.id
-                left join playgrounds_gameplaygroundsubmission pgps on pgps.game_playground_id = pgp.id
-                
-                group by 1,2,
-                assignments_assignmentcourseuserquestionmapping.coding_playground_id,
-                assignments_assignmentcourseuserquestionmapping.front_end_playground_id,
-                assignments_assignmentcourseuserquestionmapping.game_playground_id,
-                assignments_assignmentcourseuserquestionmapping.project_playground_id
-                
-                order by 1,2
-                )
-                select
-                        distinct 
+        (with latest_submission as
+    (
+    select
+        case
+            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then 'coding'
+            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then 'frontend'
+            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then 'game'
+            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then 'project'
+            when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then 'subjective' else 'other' 
+        end as playground_type,
+        
+        case
+            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then assignments_assignmentcourseuserquestionmapping.coding_playground_id
+            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then assignments_assignmentcourseuserquestionmapping.front_end_playground_id
+            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then assignments_assignmentcourseuserquestionmapping.game_playground_id
+            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then assignments_assignmentcourseuserquestionmapping.project_playground_id
+            when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then assignments_assignmentcourseuserquestionmapping.subjective_id else null 
+        end as playground_id,
+        
+        case
+            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then max(pcps.id)
+            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then max(pfps.id)
+            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then max(pgps.id)
+            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then max(ppps.id) else null 
+        end as playground_submission_id
+    from
+        assignments_assignmentcourseuserquestionmapping
+    left join playgrounds_codingplayground pcp 
+        on pcp.id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
+    left join playgrounds_frontendplayground pfp 
+        on pfp.id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id
+    left join playgrounds_gameplayground pgp 
+        on pgp.id = assignments_assignmentcourseuserquestionmapping.game_playground_id
+    left join playgrounds_projectplayground ppp 
+        on ppp.id = assignments_assignmentcourseuserquestionmapping.project_playground_id
+    left join playgrounds_codingplaygroundsubmission pcps 
+        on pcps.coding_playground_id = pcp.id
+    left join playgrounds_frontendplaygroundsubmission pfps 
+        on pfps.front_end_playground_id = pfp.id
+    left join playgrounds_projectplaygroundsubmission ppps 
+        on ppps.project_playground_id = ppp.id
+    left join playgrounds_gameplaygroundsubmission pgps 
+        on pgps.game_playground_id = pgp.id
+    group by 1,2, assignments_assignmentcourseuserquestionmapping.coding_playground_id, assignments_assignmentcourseuserquestionmapping.front_end_playground_id, assignments_assignmentcourseuserquestionmapping.game_playground_id,
+    assignments_assignmentcourseuserquestionmapping.project_playground_id
+    order by 1,2),
+    project_marks as 
+        (select 
+            assignments_assignment.id as assignment_id,
+            courses_courseusermapping.user_id,
+            assignments_assignmentcourseuserquestionmapping.assignment_question_id,
+            
+            max(case 
+                when feedback_feedbackanswer.id is null then feedback_feedbackformuserquestionanswermapping.other_answer 
+            end) as subjective_feedback,
+            
+            max(case 
+                when feedback_feedbackanswer.id is not null then feedback_feedbackanswer.text 
+            end) as project_rating
+        from 
+            assignments_assignment
+        join courses_course
+            on courses_course.id = assignments_assignment.course_id and assignments_assignment.assignment_sub_type = 6
+        join courses_courseusermapping
+            on courses_courseusermapping.course_id = courses_course.id 
+        left join assignments_assignmentcourseusermapping
+            on assignments_assignmentcourseusermapping.course_user_mapping_id = courses_courseusermapping.id 
+                and assignments_assignment.id = assignments_assignmentcourseusermapping.assignment_id
+        left join assignments_assignmentcourseuserquestionmapping
+            on assignments_assignmentcourseuserquestionmapping.assignment_course_user_mapping_id = assignments_assignmentcourseusermapping.id 
+        left join playgrounds_projectplayground
+            on playgrounds_projectplayground.id = assignments_assignmentcourseuserquestionmapping.project_playground_id
+        left join feedback_feedbackformusermapping
+            on feedback_feedbackformusermapping.entity_content_type_id = 81 
+                and feedback_feedbackformusermapping.entity_object_id = playgrounds_projectplayground.id
+        left join feedback_feedbackformuserquestionanswermapping
+            on feedback_feedbackformuserquestionanswermapping.feedback_form_user_mapping_id = feedback_feedbackformusermapping.id 
+        left join feedback_feedbackformuserquestionanswerm2m
+            on feedback_feedbackformuserquestionanswerm2m.feedback_form_user_question_answer_mapping_id = feedback_feedbackformuserquestionanswermapping.id 
+        left join feedback_feedbackanswer
+            on feedback_feedbackanswer.id = feedback_feedbackformuserquestionanswerm2m.feedback_answer_id
+        where feedback_feedbackformusermapping.feedback_form_id in (4458, 4383)
+        group by 1,2,3
+        order by 1,2,3)
+        
+                select distinct 
                         concat(courses_courseusermapping.user_id,assignments_assignmentcourseuserquestionmapping.assignment_question_id,assignments_assignment.id,assignments_assignmentcourseusermapping.id) as table_unique_key,
                         courses_courseusermapping.user_id,
                         assignments_assignment.id as assignment_id,
@@ -205,25 +256,25 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                         assignments_assignmentcourseuserquestionmapping.completed,
                         assignments_assignmentcourseuserquestionmapping.all_test_case_passed,
                         case
-                        when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then 'coding'
-                        when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then 'frontend'
-                        when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then 'game'
-                        when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then 'project'
-                        when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then 'subjective' else 'other' end as playground_type,
+                            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then 'coding'
+                            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then 'frontend'
+                            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then 'game'
+                            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then 'project'
+                            when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then 'subjective' else 'other' 
+                        end as playground_type,
                         case
-                        when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then assignments_assignmentcourseuserquestionmapping.coding_playground_id
-                        when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then assignments_assignmentcourseuserquestionmapping.front_end_playground_id
-                        when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then assignments_assignmentcourseuserquestionmapping.game_playground_id
-                        when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then assignments_assignmentcourseuserquestionmapping.project_playground_id
-                        when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then assignments_assignmentcourseuserquestionmapping.subjective_id else null end as playground_id,
-                        
+                            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then assignments_assignmentcourseuserquestionmapping.coding_playground_id
+                            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then assignments_assignmentcourseuserquestionmapping.front_end_playground_id
+                            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then assignments_assignmentcourseuserquestionmapping.game_playground_id
+                            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then assignments_assignmentcourseuserquestionmapping.project_playground_id
+                            when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then assignments_assignmentcourseuserquestionmapping.subjective_id else null 
+                        end as playground_id,
                         case
-                        when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then pcp.hash
-                        when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then pfp.hash
-                        when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then pgp.hash
-                        when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then ppp.hash
+                            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then pcp.hash
+                            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then pfp.hash
+                            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then pgp.hash
+                            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then ppp.hash
                         else null end as playground_hash,
-                        
                         assignments_assignmentcourseuserquestionmapping.hash,
                         assignments_assignmentcourseuserquestionmapping.latest_assignment_question_hint_mapping_id,
                         assignments_assignmentcourseuserquestionmapping.late_submission,
@@ -233,73 +284,98 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                         assignments_assignmentcourseusermapping.cheated_marked_at as assignment_cheated_marked_at,
                         assignments_assignmentcourseusermapping.cheated,
                         case
-                        when pcps.id is not null then (plag_coding.plagiarism_report #>> '{plagiarism_submission_id}')::float
-                        when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{plagiarism_submission_id}')::float
-                        when ppps.id is not null then (plag_project.plagiarism_report #>> '{plagiarism_submission_id}')::float
-                        when pgps.id is not null then (plag_game.plagiarism_report #>> '{plagiarism_submission_id}')::float end as plagiarism_submission_id,
+                            when pcps.id is not null then (plag_coding.plagiarism_report #>> '{plagiarism_submission_id}')::float
+                            when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{plagiarism_submission_id}')::float
+                            when ppps.id is not null then (plag_project.plagiarism_report #>> '{plagiarism_submission_id}')::float
+                            when pgps.id is not null then (plag_game.plagiarism_report #>> '{plagiarism_submission_id}')::float 
+                        end as plagiarism_submission_id,
                         case
-                        when pcps.id is not null then (plag_coding.plagiarism_report #>> '{plagiarism_score}')::float
-                        when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{plagiarism_score}')::float
-                        when ppps.id is not null then (plag_project.plagiarism_report #>> '{plagiarism_score}')::float
-                        when pgps.id is not null then (plag_game.plagiarism_report #>> '{plagiarism_score}')::float end as plagiarism_score,
+                            when pcps.id is not null then (plag_coding.plagiarism_report #>> '{plagiarism_score}')::float
+                            when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{plagiarism_score}')::float
+                            when ppps.id is not null then (plag_project.plagiarism_report #>> '{plagiarism_score}')::float
+                            when pgps.id is not null then (plag_game.plagiarism_report #>> '{plagiarism_score}')::float 
+                        end as plagiarism_score,
                         case
-                        when pcps.id is not null then (plag_coding.plagiarism_report #>> '{solution_length}')::float
-                        when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{solution_length}')::float
-                        when ppps.id is not null then (plag_project.plagiarism_report #>> '{solution_length}')::float
-                        when pgps.id is not null then (plag_game.plagiarism_report #>> '{solution_length}')::float end as solution_length,
+                            when pcps.id is not null then (plag_coding.plagiarism_report #>> '{solution_length}')::float
+                            when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{solution_length}')::float
+                            when ppps.id is not null then (plag_project.plagiarism_report #>> '{solution_length}')::float
+                            when pgps.id is not null then (plag_game.plagiarism_report #>> '{solution_length}')::float 
+                        end as solution_length,
                         case
-                        when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then count(distinct pcps.id)
-                        when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then count(distinct pfps.id)
-                        when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then count(distinct pgps.id)
-                        when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then count(distinct ppps.id) else null end as number_of_submissions,
+                            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then count(distinct pcps.id)
+                            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then count(distinct pfps.id)
+                            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then count(distinct pgps.id)
+                            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then count(distinct ppps.id) else null 
+                        end as number_of_submissions,
                         case
-                        when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then count(distinct pcps.id) filter (where pcps.current_status not in (3))
-                        when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then count(distinct pfps.id) filter (where pfps.build_status not in (3))
-                        when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then count(distinct ppps.id) filter (where pfps.build_status not in (3)) else null end as error_faced_count,
+                            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then count(distinct pcps.id) filter (where pcps.current_status not in (3))
+                            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then count(distinct pfps.id) filter (where pfps.build_status not in (3))
+                            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then count(distinct ppps.id) filter (where pfps.build_status not in (3)) else null 
+                        end as error_faced_count,
                         assignments_assignmentcourseusermapping.marks as marks_obtained,
-                        assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest
-                        from assignments_assignment
-                            left join courses_course 
-                                    on assignments_assignment.course_id = courses_course.id and (assignments_assignment.id between %d and %d)
-                            left join courses_courseusermapping 
-                                on courses_courseusermapping.course_id = courses_course.id
+                        assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest,
+                        project_marks.subjective_feedback as project_subjective_feedback,
+                        project_marks.project_rating as project_marks_obtained 
+                        from 
+                            assignments_assignment
+                        join courses_course 
+                                on assignments_assignment.course_id = courses_course.id
+                                    and (assignments_assignment.id between %d and %d)
+                        join courses_courseusermapping 
+                            on courses_courseusermapping.course_id = courses_course.id
+                        
+                        join assignments_assignmentcourseusermapping 
+                            on assignments_assignmentcourseusermapping.course_user_mapping_id = courses_courseusermapping.id 
+                                and assignments_assignmentcourseusermapping.assignment_id = assignments_assignment.id
+                      
+                        left join assignments_assignmentcourseuserquestionmapping 
+                            on assignments_assignmentcourseuserquestionmapping.assignment_course_user_mapping_id = assignments_assignmentcourseusermapping.id 
                             
-                            join assignments_assignmentcourseusermapping 
-                                on assignments_assignmentcourseusermapping.course_user_mapping_id = courses_courseusermapping.id 
-                                    and assignments_assignmentcourseusermapping.assignment_id = assignments_assignment.id
-                          
-                            left join assignments_assignmentcourseuserquestionmapping 
-                                on assignments_assignmentcourseuserquestionmapping.assignment_course_user_mapping_id = assignments_assignmentcourseusermapping.id 
-                                
-                            left join playgrounds_codingplayground pcp on pcp.id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
-                            left join playgrounds_frontendplayground pfp on pfp.id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id
-                            left join playgrounds_gameplayground pgp on pgp.id = assignments_assignmentcourseuserquestionmapping.game_playground_id
-                            left join playgrounds_projectplayground ppp on ppp.id = assignments_assignmentcourseuserquestionmapping.project_playground_id
-                            
-                            left join latest_submission as latest_submission_coding on latest_submission_coding.playground_id = assignments_assignmentcourseuserquestionmapping.coding_playground_id and latest_submission_coding.playground_type = 'coding'
-                            left join latest_submission as latest_submission_frontend on latest_submission_frontend.playground_id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id and latest_submission_frontend.playground_type = 'frontend'
-                            left join latest_submission as latest_submission_game on latest_submission_game.playground_id = assignments_assignmentcourseuserquestionmapping.game_playground_id and latest_submission_game.playground_type = 'game'
-                            left join latest_submission as latest_submission_project on latest_submission_project.playground_id = assignments_assignmentcourseuserquestionmapping.project_playground_id and latest_submission_project.playground_type = 'project'
-                            
-                                    
-                            left join playgrounds_codingplaygroundsubmission pcps on pcps.id = latest_submission_coding.playground_submission_id
-                            left join playgrounds_playgroundplagiarismreport as plag_coding on plag_coding.object_id = pcps.id and plag_coding.content_type_id = 70
-                            
-                            left join playgrounds_frontendplaygroundsubmission pfps on pfps.id = latest_submission_frontend.playground_submission_id
-                            left join playgrounds_playgroundplagiarismreport as plag_frontend on plag_frontend.object_id = pfps.id and plag_frontend.content_type_id = 160
-                            
-                            left join playgrounds_projectplaygroundsubmission ppps on ppps.id = latest_submission_project.playground_submission_id
-                            left join playgrounds_playgroundplagiarismreport as plag_project on plag_project.object_id = ppps.id and plag_project.content_type_id = 165
-                            
-                            left join playgrounds_gameplaygroundsubmission pgps on pgps.id = latest_submission_game.playground_submission_id
-                            left join playgrounds_playgroundplagiarismreport as plag_game on plag_game.object_id = pgps.id and plag_game.content_type_id = 179
+                        left join playgrounds_codingplayground pcp 
+                            on pcp.id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
+                        left join playgrounds_frontendplayground pfp 
+                            on pfp.id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id
+                        left join playgrounds_gameplayground pgp 
+                            on pgp.id = assignments_assignmentcourseuserquestionmapping.game_playground_id
+                        left join playgrounds_projectplayground ppp 
+                            on ppp.id = assignments_assignmentcourseuserquestionmapping.project_playground_id
+                        left join latest_submission as latest_submission_coding 
+                            on latest_submission_coding.playground_id = assignments_assignmentcourseuserquestionmapping.coding_playground_id and latest_submission_coding.playground_type = 'coding'
+                        left join latest_submission as latest_submission_frontend 
+                            on latest_submission_frontend.playground_id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id and latest_submission_frontend.playground_type = 'frontend'
+                        left join latest_submission as latest_submission_game 
+                            on latest_submission_game.playground_id = assignments_assignmentcourseuserquestionmapping.game_playground_id and latest_submission_game.playground_type = 'game'
+                        left join latest_submission as latest_submission_project 
+                            on latest_submission_project.playground_id = assignments_assignmentcourseuserquestionmapping.project_playground_id and latest_submission_project.playground_type = 'project'
+                        left join playgrounds_codingplaygroundsubmission pcps 
+                            on pcps.id = latest_submission_coding.playground_submission_id
+                        left join playgrounds_playgroundplagiarismreport as plag_coding 
+                            on plag_coding.object_id = pcps.id and plag_coding.content_type_id = 70
+                        left join playgrounds_frontendplaygroundsubmission pfps 
+                            on pfps.id = latest_submission_frontend.playground_submission_id
+                        left join playgrounds_playgroundplagiarismreport as plag_frontend 
+                            on plag_frontend.object_id = pfps.id and plag_frontend.content_type_id = 160
+                        left join playgrounds_projectplaygroundsubmission ppps 
+                            on ppps.id = latest_submission_project.playground_submission_id
+                        left join playgrounds_playgroundplagiarismreport as plag_project 
+                            on plag_project.object_id = ppps.id and plag_project.content_type_id = 165
+                        left join playgrounds_gameplaygroundsubmission pgps 
+                            on pgps.id = latest_submission_game.playground_submission_id
+                        left join playgrounds_playgroundplagiarismreport as plag_game 
+                            on plag_game.object_id = pgps.id and plag_game.content_type_id = 179
+                        left join project_marks 
+                            on project_marks.user_id = courses_courseusermapping.user_id
+                                and project_marks.assignment_id = assignments_assignment.id 
+                                    and project_marks.assignment_question_id = assignments_assignmentcourseuserquestionmapping.assignment_question_id
                         group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
                         assignments_assignmentcourseuserquestionmapping.coding_playground_id,
                         assignments_assignmentcourseuserquestionmapping.front_end_playground_id,
                         assignments_assignmentcourseuserquestionmapping.game_playground_id,
                         assignments_assignmentcourseuserquestionmapping.project_playground_id,
                         assignments_assignmentcourseusermapping.marks,
-                        assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest) query_rows;
+                        assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest,
+                        project_marks.subjective_feedback,
+                        project_marks.project_rating) query_rows;
             ''' % (start_assignment_id, end_assignment_id),
     )
 
@@ -319,7 +395,7 @@ def limit_offset_generator_func(**kwargs):
     }
 
 
-# TODO: Add Count Logic
+
 def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag_id, current_assignment_sub_dag_id):
     return PostgresOperator(
         task_id='transform_data',
@@ -331,153 +407,221 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
             'task_key': f'transforming_data_{current_assignment_sub_dag_id}.extract_and_transform_individual_assignment_sub_dag_{current_assignment_sub_dag_id}_cps_sub_dag_{cps_sub_dag_id}.limit_offset_generator'
         },
         sql=''' select * from
-        (with latest_submission as(
-select
-
-case
-when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then 'coding'
-when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then 'frontend'
-when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then 'game'
-when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then 'project'
-when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then 'subjective' else 'other' end as playground_type,
-
-case
-when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then assignments_assignmentcourseuserquestionmapping.coding_playground_id
-when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then assignments_assignmentcourseuserquestionmapping.front_end_playground_id
-when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then assignments_assignmentcourseuserquestionmapping.game_playground_id
-when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then assignments_assignmentcourseuserquestionmapping.project_playground_id
-when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then assignments_assignmentcourseuserquestionmapping.subjective_id else null end as playground_id,
-
-case
-when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then max(pcps.id)
-when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then max(pfps.id)
-when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then max(pgps.id)
-when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then max(ppps.id) else null end as playground_submission_id
-
-from assignments_assignmentcourseuserquestionmapping
-left join playgrounds_codingplayground pcp on pcp.id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
-left join playgrounds_frontendplayground pfp on pfp.id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id
-left join playgrounds_gameplayground pgp on pgp.id = assignments_assignmentcourseuserquestionmapping.game_playground_id
-left join playgrounds_projectplayground ppp on ppp.id = assignments_assignmentcourseuserquestionmapping.project_playground_id
-left join playgrounds_codingplaygroundsubmission pcps on pcps.coding_playground_id = pcp.id
-left join playgrounds_frontendplaygroundsubmission pfps on pfps.front_end_playground_id = pfp.id
-left join playgrounds_projectplaygroundsubmission ppps on ppps.project_playground_id = ppp.id
-left join playgrounds_gameplaygroundsubmission pgps on pgps.game_playground_id = pgp.id
-
-group by 1,2,
-assignments_assignmentcourseuserquestionmapping.coding_playground_id,
-assignments_assignmentcourseuserquestionmapping.front_end_playground_id,
-assignments_assignmentcourseuserquestionmapping.game_playground_id,
-assignments_assignmentcourseuserquestionmapping.project_playground_id
-order by 1,2
-)
-select
-            distinct 
-            concat(courses_courseusermapping.user_id,assignments_assignmentcourseuserquestionmapping.assignment_question_id,assignments_assignment.id,assignments_assignmentcourseusermapping.id) as table_unique_key,
-            courses_courseusermapping.user_id,
-            assignments_assignment.id as assignment_id,
-            assignments_assignmentcourseuserquestionmapping.assignment_question_id as question_id,
-            assignments_assignmentcourseuserquestionmapping.started_at as question_started_at,
-            assignments_assignmentcourseuserquestionmapping.completed_at as question_completed_at,
-            assignments_assignmentcourseuserquestionmapping.completed,
-            assignments_assignmentcourseuserquestionmapping.all_test_case_passed,
-            case
+        (with latest_submission as
+    (
+    select
+        case
             when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then 'coding'
             when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then 'frontend'
             when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then 'game'
             when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then 'project'
-            when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then 'subjective' else 'other' end as playground_type,
-            case
+            when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then 'subjective' else 'other' 
+        end as playground_type,
+        
+        case
             when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then assignments_assignmentcourseuserquestionmapping.coding_playground_id
             when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then assignments_assignmentcourseuserquestionmapping.front_end_playground_id
             when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then assignments_assignmentcourseuserquestionmapping.game_playground_id
             when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then assignments_assignmentcourseuserquestionmapping.project_playground_id
-            when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then assignments_assignmentcourseuserquestionmapping.subjective_id else null end as playground_id,
+            when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then assignments_assignmentcourseuserquestionmapping.subjective_id else null 
+        end as playground_id,
+        
+        case
+            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then max(pcps.id)
+            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then max(pfps.id)
+            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then max(pgps.id)
+            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then max(ppps.id) else null 
+        end as playground_submission_id
+    from
+        assignments_assignmentcourseuserquestionmapping
+    left join playgrounds_codingplayground pcp 
+        on pcp.id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
+    left join playgrounds_frontendplayground pfp 
+        on pfp.id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id
+    left join playgrounds_gameplayground pgp 
+        on pgp.id = assignments_assignmentcourseuserquestionmapping.game_playground_id
+    left join playgrounds_projectplayground ppp 
+        on ppp.id = assignments_assignmentcourseuserquestionmapping.project_playground_id
+    left join playgrounds_codingplaygroundsubmission pcps 
+        on pcps.coding_playground_id = pcp.id
+    left join playgrounds_frontendplaygroundsubmission pfps 
+        on pfps.front_end_playground_id = pfp.id
+    left join playgrounds_projectplaygroundsubmission ppps 
+        on ppps.project_playground_id = ppp.id
+    left join playgrounds_gameplaygroundsubmission pgps 
+        on pgps.game_playground_id = pgp.id
+    group by 1,2, assignments_assignmentcourseuserquestionmapping.coding_playground_id, assignments_assignmentcourseuserquestionmapping.front_end_playground_id, assignments_assignmentcourseuserquestionmapping.game_playground_id,
+    assignments_assignmentcourseuserquestionmapping.project_playground_id
+    order by 1,2),
+    project_marks as 
+        (select 
+            assignments_assignment.id as assignment_id,
+            courses_courseusermapping.user_id,
+            assignments_assignmentcourseuserquestionmapping.assignment_question_id,
             
-            case
-            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then pcp.hash
-            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then pfp.hash
-            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then pgp.hash
-            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then ppp.hash
-            else null end as playground_hash,
+            max(case 
+                when feedback_feedbackanswer.id is null then feedback_feedbackformuserquestionanswermapping.other_answer 
+            end) as subjective_feedback,
             
-            assignments_assignmentcourseuserquestionmapping.hash,
-            assignments_assignmentcourseuserquestionmapping.latest_assignment_question_hint_mapping_id,
-            assignments_assignmentcourseuserquestionmapping.late_submission,
-            assignments_assignmentcourseuserquestionmapping.max_test_case_passed,
-            assignments_assignmentcourseusermapping.started_at as assignment_started_at,
-            assignments_assignmentcourseusermapping.completed_at as assignment_completed_at,
-            assignments_assignmentcourseusermapping.cheated_marked_at as assignment_cheated_marked_at,
-            assignments_assignmentcourseusermapping.cheated,
-            case
-            when pcps.id is not null then (plag_coding.plagiarism_report #>> '{plagiarism_submission_id}')::float
-            when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{plagiarism_submission_id}')::float
-            when ppps.id is not null then (plag_project.plagiarism_report #>> '{plagiarism_submission_id}')::float
-            when pgps.id is not null then (plag_game.plagiarism_report #>> '{plagiarism_submission_id}')::float end as plagiarism_submission_id,
-            case
-            when pcps.id is not null then (plag_coding.plagiarism_report #>> '{plagiarism_score}')::float
-            when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{plagiarism_score}')::float
-            when ppps.id is not null then (plag_project.plagiarism_report #>> '{plagiarism_score}')::float
-            when pgps.id is not null then (plag_game.plagiarism_report #>> '{plagiarism_score}')::float end as plagiarism_score,
-            case
-            when pcps.id is not null then (plag_coding.plagiarism_report #>> '{solution_length}')::float
-            when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{solution_length}')::float
-            when ppps.id is not null then (plag_project.plagiarism_report #>> '{solution_length}')::float
-            when pgps.id is not null then (plag_game.plagiarism_report #>> '{solution_length}')::float end as solution_length,
-            case
-            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then count(distinct pcps.id)
-            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then count(distinct pfps.id)
-            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then count(distinct pgps.id)
-            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then count(distinct ppps.id) else null end as number_of_submissions,
-            case
-            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then count(distinct pcps.id) filter (where pcps.current_status not in (3))
-            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then count(distinct pfps.id) filter (where pfps.build_status not in (3))
-            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then count(distinct ppps.id) filter (where pfps.build_status not in (3)) else null end as error_faced_count,
-            assignments_assignmentcourseusermapping.marks as marks_obtained,
-            assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest
-            
-            from assignments_assignment
-                left join courses_course 
-                        on assignments_assignment.course_id = courses_course.id and (assignments_assignment.id between %d and %d)
-                left join courses_courseusermapping 
-                    on courses_courseusermapping.course_id = courses_course.id
-                
-                join assignments_assignmentcourseusermapping 
-                    on assignments_assignmentcourseusermapping.course_user_mapping_id = courses_courseusermapping.id 
-                        and assignments_assignmentcourseusermapping.assignment_id = assignments_assignment.id
-              
-                left join assignments_assignmentcourseuserquestionmapping 
-                    on assignments_assignmentcourseuserquestionmapping.assignment_course_user_mapping_id = assignments_assignmentcourseusermapping.id 
-                    
-                left join playgrounds_codingplayground pcp on pcp.id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
-                left join playgrounds_frontendplayground pfp on pfp.id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id
-                left join playgrounds_gameplayground pgp on pgp.id = assignments_assignmentcourseuserquestionmapping.game_playground_id
-                left join playgrounds_projectplayground ppp on ppp.id = assignments_assignmentcourseuserquestionmapping.project_playground_id
-                
-                left join latest_submission as latest_submission_coding on latest_submission_coding.playground_id = assignments_assignmentcourseuserquestionmapping.coding_playground_id and latest_submission_coding.playground_type = 'coding'
-                left join latest_submission as latest_submission_frontend on latest_submission_frontend.playground_id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id and latest_submission_frontend.playground_type = 'frontend'
-                left join latest_submission as latest_submission_game on latest_submission_game.playground_id = assignments_assignmentcourseuserquestionmapping.game_playground_id and latest_submission_game.playground_type = 'game'
-                left join latest_submission as latest_submission_project on latest_submission_project.playground_id = assignments_assignmentcourseuserquestionmapping.project_playground_id and latest_submission_project.playground_type = 'project'
-                
+            max(case 
+                when feedback_feedbackanswer.id is not null then feedback_feedbackanswer.text 
+            end) as project_rating
+        from 
+            assignments_assignment
+        join courses_course
+            on courses_course.id = assignments_assignment.course_id and assignments_assignment.assignment_sub_type = 6
+        join courses_courseusermapping
+            on courses_courseusermapping.course_id = courses_course.id 
+        left join assignments_assignmentcourseusermapping
+            on assignments_assignmentcourseusermapping.course_user_mapping_id = courses_courseusermapping.id 
+                and assignments_assignment.id = assignments_assignmentcourseusermapping.assignment_id
+        left join assignments_assignmentcourseuserquestionmapping
+            on assignments_assignmentcourseuserquestionmapping.assignment_course_user_mapping_id = assignments_assignmentcourseusermapping.id 
+        left join playgrounds_projectplayground
+            on playgrounds_projectplayground.id = assignments_assignmentcourseuserquestionmapping.project_playground_id
+        left join feedback_feedbackformusermapping
+            on feedback_feedbackformusermapping.entity_content_type_id = 81 
+                and feedback_feedbackformusermapping.entity_object_id = playgrounds_projectplayground.id
+        left join feedback_feedbackformuserquestionanswermapping
+            on feedback_feedbackformuserquestionanswermapping.feedback_form_user_mapping_id = feedback_feedbackformusermapping.id 
+        left join feedback_feedbackformuserquestionanswerm2m
+            on feedback_feedbackformuserquestionanswerm2m.feedback_form_user_question_answer_mapping_id = feedback_feedbackformuserquestionanswermapping.id 
+        left join feedback_feedbackanswer
+            on feedback_feedbackanswer.id = feedback_feedbackformuserquestionanswerm2m.feedback_answer_id
+        where feedback_feedbackformusermapping.feedback_form_id in (4458, 4383)
+        group by 1,2,3
+        order by 1,2,3)
+        
+                select distinct 
+                        concat(courses_courseusermapping.user_id,assignments_assignmentcourseuserquestionmapping.assignment_question_id,assignments_assignment.id,assignments_assignmentcourseusermapping.id) as table_unique_key,
+                        courses_courseusermapping.user_id,
+                        assignments_assignment.id as assignment_id,
+                        assignments_assignmentcourseuserquestionmapping.assignment_question_id as question_id,
+                        assignments_assignmentcourseuserquestionmapping.started_at as question_started_at,
+                        assignments_assignmentcourseuserquestionmapping.completed_at as question_completed_at,
+                        assignments_assignmentcourseuserquestionmapping.completed,
+                        assignments_assignmentcourseuserquestionmapping.all_test_case_passed,
+                        case
+                            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then 'coding'
+                            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then 'frontend'
+                            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then 'game'
+                            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then 'project'
+                            when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then 'subjective' else 'other' 
+                        end as playground_type,
+                        case
+                            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then assignments_assignmentcourseuserquestionmapping.coding_playground_id
+                            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then assignments_assignmentcourseuserquestionmapping.front_end_playground_id
+                            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then assignments_assignmentcourseuserquestionmapping.game_playground_id
+                            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then assignments_assignmentcourseuserquestionmapping.project_playground_id
+                            when assignments_assignmentcourseuserquestionmapping.subjective_id is not null then assignments_assignmentcourseuserquestionmapping.subjective_id else null 
+                        end as playground_id,
+                        case
+                            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then pcp.hash
+                            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then pfp.hash
+                            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then pgp.hash
+                            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then ppp.hash
+                        else null end as playground_hash,
+                        assignments_assignmentcourseuserquestionmapping.hash,
+                        assignments_assignmentcourseuserquestionmapping.latest_assignment_question_hint_mapping_id,
+                        assignments_assignmentcourseuserquestionmapping.late_submission,
+                        assignments_assignmentcourseuserquestionmapping.max_test_case_passed,
+                        assignments_assignmentcourseusermapping.started_at as assignment_started_at,
+                        assignments_assignmentcourseusermapping.completed_at as assignment_completed_at,
+                        assignments_assignmentcourseusermapping.cheated_marked_at as assignment_cheated_marked_at,
+                        assignments_assignmentcourseusermapping.cheated,
+                        case
+                            when pcps.id is not null then (plag_coding.plagiarism_report #>> '{plagiarism_submission_id}')::float
+                            when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{plagiarism_submission_id}')::float
+                            when ppps.id is not null then (plag_project.plagiarism_report #>> '{plagiarism_submission_id}')::float
+                            when pgps.id is not null then (plag_game.plagiarism_report #>> '{plagiarism_submission_id}')::float 
+                        end as plagiarism_submission_id,
+                        case
+                            when pcps.id is not null then (plag_coding.plagiarism_report #>> '{plagiarism_score}')::float
+                            when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{plagiarism_score}')::float
+                            when ppps.id is not null then (plag_project.plagiarism_report #>> '{plagiarism_score}')::float
+                            when pgps.id is not null then (plag_game.plagiarism_report #>> '{plagiarism_score}')::float 
+                        end as plagiarism_score,
+                        case
+                            when pcps.id is not null then (plag_coding.plagiarism_report #>> '{solution_length}')::float
+                            when pfps.id is not null then (plag_frontend.plagiarism_report #>> '{solution_length}')::float
+                            when ppps.id is not null then (plag_project.plagiarism_report #>> '{solution_length}')::float
+                            when pgps.id is not null then (plag_game.plagiarism_report #>> '{solution_length}')::float 
+                        end as solution_length,
+                        case
+                            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then count(distinct pcps.id)
+                            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then count(distinct pfps.id)
+                            when assignments_assignmentcourseuserquestionmapping.game_playground_id is not null then count(distinct pgps.id)
+                            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then count(distinct ppps.id) else null 
+                        end as number_of_submissions,
+                        case
+                            when assignments_assignmentcourseuserquestionmapping.coding_playground_id is not null then count(distinct pcps.id) filter (where pcps.current_status not in (3))
+                            when assignments_assignmentcourseuserquestionmapping.front_end_playground_id is not null then count(distinct pfps.id) filter (where pfps.build_status not in (3))
+                            when assignments_assignmentcourseuserquestionmapping.project_playground_id is not null then count(distinct ppps.id) filter (where pfps.build_status not in (3)) else null 
+                        end as error_faced_count,
+                        assignments_assignmentcourseusermapping.marks as marks_obtained,
+                        assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest,
+                        project_marks.subjective_feedback as project_subjective_feedback,
+                        project_marks.project_rating as project_marks_obtained 
+                        from 
+                            assignments_assignment
+                        join courses_course 
+                                on assignments_assignment.course_id = courses_course.id
+                                    and (assignments_assignment.id between %d and %d)
+                        join courses_courseusermapping 
+                            on courses_courseusermapping.course_id = courses_course.id
                         
-                left join playgrounds_codingplaygroundsubmission pcps on pcps.id = latest_submission_coding.playground_submission_id
-                left join playgrounds_playgroundplagiarismreport as plag_coding on plag_coding.object_id = pcps.id and plag_coding.content_type_id = 70
-                
-                left join playgrounds_frontendplaygroundsubmission pfps on pfps.id = latest_submission_frontend.playground_submission_id
-                left join playgrounds_playgroundplagiarismreport as plag_frontend on plag_frontend.object_id = pfps.id and plag_frontend.content_type_id = 160
-                
-                left join playgrounds_projectplaygroundsubmission ppps on ppps.id = latest_submission_project.playground_submission_id
-                left join playgrounds_playgroundplagiarismreport as plag_project on plag_project.object_id = ppps.id and plag_project.content_type_id = 165
-                
-                left join playgrounds_gameplaygroundsubmission pgps on pgps.id = latest_submission_game.playground_submission_id
-                left join playgrounds_playgroundplagiarismreport as plag_game on plag_game.object_id = pgps.id and plag_game.content_type_id = 179
-            group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,assignments_assignmentcourseuserquestionmapping.coding_playground_id,
-            assignments_assignmentcourseuserquestionmapping.front_end_playground_id,
-            assignments_assignmentcourseuserquestionmapping.game_playground_id,
-            assignments_assignmentcourseuserquestionmapping.project_playground_id,
-            assignments_assignmentcourseusermapping.marks,
-            assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest
-        ) final_query
+                        join assignments_assignmentcourseusermapping 
+                            on assignments_assignmentcourseusermapping.course_user_mapping_id = courses_courseusermapping.id 
+                                and assignments_assignmentcourseusermapping.assignment_id = assignments_assignment.id
+                      
+                        left join assignments_assignmentcourseuserquestionmapping 
+                            on assignments_assignmentcourseuserquestionmapping.assignment_course_user_mapping_id = assignments_assignmentcourseusermapping.id 
+                            
+                        left join playgrounds_codingplayground pcp 
+                            on pcp.id = assignments_assignmentcourseuserquestionmapping.coding_playground_id
+                        left join playgrounds_frontendplayground pfp 
+                            on pfp.id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id
+                        left join playgrounds_gameplayground pgp 
+                            on pgp.id = assignments_assignmentcourseuserquestionmapping.game_playground_id
+                        left join playgrounds_projectplayground ppp 
+                            on ppp.id = assignments_assignmentcourseuserquestionmapping.project_playground_id
+                        left join latest_submission as latest_submission_coding 
+                            on latest_submission_coding.playground_id = assignments_assignmentcourseuserquestionmapping.coding_playground_id and latest_submission_coding.playground_type = 'coding'
+                        left join latest_submission as latest_submission_frontend 
+                            on latest_submission_frontend.playground_id = assignments_assignmentcourseuserquestionmapping.front_end_playground_id and latest_submission_frontend.playground_type = 'frontend'
+                        left join latest_submission as latest_submission_game 
+                            on latest_submission_game.playground_id = assignments_assignmentcourseuserquestionmapping.game_playground_id and latest_submission_game.playground_type = 'game'
+                        left join latest_submission as latest_submission_project 
+                            on latest_submission_project.playground_id = assignments_assignmentcourseuserquestionmapping.project_playground_id and latest_submission_project.playground_type = 'project'
+                        left join playgrounds_codingplaygroundsubmission pcps 
+                            on pcps.id = latest_submission_coding.playground_submission_id
+                        left join playgrounds_playgroundplagiarismreport as plag_coding 
+                            on plag_coding.object_id = pcps.id and plag_coding.content_type_id = 70
+                        left join playgrounds_frontendplaygroundsubmission pfps 
+                            on pfps.id = latest_submission_frontend.playground_submission_id
+                        left join playgrounds_playgroundplagiarismreport as plag_frontend 
+                            on plag_frontend.object_id = pfps.id and plag_frontend.content_type_id = 160
+                        left join playgrounds_projectplaygroundsubmission ppps 
+                            on ppps.id = latest_submission_project.playground_submission_id
+                        left join playgrounds_playgroundplagiarismreport as plag_project 
+                            on plag_project.object_id = ppps.id and plag_project.content_type_id = 165
+                        left join playgrounds_gameplaygroundsubmission pgps 
+                            on pgps.id = latest_submission_game.playground_submission_id
+                        left join playgrounds_playgroundplagiarismreport as plag_game 
+                            on plag_game.object_id = pgps.id and plag_game.content_type_id = 179
+                        left join project_marks 
+                            on project_marks.user_id = courses_courseusermapping.user_id
+                                and project_marks.assignment_id = assignments_assignment.id 
+                                    and project_marks.assignment_question_id = assignments_assignmentcourseuserquestionmapping.assignment_question_id
+                        group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+                        assignments_assignmentcourseuserquestionmapping.coding_playground_id,
+                        assignments_assignmentcourseuserquestionmapping.front_end_playground_id,
+                        assignments_assignmentcourseuserquestionmapping.game_playground_id,
+                        assignments_assignmentcourseuserquestionmapping.project_playground_id,
+                        assignments_assignmentcourseusermapping.marks,
+                        assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest,
+                        project_marks.subjective_feedback,
+                        project_marks.project_rating) final_query
         limit {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').limit }} 
         offset {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').offset }}
         ;
