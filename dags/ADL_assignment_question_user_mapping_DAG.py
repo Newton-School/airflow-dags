@@ -65,7 +65,8 @@ create_table = PostgresOperator(
             marks_obtained int,
             max_test_case_passed_during_contest int,
             project_subjective_feedback text,
-            project_marks_obtained text
+            project_marks_obtained text,
+            calibrated_assignment_end_timestamp timestamp 
         );
     ''',
     dag=dag
@@ -95,8 +96,9 @@ def extract_data_to_nested(**kwargs):
             'number_of_submissions, error_faced_count, marks_obtained,'
             'max_test_case_passed_during_contest,'
             'project_subjective_feedback,'
-            'project_marks_obtained)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'project_marks_obtained,'
+            'calibrated_assignment_end_timestamp)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set question_started_at=EXCLUDED.question_started_at,'
             'question_completed_at = EXCLUDED.question_completed_at,'
             'completed=EXCLUDED.completed, all_test_case_passed=EXCLUDED.all_test_case_passed, '
@@ -118,7 +120,8 @@ def extract_data_to_nested(**kwargs):
             'marks_obtained = EXCLUDED.marks_obtained,'
             'max_test_case_passed_during_contest = EXCLUDED.max_test_case_passed_during_contest,'
             'project_subjective_feedback = EXCLUDED.project_subjective_feedback,'
-            'project_marks_obtained = EXCLUDED.project_marks_obtained;',
+            'project_marks_obtained = EXCLUDED.project_marks_obtained,'
+            'calibrated_assignment_end_timestamp = EXCLUDED.calibrated_assignment_end_timestamp;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -148,6 +151,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[25],
                 transform_row[26],
                 transform_row[27],
+                transform_row[28],
             )
         )
         pg_conn.commit()
@@ -204,9 +208,14 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
         on ppps.project_playground_id = ppp.id
     left join playgrounds_gameplaygroundsubmission pgps 
         on pgps.game_playground_id = pgp.id
-    group by 1,2, assignments_assignmentcourseuserquestionmapping.coding_playground_id, assignments_assignmentcourseuserquestionmapping.front_end_playground_id, assignments_assignmentcourseuserquestionmapping.game_playground_id,
-    assignments_assignmentcourseuserquestionmapping.project_playground_id
-    order by 1,2),
+    group by 
+        1,2, 
+        assignments_assignmentcourseuserquestionmapping.coding_playground_id, 
+        assignments_assignmentcourseuserquestionmapping.front_end_playground_id, 
+        assignments_assignmentcourseuserquestionmapping.game_playground_id,
+        assignments_assignmentcourseuserquestionmapping.project_playground_id
+    order by 
+        1,2),
     project_marks as 
         (select 
             assignments_assignment.id as assignment_id,
@@ -315,7 +324,8 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                         assignments_assignmentcourseusermapping.marks as marks_obtained,
                         assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest,
                         project_marks.subjective_feedback as project_subjective_feedback,
-                        project_marks.project_rating as project_marks_obtained 
+                        project_marks.project_rating as project_marks_obtained,
+                        assignments_assignmentcourseusermapping.end_timestamp as calibrated_assignment_end_timestamp
                         from 
                             assignments_assignment
                         join courses_course 
@@ -375,7 +385,8 @@ def number_of_rows_per_assignment_sub_dag_func(start_assignment_id, end_assignme
                         assignments_assignmentcourseusermapping.marks,
                         assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest,
                         project_marks.subjective_feedback,
-                        project_marks.project_rating) query_rows;
+                        project_marks.project_rating,
+                        assignments_assignmentcourseusermapping.end_timestamp) query_rows;
             ''' % (start_assignment_id, end_assignment_id),
     )
 
@@ -450,9 +461,14 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
         on ppps.project_playground_id = ppp.id
     left join playgrounds_gameplaygroundsubmission pgps 
         on pgps.game_playground_id = pgp.id
-    group by 1,2, assignments_assignmentcourseuserquestionmapping.coding_playground_id, assignments_assignmentcourseuserquestionmapping.front_end_playground_id, assignments_assignmentcourseuserquestionmapping.game_playground_id,
-    assignments_assignmentcourseuserquestionmapping.project_playground_id
-    order by 1,2),
+    group by 
+        1,2, 
+        assignments_assignmentcourseuserquestionmapping.coding_playground_id, 
+        assignments_assignmentcourseuserquestionmapping.front_end_playground_id, 
+        assignments_assignmentcourseuserquestionmapping.game_playground_id,
+        assignments_assignmentcourseuserquestionmapping.project_playground_id
+    order by 
+        1,2),
     project_marks as 
         (select 
             assignments_assignment.id as assignment_id,
@@ -561,7 +577,8 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                         assignments_assignmentcourseusermapping.marks as marks_obtained,
                         assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest,
                         project_marks.subjective_feedback as project_subjective_feedback,
-                        project_marks.project_rating as project_marks_obtained 
+                        project_marks.project_rating as project_marks_obtained,
+                        assignments_assignmentcourseusermapping.end_timestamp as calibrated_assignment_end_timestamp
                         from 
                             assignments_assignment
                         join courses_course 
@@ -621,7 +638,8 @@ def transform_data_per_query(start_assignment_id, end_assignment_id, cps_sub_dag
                         assignments_assignmentcourseusermapping.marks,
                         assignments_assignmentcourseuserquestionmapping.max_test_case_passed_during_contest,
                         project_marks.subjective_feedback,
-                        project_marks.project_rating) final_query
+                        project_marks.project_rating,
+                        assignments_assignmentcourseusermapping.end_timestamp) final_query
         limit {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').limit }} 
         offset {{ ti.xcom_pull(task_ids=params.task_key, key='return_value').offset }}
         ;
