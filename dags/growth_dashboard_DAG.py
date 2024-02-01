@@ -89,7 +89,7 @@ dag = DAG(
     'Growth_Dashboard_DAG',
     default_args=default_args,
     description='An Analytics Reporting Layer DAG for Growth Dashboard',
-    schedule_interval='30 2 * * *',
+    schedule_interval='55 2 * * *',
     catchup=False
 )
 
