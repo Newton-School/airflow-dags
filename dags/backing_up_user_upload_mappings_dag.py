@@ -4,6 +4,7 @@ from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.hooks.S3_hook import S3Hook
 from datetime import datetime
+import pandas as pd
 
 default_args = {
     'owner': 'airflow',
@@ -32,9 +33,24 @@ def extract_latest_updated_user_upload_mappings(**kwargs):
 def upload_user_upload_to_s3(**kwargs):
   S3_CONN_ID = 's3_aws_credentials'
   POSTGRES_CONN_ID = 'postgres_read_replica'
+  
   ti = kwargs['ti']
   latest_updated_id = ti.xcom_pull(task_ids='extract_latest_updated')
-  print(latest_updated_id, "From upload_user_upload_to_s3")
+  
+  # Connect to PostgreSQL
+  postgres_hook = PostgresHook(postgres_conn_id='your_postgres_conn_id')
+  connection = postgres_hook.get_conn()
+  cursor = connection.cursor()
+
+  postgres_query = f"select * from uploads_useruploadmapping where created_at < CURRENT_DATE - INTERVAL '2 months' and content_type_id in (61,38) and id > {latest_updated_id} order by id limit 10 offset 20;"
+  
+  cursor.execute(postgres_query)
+  results = cursor.fetchall()
+
+  df = pd.DataFrame(results, columns=[column[0] for column in cursor.description])
+
+  print(df)
+
   pass
 
 
