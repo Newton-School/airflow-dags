@@ -23,15 +23,18 @@ def extract_latest_updated_user_upload_mappings(**kwargs):
   if s3_object:
       s3_data = s3_object.get()['Body'].read().decode('utf-8')
       # Perform further processing on the S3 data
-      print(s3_data)
+      return s3_data
   else:
       print(f"S3 object {s3_key} not found in bucket {s3_bucket_name}")
 
-  pass
+  return 0
 
 def upload_user_upload_to_s3(**kwargs):
   S3_CONN_ID = 's3_aws_credentials'
   POSTGRES_CONN_ID = 'postgres_read_replica'
+  ti = kwargs['ti']
+  latest_updated_id = ti.xcom_pull(task_ids='extract_latest_updated')
+  print(latest_updated_id, "From upload_user_upload_to_s3")
   pass
 
 
