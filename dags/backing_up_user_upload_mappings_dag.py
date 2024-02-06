@@ -5,7 +5,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.hooks.S3_hook import S3Hook
 from datetime import datetime
 import pandas as pd
-
+import os
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
@@ -82,10 +82,12 @@ order by uploads_useruploadmapping.id limit {100000} offset {current_offset}
 
         s3_hook.load_file(
             filename=f'data_upload_{current_offset}.csv',
-            key=f'user_upload/data/data_upload_{current_offset}.csv',
+            key=f'user_upload/data/data_upload_{latest_updated_id}_{current_offset}.csv',
             bucket_name=s3_bucket_name,
             replace=True,
         )
+        os.remove("data_upload_{current_offset}.csv")
+
 
     s3_hook.load_string(
         f"{latest_id}",
