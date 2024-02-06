@@ -78,6 +78,13 @@ order by uploads_useruploadmapping.id limit {100000} offset {current_offset}
 
         latest_id = df.iloc[-1]['id']
 
+        s3_hook.load_string(
+            f"{latest_id}",
+            key='user_upload/total_count.txt',
+            bucket_name=s3_bucket_name,
+            replace=True,
+        )
+
         df.to_csv(f'data_upload_{current_offset}.csv')
 
         s3_hook.load_file(
