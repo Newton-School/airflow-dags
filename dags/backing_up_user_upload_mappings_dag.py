@@ -93,7 +93,7 @@ order by uploads_useruploadmapping.id limit {100000} offset {current_offset}
             bucket_name=s3_bucket_name,
             replace=True,
         )
-        os.remove("data_upload_{current_offset}.csv")
+        os.remove(f"data_upload_{current_offset}.csv")
 
     s3_hook.load_string(
         f"{latest_id}",
