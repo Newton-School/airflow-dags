@@ -47,24 +47,22 @@ def upload_user_upload_to_s3(**kwargs):
 
     current_offset = 0
 
-    while True:
-        postgres_query = f"select * from uploads_useruploadmapping where created_at < CURRENT_DATE - INTERVAL '2 months' and content_type_id in (61,38) and id > {latest_updated_id} order by id limit 10 offset {current_offset};"
+    latest_id = 0
 
-        print(postgres_query)
+    while True:
+        postgres_query = f"select * from uploads_useruploadmapping where created_at < CURRENT_DATE - INTERVAL '2 months' and content_type_id in (61,38) and id > {latest_updated_id} order by id limit 10000 offset {current_offset};"
         
         cursor.execute(postgres_query)
         results = cursor.fetchall()
 
-        current_offset += 10
-
-        if current_offset > 40:
-            break
+        current_offset += 10000
 
         df = pd.DataFrame(results, columns=[column[0] for column in cursor.description])
 
-        print(df)
+        if df.len() == 0:
+            break
 
-        print(df.iloc[-1]['id'], 'old value')
+        latest_id = df.iloc[-1]['id']
 
         df.to_csv(f'data_upload_{current_offset}.csv')
 
@@ -75,7 +73,12 @@ def upload_user_upload_to_s3(**kwargs):
             replace=True,
         )
 
-    pass
+    s3_hook.load_string(
+        f"{latest_id}",
+        key='user_upload/total_count.txt',
+        bucket_name=s3_bucket_name,
+        replace=True,
+    )
 
 
 dag = DAG(
