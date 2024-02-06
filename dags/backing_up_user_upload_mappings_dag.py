@@ -13,45 +13,55 @@ default_args = {
 }
 
 def extract_latest_updated_user_upload_mappings(**kwargs):
-  S3_CONN_ID = 's3_aws_credentials'
-  s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
-  s3_bucket_name = 'newton-airflow-dags-temp'
-  s3_key = 'user_upload/total_count.txt'
+    S3_CONN_ID = 's3_aws_credentials'
+    s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
+    s3_bucket_name = 'newton-airflow-dags-temp'
+    s3_key = 'user_upload/total_count.txt'
 
-  # Read data from S3 file
-  s3_object = s3_hook.get_key(key=s3_key, bucket_name=s3_bucket_name)
-  
-  if s3_object:
-      s3_data = s3_object.get()['Body'].read().decode('utf-8')
-      # Perform further processing on the S3 data
-      return s3_data
-  else:
-      print(f"S3 object {s3_key} not found in bucket {s3_bucket_name}")
+    # Read data from S3 file
+    s3_object = s3_hook.get_key(key=s3_key, bucket_name=s3_bucket_name)
+    
+    if s3_object:
+        s3_data = s3_object.get()['Body'].read().decode('utf-8')
+        # Perform further processing on the S3 data
+        return s3_data
+    else:
+        print(f"S3 object {s3_key} not found in bucket {s3_bucket_name}")
 
-  return 0
+    return 0
 
 def upload_user_upload_to_s3(**kwargs):
-  S3_CONN_ID = 's3_aws_credentials'
-  POSTGRES_CONN_ID = 'postgres_read_replica'
-  
-  ti = kwargs['ti']
-  latest_updated_id = ti.xcom_pull(task_ids='extract_latest_updated')
-  
-  # Connect to PostgreSQL
-  postgres_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
-  connection = postgres_hook.get_conn()
-  cursor = connection.cursor()
+    S3_CONN_ID = 's3_aws_credentials'
+    POSTGRES_CONN_ID = 'postgres_read_replica'
+    
+    ti = kwargs['ti']
+    latest_updated_id = ti.xcom_pull(task_ids='extract_latest_updated')
+    
+    # Connect to PostgreSQL
+    postgres_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+    connection = postgres_hook.get_conn()
+    cursor = connection.cursor()
 
-  postgres_query = f"select * from uploads_useruploadmapping where created_at < CURRENT_DATE - INTERVAL '2 months' and content_type_id in (61,38) and id > {latest_updated_id} order by id limit 10 offset 20;"
-  
-  cursor.execute(postgres_query)
-  results = cursor.fetchall()
+    current_offset = 0
 
-  df = pd.DataFrame(results, columns=[column[0] for column in cursor.description])
+    while True:
+        postgres_query = f"select * from uploads_useruploadmapping 
+        where created_at < CURRENT_DATE - INTERVAL '2 months' and content_type_id in (61,38) and id > {latest_updated_id} 
+        order by id limit 1000 offset {current_offset};"
+        
+        cursor.execute(postgres_query)
+        results = cursor.fetchall()
 
-  print(df)
+        current_offset += 10
 
-  pass
+        if current_offset < 40:
+            break
+
+        df = pd.DataFrame(results, columns=[column[0] for column in cursor.description])
+
+        print(df, current_offset)
+
+    pass
 
 
 dag = DAG(
