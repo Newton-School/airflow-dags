@@ -41,6 +41,9 @@ def upload_user_upload_to_s3(**kwargs):
     postgres_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
     connection = postgres_hook.get_conn()
     cursor = connection.cursor()
+    s3_bucket_name = 'newton-airflow-dags-temp'
+
+    s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
 
     current_offset = 0
 
@@ -59,7 +62,14 @@ def upload_user_upload_to_s3(**kwargs):
 
         df = pd.DataFrame(results, columns=[column[0] for column in cursor.description])
 
-        print(df, current_offset)
+        df.to_csv(f'data_upload_{current_offset}.csv')
+
+        s3_hook.load_file(
+            filename=f'data_upload_{current_offset}.csv',
+            key=f'user_upload/data/data_upload_{current_offset}.csv',
+            bucket_name=s3_bucket_name,
+            replace=True, 
+        )
 
     pass
 
