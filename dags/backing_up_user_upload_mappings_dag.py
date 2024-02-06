@@ -54,7 +54,7 @@ def upload_user_upload_to_s3(**kwargs):
 
         current_offset += 10
 
-        if current_offset < 40:
+        if current_offset > 40:
             break
 
         df = pd.DataFrame(results, columns=[column[0] for column in cursor.description])
