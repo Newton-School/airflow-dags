@@ -45,9 +45,7 @@ def upload_user_upload_to_s3(**kwargs):
     current_offset = 0
 
     while True:
-        postgres_query = f"select * from uploads_useruploadmapping "
-        f"where created_at < CURRENT_DATE - INTERVAL '2 months' and content_type_id in (61,38) and id > {latest_updated_id}"
-        f"order by id limit 1000 offset {current_offset};"
+        postgres_query = f"select * from uploads_useruploadmapping where created_at < CURRENT_DATE - INTERVAL '2 months' and content_type_id in (61,38) and id > {latest_updated_id} order by id limit 1000 offset {current_offset};"
 
         print(postgres_query)
         
