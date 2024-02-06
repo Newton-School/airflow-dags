@@ -62,7 +62,9 @@ def upload_user_upload_to_s3(**kwargs):
 
         df = pd.DataFrame(results, columns=[column[0] for column in cursor.description])
 
-        print(df['id'][-1], 'old value')
+        print(df)
+
+        print(df.iloc[-1], 'old value')
 
         df.to_csv(f'data_upload_{current_offset}.csv')
 
