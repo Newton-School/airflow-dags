@@ -38,7 +38,7 @@ def upload_user_upload_to_s3(**kwargs):
   latest_updated_id = ti.xcom_pull(task_ids='extract_latest_updated')
   
   # Connect to PostgreSQL
-  postgres_hook = PostgresHook(postgres_conn_id='your_postgres_conn_id')
+  postgres_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
   connection = postgres_hook.get_conn()
   cursor = connection.cursor()
 
