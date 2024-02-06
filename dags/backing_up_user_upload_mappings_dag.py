@@ -59,7 +59,7 @@ def upload_user_upload_to_s3(**kwargs):
 
         df = pd.DataFrame(results, columns=[column[0] for column in cursor.description])
 
-        if df.len() == 0:
+        if len(df) == 0:
             break
 
         latest_id = df.iloc[-1]['id']
