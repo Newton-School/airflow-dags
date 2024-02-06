@@ -62,13 +62,15 @@ def upload_user_upload_to_s3(**kwargs):
 
         df = pd.DataFrame(results, columns=[column[0] for column in cursor.description])
 
+        print(df['id'][-1], 'old value')
+
         df.to_csv(f'data_upload_{current_offset}.csv')
 
         s3_hook.load_file(
             filename=f'data_upload_{current_offset}.csv',
             key=f'user_upload/data/data_upload_{current_offset}.csv',
             bucket_name=s3_bucket_name,
-            replace=True, 
+            replace=True,
         )
 
     pass
