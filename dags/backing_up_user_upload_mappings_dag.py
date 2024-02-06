@@ -88,7 +88,6 @@ order by uploads_useruploadmapping.id limit {100000} offset {current_offset}
         )
         os.remove("data_upload_{current_offset}.csv")
 
-
     s3_hook.load_string(
         f"{latest_id}",
         key='user_upload/total_count.txt',
