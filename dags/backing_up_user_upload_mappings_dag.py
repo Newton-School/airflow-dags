@@ -9,7 +9,7 @@ import os
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    # 'start_date': datetime(2023, 3, 16),
+    'start_date': datetime(2023, 3, 16),
 }
 
 def extract_latest_updated_user_upload_mappings(**kwargs):
@@ -108,7 +108,7 @@ dag = DAG(
     'backing_up_user_upload_mappings_dag',
     default_args=default_args,
     description='Backing up user uploads',
-    schedule_interval='30 20 * * *',
+    schedule_interval=None,
     catchup=False
 )
 
