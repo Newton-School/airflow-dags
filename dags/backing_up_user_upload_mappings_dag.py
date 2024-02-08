@@ -64,12 +64,12 @@ join uploads_userupload ON uploads_useruploadmapping.user_upload_id = uploads_us
 left join assignments_assignmentcourseusermapping on assignments_assignmentcourseusermapping.id = cast(uploads_useruploadmapping.object_id as int) and uploads_useruploadmapping.content_type_id = 61 and assignments_assignmentcourseusermapping.cheated = false
 left join assessments_courseuserassessmentmapping on assessments_courseuserassessmentmapping.id = cast(uploads_useruploadmapping.object_id as int) and uploads_useruploadmapping.content_type_id = 38 and assessments_courseuserassessmentmapping.cheated = false
 where uploads_useruploadmapping.created_at < CURRENT_DATE - INTERVAL '2 months' and uploads_useruploadmapping.content_type_id in (61,38) and uploads_useruploadmapping.id > {latest_updated_id}
-order by uploads_useruploadmapping.id limit {100000} offset {current_offset}
+order by uploads_useruploadmapping.id limit {10000} offset {current_offset}
 """
         cursor.execute(postgres_query)
         results = cursor.fetchall()
 
-        current_offset += 100000
+        current_offset += 10000
 
         df = pd.DataFrame(results, columns=[column[0] for column in cursor.description])
 
