@@ -97,7 +97,7 @@ def extract_data_to_nested(**kwargs):
         task_ids=f'transforming_data_{current_lecture_sub_dag_id}.extract_and_transform_individual_lecture_sub_dag_{current_lecture_sub_dag_id}_cps_sub_dag_{current_cps_sub_dag_id}.transform_data')
     for transform_row in transform_data_output:
         pg_cursor = pg_conn.cursor()
-        pg_cursor.execute('INSERT INTO lecture_course_user_reports_bigint (table_unique_key, user_id, student_name,'
+        pg_cursor.execute('INSERT INTO lecture_course_user_reports_bigserial (table_unique_key, user_id, student_name,'
         'lead_type, student_category, course_user_mapping_id, label_mapping_status,'
         'course_id, course_name, course_structure_class, lecture_id, lecture_title,'
         'lecture_type, '
