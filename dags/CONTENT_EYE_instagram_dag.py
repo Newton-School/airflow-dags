@@ -62,7 +62,7 @@ def get_posts(instagram_username):
             post_link = f"https://www.instagram.com/p/{codename}/"
             taken_at_timestamp = node['taken_at_timestamp']
             taken_at_datetime = datetime.fromtimestamp(taken_at_timestamp, pytz.UTC)
-            if now - taken_at_datetime > timedelta(hours=200):
+            if now - taken_at_datetime > timedelta(hours=4):
                 continue
         except Exception as e:
             print(e)
@@ -76,6 +76,8 @@ def get_posts(instagram_username):
 
 
 def extract_recent_posts(**kwargs):
+    now = datetime.now()
+    print(now.strftime("%Y-%m-%d %H:%M:%S"))
     instagram_pages_configuration = Variable.get(
             "CONTENT_EYE_INSTAGRAM_PAGES_TO_WATCH",
             deserialize_json=True,
@@ -99,7 +101,7 @@ dag = DAG(
         'CONTENT_EYE_instagram_dag',
         default_args=default_args,
         description='A DAG to get the latest posts from the official Instagram accounts',
-        schedule_interval='10 * * * *',
+        schedule_interval='10 */4 * * *',
         catchup=False
 )
 
