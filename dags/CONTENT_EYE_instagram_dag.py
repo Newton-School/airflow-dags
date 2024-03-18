@@ -33,10 +33,11 @@ def get_posts(instagram_username):
     now = datetime.now()
     URL = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={instagram_username}&hl=en"
 
-    response = requests.options(URL)
-    cookies = response.cookies
+    options_response = requests.options(URL)
+    cookies = options_response.cookies
 
     i = 0
+    response = None
     while i < 5:
         response = requests.get(
                 URL,
@@ -49,7 +50,7 @@ def get_posts(instagram_username):
             break
         i += 1
 
-    if response.status_code != 200:
+    if response and response.status_code != 200:
         return [], None, "Failed to fetch data from Instagram. Please check the username."
 
     print("Response", response, response.text)
