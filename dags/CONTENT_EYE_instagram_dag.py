@@ -29,8 +29,8 @@ def send_to_slack(message, channel, icon_url=None, bot_name=None):
 
 
 def get_posts(instagram_username):
+    print("Getting posts for", instagram_username)
     now = datetime.now()
-    print(now.strftime("%Y-%m-%d %H:%M:%S"))
     URL = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={instagram_username}&hl=en"
 
     response = requests.options(URL)
@@ -50,21 +50,21 @@ def get_posts(instagram_username):
         i += 1
 
     if response.status_code != 200:
-        return []
+        return [], None, "Failed to fetch data from Instagram. Please check the username."
 
     data = response.json().get('data')
     if not data:
-        return []
+        return [], None, "Failed to fetch data from Instagram. Please check the username."
     user = data.get('user')
     if not user:
-        return []
+        return [], None, "Failed to fetch data from Instagram. Please check the username."
     profile_pic_url = user.get('profile_pic_url')
     edge_owner_to_timeline_media = user.get('edge_owner_to_timeline_media')
     if not edge_owner_to_timeline_media:
-        return []
+        return [], None, "Failed to fetch data from Instagram. Please check the username."
     edges = edge_owner_to_timeline_media.get('edges')
     if not edges:
-        return []
+        return [], None, "Failed to fetch data from Instagram. Please check the username."
     records = []
     for edge in edges:
         node = edge.get('node')
@@ -91,22 +91,24 @@ def get_posts(instagram_username):
                     "text": text
                 }
         )
-        return profile_pic_url, records
+        return profile_pic_url, records, None
 
 
 def extract_recent_posts(**kwargs):
-    now = datetime.now()
-    print(now.strftime("%Y-%m-%d %H:%M:%S"))
     instagram_pages_configuration = Variable.get(
             "CONTENT_EYE_INSTAGRAM_PAGES_TO_WATCH",
             deserialize_json=True,
             default_var=[]
     )
+    print(instagram_pages_configuration)
     slack_messages = []
     for instagram_page_configuration in instagram_pages_configuration:
         page_username = instagram_page_configuration['username']
         slack_bot_name = f"{instagram_page_configuration['slack_bot_name']} - INSTAGRAM"
-        profile_pic_url, records = get_posts(page_username)
+        profile_pic_url, records, error = get_posts(page_username)
+        if error:
+            print("Errored", error)
+            continue
         slack_messages.extend(
                 [
                     {'icon_url': profile_pic_url, 'bot_name': slack_bot_name, **record} for record in records
