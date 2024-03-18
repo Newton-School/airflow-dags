@@ -12,6 +12,21 @@ default_args = {
     'start_date': datetime(2024, 3, 18),
 }
 
+SLACK_CHANNEL = Variable.get("CONTENT_EYE_SLACK_CHANNEL", default_var="#social-media-eye")
+
+
+def send_to_slack(message, channel, icon_url=None, bot_name=None):
+    token = Variable.get("NEWTON_SCHOOL_HQ_SLACK_BOT_TOKEN")
+    if not token:
+        raise ValueError("SLACK_BOT_TOKEN is not set")
+
+    data = {"text": message, "channel": channel, "token": token}
+    if icon_url:
+        data['icon_url'] = icon_url
+    if bot_name:
+        data['username'] = bot_name
+    requests.post(f"https://slack.com/api/chat.postMessage", data=data)
+
 
 def get_posts(instagram_username):
     now = datetime.now()
@@ -50,6 +65,7 @@ def get_posts(instagram_username):
     edges = edge_owner_to_timeline_media.get('edges')
     if not edges:
         return []
+    records = []
     for edge in edges:
         node = edge.get('node')
         if not node:
@@ -61,18 +77,21 @@ def get_posts(instagram_username):
             text = edge_media_to_caption['edges'][0]['node']['text']
             post_link = f"https://www.instagram.com/p/{codename}/"
             taken_at_timestamp = node['taken_at_timestamp']
-            taken_at_datetime = datetime.fromtimestamp(taken_at_timestamp, pytz.UTC)
+            taken_at_datetime = datetime.fromtimestamp(taken_at_timestamp)
             if now - taken_at_datetime > timedelta(hours=4):
                 continue
         except Exception as e:
             print(e)
             continue
-        print("Duration", now - taken_at_datetime)
-        print("Display URL:", display_url)
-        print("Post Link:", post_link)
-        print("Taken At:", taken_at_datetime)
-        print("Text:", text)
-        print('-' * 300)
+        records.append(
+                {
+                    "display_url": display_url,
+                    "post_link": post_link,
+                    "taken_at_datetime": taken_at_datetime,
+                    "text": text
+                }
+        )
+        return profile_pic_url, records
 
 
 def extract_recent_posts(**kwargs):
@@ -83,18 +102,33 @@ def extract_recent_posts(**kwargs):
             deserialize_json=True,
             default_var=[]
     )
+    slack_messages = []
     for instagram_page_configuration in instagram_pages_configuration:
         page_username = instagram_page_configuration['username']
-        slack_bot_name = instagram_page_configuration['slack_bot_name']
-        slack_bot_icon = instagram_page_configuration['slack_bot_icon']
-
-    return [{"hello": "world"}]
+        slack_bot_name = f"{instagram_page_configuration['slack_bot_name']} - INSTAGRAM"
+        profile_pic_url, records = get_posts(page_username)
+        slack_messages.extend(
+                [
+                    {'icon_url': profile_pic_url, 'bot_name': slack_bot_name, **record} for record in records
+                ]
+        )
+    return slack_messages
 
 
 def post_on_slack(**kwargs):
     ti = kwargs['ti']
-    transform_data_output = ti.xcom_pull(task_ids='extract_instagram_data')
-    print(transform_data_output)
+    slack_messages = ti.xcom_pull(task_ids='extract_instagram_data')
+    for slack_message in slack_messages:
+        message = f"*{slack_message['bot_name']}* has a new post on Instagram\n" \
+                    f"{slack_message['text']} \n" \
+                  f"{slack_message['post_link']}\n" \
+                  f"[Display]({slack_message['display_url']})"
+        send_to_slack(
+                message,
+                SLACK_CHANNEL,
+                slack_message['icon_url'],
+                slack_message['bot_name']
+        )
 
 
 dag = DAG(
