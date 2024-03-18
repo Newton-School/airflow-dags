@@ -52,7 +52,9 @@ def get_posts(instagram_username):
     if response.status_code != 200:
         return [], None, "Failed to fetch data from Instagram. Please check the username."
 
+    print("Response", response)
     data = response.json().get('data')
+    print("Data", data)
     if not data:
         return [], None, "Failed to fetch data from Instagram. Please check the username."
     user = data.get('user')
