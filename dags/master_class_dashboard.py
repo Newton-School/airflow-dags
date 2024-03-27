@@ -32,8 +32,8 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO master_class_dashboard (email,lead_created_on,lecture_date,overlapping_time_minutes,prospect_stage,was_prospect,prospect_date,first_connect,salary,degree,twelfth_marks,lead_owner,instructor_name,number_of_cnc_dials,docs,inst_time_in_mins,rfd_date,offer_letter_date,lecture_prospect_status,lecture_before_rfd,lecture_first_connect_status,rfd_and_lecture_same_month,test_marks,test_date,not_interested_reason)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
+            'INSERT INTO master_class_dashboard (email,lead_created_on,lecture_date,overlapping_time_minutes,prospect_stage,was_prospect,prospect_date,first_connect,salary,degree,twelfth_marks,lead_owner,instructor_name,number_of_cnc_dials,docs,inst_time_in_mins,rfd_date,offer_letter_date,lecture_prospect_status,lecture_before_rfd,lecture_first_connect_status,rfd_and_lecture_same_month,test_marks,test_date,not_interested_reason,utm_source)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
             (
                 transform_row[0],
                 transform_row[1],
@@ -60,6 +60,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[22],
                 transform_row[23],
                 transform_row[24],
+                transform_row[25],
             )
         )
     pg_conn.commit()
@@ -102,7 +103,8 @@ create_table = PostgresOperator(
             rfd_and_lecture_same_month boolean,
             test_marks int,
             test_date DATE,
-            not_interested_reason  varchar(256)
+            not_interested_reason  varchar(256),
+            utm_source varchar(256)
         );
     ''',
     dag=dag
@@ -180,7 +182,8 @@ transform_data = PostgresOperator(
         when course_user_timeline_flow_mapping.apply_form_question_set = 1 then 'Default'
         when course_user_timeline_flow_mapping.apply_form_question_set = 2 then 'Long' end as apply_form_question_set,
         -- date(course_user_mapping.created_at) as created_at,
-        date(users_info.date_joined) as date_joined
+        date(users_info.date_joined) as date_joined,
+        users_info.utm_source
         from users_info
         left join course_user_timeline_flow_mapping on course_user_timeline_flow_mapping.user_id = users_info.user_id and course_user_timeline_flow_mapping.course_id in (786,759,800,818,819,820,821,822,823)
         left join apply_form_course_user_question_mapping on apply_form_course_user_question_mapping.user_id = course_user_timeline_flow_mapping.user_id and apply_form_course_user_question_mapping.course_id = course_user_timeline_flow_mapping.course_id
@@ -193,6 +196,7 @@ transform_data = PostgresOperator(
         b as(
         select
         distinct email,
+        utm_source,
         case when question_text = 'What are you doing currently?' then apply_form_response end as "What are you doing currently?",
         case when question_text = 'Graduation Year (College passing out year)' then apply_form_response end as "Graduation Year (College passing out year)",
         case when question_text in ('Designation','How much salary do you get in a month currently?','What is your total yearly salary package? (LPA - Lakh Per Annum)') then apply_form_response end as "salary",
@@ -206,6 +210,7 @@ transform_data = PostgresOperator(
         final as(
         select
         distinct email,
+        utm_source,
         max("salary") as salary,
         max("why_do_you_want_to_join") as why_do_you_want_to_join,
         max("degree") as degree,
@@ -213,7 +218,7 @@ transform_data = PostgresOperator(
         max("Graduation Year (College passing out year)") as graduation_year,
         max("What are you doing currently?") as life_status
         from b
-        group by 1
+        group by 1,2
         ),
         lecture_details_final as(
         with inst_time_raw as 
@@ -374,7 +379,8 @@ transform_data = PostgresOperator(
         when lsq_leads_x_activities.prospect_stage = 'Rejected'
         and (lsq_leads_x_activities.mx_custom_3 IS NOT NULL)
         and ((lsq_leads_x_activities.mx_custom_3 <> '') or (lsq_leads_x_activities.mx_custom_3 is null))
-        AND (lsq_leads_x_activities.event_name = 'Log Phone Call') then lsq_leads_x_activities.mx_custom_3 else null end as not_interested_reason
+        AND (lsq_leads_x_activities.event_name = 'Log Phone Call') then lsq_leads_x_activities.mx_custom_3 else null end as not_interested_reason,
+        final.utm_source
         
         from lecture_details
         left join lsq_leads_x_activities on lsq_leads_x_activities.email_address = lecture_details.email
