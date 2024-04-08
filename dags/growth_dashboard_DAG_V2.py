@@ -345,7 +345,7 @@ transform_data = PostgresOperator(
             distinct email_address,
             min(date(modified_on)) as first_connect
             from user_level
-            left join lsq_leads_x_activities on lsq_leads_x_activities.email_address = user_level.email
+            right join lsq_leads_x_activities on lsq_leads_x_activities.email_address = user_level.email
             where lsq_leads_x_activities.lead_created_on is not null and lsq_leads_x_activities.lead_owner not in ('System','Jai Sharma','Praduman Goyal')
             and date_trunc('month',date(modified_on)) >= date_trunc('month',now()) - interval '3 month'
             and ((event in ('Outbound Phone Call Activity') and call_type = 'Answered') or (event in ('Log Phone Call') and mx_custom_1 not in ('CNC','CBL'))) and event in ('Outbound Phone Call Activity','Log Phone Call')
