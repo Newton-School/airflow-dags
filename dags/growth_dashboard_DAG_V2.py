@@ -88,7 +88,7 @@ def extract_data_to_nested(**kwargs):
 dag = DAG(
     'Growth_Dashboard_V2_DAG',
     default_args=default_args,
-    description='An Analytics Reporting Layer DAG for Growth Dashboard',
+    description='An Analytics Reporting Layer DAG for Growth Dashboard kuch naya dashboard',
     schedule_interval='55 2 * * *',
     catchup=False
 )
