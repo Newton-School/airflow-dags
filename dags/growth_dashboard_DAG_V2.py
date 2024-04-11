@@ -88,7 +88,7 @@ def extract_data_to_nested(**kwargs):
 dag = DAG(
     'Growth_Dashboard_V2_DAG',
     default_args=default_args,
-    description='An Analytics Reporting Layer DAG for Growth Dashboard kuch naya dashboard',
+    description='An Analytics Reporting Layer DAG for Growth Dashboard',
     schedule_interval='55 2 * * *',
     catchup=False
 )
@@ -332,12 +332,12 @@ transform_data = PostgresOperator(
             case when docs.docs_collected is null then 0 else 1 end as docs_collected,
             date(lsq_leads_x_activities.mx_rfd_date) as rfd_date,
             lsq_leads_x_activities.lead_last_call_status
-            from final
-            left join lsq_leads_x_activities on lsq_leads_x_activities.email_address = final.email
-            left join all_time_prospect on all_time_prospect.email_address = final.email
-            left join offer_letter on offer_letter.email_address = final.email
-            left join docs on docs.email_address = final.email
-            left join product_paid on product_paid.email_address = final.email
+            from lsq_leads_x_activities
+            left join final on lsq_leads_x_activities.email_address = final.email
+            left join all_time_prospect on all_time_prospect.email_address = lsq_leads_x_activities.email_address
+            left join offer_letter on offer_letter.email_address = lsq_leads_x_activities.email_address
+            left join docs on docs.email_address = lsq_leads_x_activities.email_address
+            left join product_paid on product_paid.email_address = lsq_leads_x_activities.email_address
             where lsq_leads_x_activities.lead_created_on is not null
             ),
             prospect_churned as(
@@ -389,7 +389,7 @@ transform_data = PostgresOperator(
             count(distinct activity_id) filter (where ((event in ('Outbound Phone Call Activity') and call_type = 'NotAnswered') or (event in ('Log Phone Call') and mx_custom_1 in ('CNC'))) and event in ('Outbound Phone Call Activity','Log Phone Call')) as number_of_dials,
             count(distinct activity_id) filter (where ((event in ('Outbound Phone Call Activity') and call_type = 'Answered') or (event in ('Log Phone Call') and mx_custom_1 not in ('CNC'))) and event in ('Outbound Phone Call Activity','Log Phone Call')) as number_of_connects
             from final
-            right join lsq_leads_x_activities on lsq_leads_x_activities.email_address = final.email
+            left join lsq_leads_x_activities on lsq_leads_x_activities.email_address = final.email
             where lead_created_on is not null and lead_owner not in ('System','Jai Sharma','Praduman Goyal')
             group by 1,2
             order by email_address
