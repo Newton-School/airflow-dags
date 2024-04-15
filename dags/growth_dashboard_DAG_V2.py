@@ -147,23 +147,23 @@ transform_data = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''with test_taken_1 as(
             select 
-                        distinct users_info.email,
-                        date(assessment_started_at) as test_date,
-                        max(marks_obtained) as marks_obtained,
-                        count(distinct aqum.mcq_id) filter (where aqum.id is not null) as total_mcqs_opened,
-                        count(distinct aqum.mcq_id) filter (where aqum.option_marked_at is not null) as total_mcqs_attempted,
-                        count(distinct aqum.mcq_id) filter (where aqum.marked_choice = aqum.correct_choice) as total_mcqs_correct
-                    from
-                        assessments a 
-                    join courses c 
-                        on c.course_id = a.course_id and c.course_id in (800,818,819,820,821,822,823)
-                    left join course_user_mapping as cum on cum.course_id = c.course_id
-                    left join assessment_question_user_mapping aqum 
-                        on aqum.assessment_id = a.assessment_id 
-                            and aqum.course_user_mapping_id = cum.course_user_mapping_id 
-                    left join users_info on users_info.user_id = aqum.user_id
-                    where users_info.email not like ('%@newtonschool.co%')
-                    group by 1,2
+                distinct users_info.email,
+                date(assessment_started_at) as test_date,
+                max(marks_obtained) as marks_obtained,
+                count(distinct aqum.mcq_id) filter (where aqum.id is not null) as total_mcqs_opened,
+                count(distinct aqum.mcq_id) filter (where aqum.option_marked_at is not null) as total_mcqs_attempted,
+                count(distinct aqum.mcq_id) filter (where aqum.marked_choice = aqum.correct_choice) as total_mcqs_correct
+            from
+                assessments a 
+            join courses c 
+                on c.course_id = a.course_id and c.course_id in (800,818,819,820,821,822,823)
+            left join course_user_mapping as cum on cum.course_id = c.course_id
+            left join assessment_question_user_mapping aqum 
+                on aqum.assessment_id = a.assessment_id 
+                    and aqum.course_user_mapping_id = cum.course_user_mapping_id 
+            left join users_info on users_info.user_id = aqum.user_id
+            where users_info.email not like ('%@newtonschool.co%')
+            group by 1,2
             ),
             test_taken_2 as(
             select 
@@ -313,23 +313,26 @@ transform_data = PostgresOperator(
             ),
             user_level as(
             select
+            lsq_leads_x_activities.email as lsq_email,
             distinct final.*,
             lsq_leads_x_activities.prospect_stage,
             case 
-            when "salary" in ('Rs 25000 - Rs 30000 per month','Rs 30000 - Rs 40000 per month','Rs 40000 - Rs 50000 per month','Rs 50000 - Rs 75000 per month','Rs 75000 - Rs 100000 per month','More than 100000','3 LPA - 4.99 LPA','5 LPA or more') then 'ICP'
-            when "salary" in ('Rs 20000 - Rs 30000 per month','Rs 10000 - Rs 20000 per month','Rs 20000 - Rs 24999 per month','2 LPA - 2.99 LPA','Below 2 LPA','Less than 3LPA') then 'Close to ICP'
-            when "salary" in ('I am not earning right now','Not Earning') then 'Not ICP' end as icp_status,
-            case when all_time_prospect.a_t_prospect is true then 'Yes' else null end as was_prospect,
+                when "salary" in ('Rs 25000 - Rs 30000 per month','Rs 30000 - Rs 40000 per month','Rs 40000 - Rs 50000 per month','Rs 50000 - Rs 75000 per month','Rs 75000 - Rs 100000 per month','More than 100000','3 LPA - 4.99 LPA','5 LPA or more') then 'ICP'
+                when "salary" in ('Rs 20000 - Rs 30000 per month','Rs 10000 - Rs 20000 per month','Rs 20000 - Rs 24999 per month','2 LPA - 2.99 LPA','Below 2 LPA','Less than 3LPA') then 'Close to ICP'
+                when "salary" in ('I am not earning right now','Not Earning') then 'Not ICP' end as icp_status,
+            case 
+                when all_time_prospect.a_t_prospect is true then 'Yes' else null end as was_prospect,
             prospect_date,
-            case when offer_letter.ol is null then 0 else 1 end as ol,
-            case when offer_letter.ol is null then null else offer_letter_date end as offer_letter_date,
-            case when product_paid.paid_on_product is null then 0 else 1 end as paid_on_product,
-            case when product_paid.paid_on_product is null then null else paid_on_product_date end as paid_on_product_date,
-            case when mid_funnel_buckets like ('%Live Class%') then 1 else 0 end as live_class,
+                case when offer_letter.ol is null then 0 else 1 end as ol,
+                case when offer_letter.ol is null then null else offer_letter_date end as offer_letter_date,
+                case when product_paid.paid_on_product is null then 0 else 1 end as paid_on_product,
+                case when product_paid.paid_on_product is null then null else paid_on_product_date end as paid_on_product_date,
+                case when mid_funnel_buckets like ('%Live Class%') then 1 else 0 end as live_class,
             lsq_leads_x_activities.lead_owner,
             lsq_leads_x_activities.lead_created_on,
             lsq_leads_x_activities.mx_priority_status,
-            case when docs.docs_collected is null then 0 else 1 end as docs_collected,
+            case 
+                when docs.docs_collected is null then 0 else 1 end as docs_collected,
             date(lsq_leads_x_activities.mx_rfd_date) as rfd_date,
             lsq_leads_x_activities.lead_last_call_status
             from lsq_leads_x_activities
@@ -450,9 +453,7 @@ transform_data = PostgresOperator(
             left join responded on responded.email_address = user_level.email
             left join test_taken on test_taken.email = user_level.email
             left join source_mapping on source_mapping.utm_source = user_level.utm_source 
-            group by 1,2,3,4,5,6,7,8,user_level.lead_owner,user_level.mx_priority_status,rfd_date,test_taken.marks_obtained,test_taken.test_date,test_taken.total_mcqs_attempted,user_level.utm_source,utm_medium,utm_campaign,source_mapping.source,lead_last_call_status
-
-    ;
+            group by 1,2,3,4,5,6,7,8,user_level.lead_owner,user_level.mx_priority_status,rfd_date,test_taken.marks_obtained,test_taken.test_date,test_taken.total_mcqs_attempted,user_level.utm_source,utm_medium,utm_campaign,source_mapping.source,lead_last_call_status;
         ''',
     dag=dag
 )
