@@ -313,8 +313,8 @@ transform_data = PostgresOperator(
             ),
             user_level as(
             select
-            lsq_leads_x_activities.email as lsq_email,
             distinct final.*,
+            lsq_leads_x_activities.email as lsq_email,
             lsq_leads_x_activities.prospect_stage,
             case 
                 when "salary" in ('Rs 25000 - Rs 30000 per month','Rs 30000 - Rs 40000 per month','Rs 40000 - Rs 50000 per month','Rs 50000 - Rs 75000 per month','Rs 75000 - Rs 100000 per month','More than 100000','3 LPA - 4.99 LPA','5 LPA or more') then 'ICP'
