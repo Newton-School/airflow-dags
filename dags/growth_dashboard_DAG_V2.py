@@ -398,7 +398,7 @@ transform_data = PostgresOperator(
             order by email_address
             )
             select
-            distinct user_level.email,
+            distinct user_level.lsq_email,
             course_timeline_flow,
             cum_created_at,
             date_joined,
