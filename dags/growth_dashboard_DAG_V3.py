@@ -164,7 +164,7 @@ transform_data = PostgresOperator(
                     left join users_info on users_info.user_id = aqum.user_id
                     where users_info.email not like ('%@newtonschool.co%')
                     group by 1,2
-            ),
+            ), 
             test_taken_2 as(
             select 
                         distinct users_info.email,
