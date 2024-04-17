@@ -32,7 +32,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO growth_dashboard (email,course_timeline_flow,cum_created_at,date_joined,'
+            'INSERT INTO growth_dashboard_v3 (email,course_timeline_flow,cum_created_at,date_joined,'
             'cutfm_created_at,prospect_date,course_id,created_at,churned_date,salary,why_do_you_want_to_join,'
             'degree,twelfth_marks,graduation_year,life_status,prospect_stage,icp_status,was_prospect,ol,'
             'paid_on_product,live_class,lead_owner,number_of_dials_prospect,number_of_dials,'
@@ -86,7 +86,7 @@ def extract_data_to_nested(**kwargs):
 
 
 dag = DAG(
-    'Growth_Dashboard_DAG',
+    'Growth_Dashboard_DAG_V3',
     default_args=default_args,
     description='An Analytics Reporting Layer DAG for Growth Dashboard',
     schedule_interval='55 2 * * *',
@@ -96,7 +96,7 @@ dag = DAG(
 create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE IF NOT EXISTS growth_dashboard (
+    sql='''CREATE TABLE IF NOT EXISTS growth_dashboard_v3 (
             id serial,
             email varchar(256),
             course_timeline_flow varchar(256), 
@@ -472,7 +472,7 @@ select distinct user_level.email,
 drop_table = PostgresOperator(
     task_id='drop_table',
     postgres_conn_id='postgres_result_db',
-    sql='''DROP TABLE IF EXISTS growth_dashboard;
+    sql='''DROP TABLE IF EXISTS growth_dashboard_v3;
     ''',
     dag=dag
 )
