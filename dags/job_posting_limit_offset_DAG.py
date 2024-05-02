@@ -23,8 +23,6 @@ dag = DAG(
     catchup=False
 )
 
-def extract_total_(**kwargs):
-
 
 def extract_data_to_nested(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
