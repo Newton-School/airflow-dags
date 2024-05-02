@@ -167,7 +167,7 @@ for job_postings_sub_dag_id in range(int(total_number_of_sub_dags)):
     with TaskGroup(group_id=f"job_posting_sub_dag_{job_postings_sub_dag_id}", dag=dag) as job_posting_sub_dag_task_group:
         def transform_data(**kwargs):
             ti = kwargs['ti']
-            print("Drumil")
+            print("Drumil", kwargs["current_iterator"])
             print(ti.xcom_pull("extract_total_job_posting"))
 
         transform_limit_offset = PythonOperator(
