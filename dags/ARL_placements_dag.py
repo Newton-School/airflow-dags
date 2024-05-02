@@ -295,6 +295,7 @@ transform_data = PostgresOperator(
                     date(placements_company_user_mapping.referred_at) as referred_at,
                     date(placements_company_user_mapping.placed_at) as placed_at,
                     'Placed'  as round_type,
+                    
                     date(placements_round_progress.start_timestamp) as round_start_date,
                     date(placements_round_progress.end_timestamp) as round_end_date,
                     'Placed'  as round,
