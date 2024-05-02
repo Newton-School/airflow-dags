@@ -170,7 +170,7 @@ for job_postings_sub_dag_id in range(int(total_number_of_sub_dags)):
             extract_total_job_posting = ti.xcom_pull("extract_total_job_posting")[0][0]
             individual_total_job_posting = extract_total_job_posting / total_number_of_sub_dags
             query_limit = individual_total_job_posting
-            query_offset = individual_total_job_posting * kwargs["current_iterator"] + 1
+            query_offset = individual_total_job_posting * kwargs["current_iterator"]
 
             print("Drumil", query_limit, query_offset)
             
