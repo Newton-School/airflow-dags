@@ -168,7 +168,7 @@ for job_postings_sub_dag_id in range(int(total_number_of_sub_dags)):
         def transform_data(**kwargs):
             ti = kwargs['ti']
             print("Drumil", kwargs["current_iterator"], total_number_of_sub_dags)
-            print(ti.xcom_pull("extract_total_job_posting"))
+            print(ti.xcom_pull("extract_total_job_posting")[0][0])
 
         transform_limit_offset = PythonOperator(
             task_id="transform_limit_offset",
