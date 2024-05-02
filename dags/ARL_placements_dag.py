@@ -295,8 +295,8 @@ transform_data = PostgresOperator(
                     date(placements_company_user_mapping.referred_at) as referred_at,
                     date(placements_company_user_mapping.placed_at) as placed_at,
                     'Placed'  as round_type,
-                    cast(null as date) as round_start_date,
-                    cast(null as date) as round_end_date,
+                    date(placements_round_progress.start_timestamp) as round_start_date,
+                    date(placements_round_progress.end_timestamp) as round_end_date,
                     'Placed'  as round,
                     cast(null as boolean) as no_show,
                     
@@ -342,6 +342,7 @@ transform_data = PostgresOperator(
                     left join placements_job_openings on placements_job_openings.job_opening_id = placements_company_user_mapping.job_opening_id
                     left join placements_company on placements_company.company_id = placements_job_openings.company_id
                     left join course_user_mapping on course_user_mapping.course_user_mapping_id = placements_company_user_mapping.course_user_mapping_id
+                    left join placements_round_progress on placements_round_progress.company_course_user_mapping_id = placements_company_user_mapping.company_course_user_mapping_id
                     left join users_info ui 
                     	on ui.user_id = course_user_mapping.user_id 
 
@@ -367,8 +368,8 @@ transform_data = PostgresOperator(
                     date(placements_company_user_mapping.referred_at) as referred_at,
                     date(placements_company_user_mapping.placed_at) as placed_at,
                     'Referral'  as round_type,
-                    cast(null as date) as round_start_date,
-                    cast(null as date) as round_end_date,
+                    date(placements_round_progress.start_timestamp) as round_start_date,
+                    date(placements_round_progress.end_timestamp) as round_end_date,
                     'Referral'  as round,
                     cast(null as boolean) as no_show,
                     'Referral'  as round_status,
@@ -410,6 +411,7 @@ transform_data = PostgresOperator(
                     from placements_company_user_mapping
                     left join placements_job_openings on placements_job_openings.job_opening_id = placements_company_user_mapping.job_opening_id
                     left join placements_company on placements_company.company_id = placements_job_openings.company_id
+                    left join placements_round_progress on placements_round_progress.company_course_user_mapping_id = placements_company_user_mapping.company_course_user_mapping_id
                     left join course_user_mapping on course_user_mapping.course_user_mapping_id = placements_company_user_mapping.course_user_mapping_id
                     left join users_info ui 
                     	on ui.user_id = course_user_mapping.user_id 
