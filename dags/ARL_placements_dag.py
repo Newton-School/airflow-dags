@@ -367,8 +367,6 @@ transform_data = PostgresOperator(
                     date(placements_company_user_mapping.referred_at) as referred_at,
                     date(placements_company_user_mapping.placed_at) as placed_at,
                     'Referral'  as round_type,
-                    cast(null as date) as round_start_date,
-                    cast(null as date) as round_end_date,
                     'Referral'  as round,
                     cast(null as boolean) as no_show,
                     
