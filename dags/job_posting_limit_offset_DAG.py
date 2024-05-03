@@ -114,11 +114,11 @@ create_table = PostgresOperator(
     dag=dag
 )
 
-def get_postgres_job_posting_operator(sql_iterator):
+def get_postgres_job_posting_operator(task_iterator):
     return PostgresOperator(
         task_id='transform_data',
         postgres_conn_id='postgres_job_posting',
-        sql='''select
+        sql=f'''select
                 distinct
                 skills -> 'otherSkills' as other_skills,
                 job_openings.company,
@@ -144,7 +144,7 @@ def get_postgres_job_posting_operator(sql_iterator):
                 job_openings._airbyte_job_openings_hashid,
                 job_openings._airbyte_unique_key,
                 raw_response -> 'vacancy' as number_of_openings
-                from job_openings limit;
+                from job_openings limit {{{{ ti.xcom_pull("query_limit_job_posting_{task_iterator}") }}}} offset {{{{ ti.xcom_pull("query_offset_job_posting_{task_iterator}") }}}};
             ''',
         dag=dag
     )
