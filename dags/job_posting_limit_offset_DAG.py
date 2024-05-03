@@ -144,7 +144,7 @@ def get_postgres_job_posting_operator(task_iterator):
                 job_openings._airbyte_job_openings_hashid,
                 job_openings._airbyte_unique_key,
                 raw_response -> 'vacancy' as number_of_openings
-                from job_openings limit {{{{ ti.xcom_pull(key="query_limit_job_posting_{task_iterator}") }}}} offset {{{{ ti.xcom_pull(key="query_offset_job_posting_{task_iterator}") }}}};
+                from job_openings limit {{{{ ti.xcom_pull(key="query_limit_job_posting_{task_iterator}", task_ids="transform_limit_offset_{task_iterator}") }}}} offset {{{{ ti.xcom_pull(key="query_offset_job_posting_{task_iterator}", task_ids="transform_limit_offset_{task_iterator}") }}}};
             ''',
         dag=dag
     )
@@ -178,7 +178,7 @@ for job_postings_sub_dag_id in range(int(total_number_of_sub_dags)):
 
 
         transform_limit_offset = PythonOperator(
-            task_id="transform_limit_offset",
+            task_id=f"transform_limit_offset_{job_postings_sub_dag_id}",
             python_callable=transform_data,
             provide_context=True,
             op_kwargs={
