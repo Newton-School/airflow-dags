@@ -164,8 +164,9 @@ extract_total_job_posting = PostgresOperator(
     dag=dag
 )
 
-for job_postings_sub_dag_id in range(int(total_number_of_sub_dags)):
+for itr in range(int(total_number_of_sub_dags)):
     with TaskGroup(group_id=f"job_posting_sub_dag_{job_postings_sub_dag_id}", dag=dag) as job_posting_sub_dag_task_group:
+        job_postings_sub_dag_id = itr
         def transform_data(**kwargs):
             ti = kwargs['ti']
             extract_total_job_posting = ti.xcom_pull("extract_total_job_posting")[0][0]
