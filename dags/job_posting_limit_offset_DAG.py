@@ -173,8 +173,8 @@ for job_postings_sub_dag_id in range(int(total_number_of_sub_dags)):
             query_limit = math.floor(individual_total_job_posting)
             query_offset = individual_total_job_posting * kwargs["current_iterator"]
 
-            print("Drumil", query_limit, query_offset)
-            
+            ti.xcom_push(key=f"query_limit_job_posting_{job_postings_sub_dag_id}", value=query_limit)
+            ti.xcom_push(key=f"query_offset_job_posting_{job_postings_sub_dag_id}", value=query_offset)
 
 
         transform_limit_offset = PythonOperator(
