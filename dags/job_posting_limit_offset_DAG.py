@@ -33,7 +33,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO job_postings (other_skills,company,max_ctc,min_ctc,job_role,job_type,job_title,'
+            'INSERT INTO job_postings_v2 (other_skills,company,max_ctc,min_ctc,job_role,job_type,job_title,'
             'department,job_source,is_duplicate,job_location,preferred_skills,max_experience,min_experience,'
             'relevancy_score,job_description_url,job_description_raw_text,job_description_url_without_job_id,'
             '_airbyte_ab_id,_airbyte_emitted_at,_airbyte_normalized_at,_airbyte_job_openings_hashid,'
@@ -116,7 +116,7 @@ create_table = PostgresOperator(
 
 def get_postgres_job_posting_operator(task_iterator):
     return PostgresOperator(
-        task_id='transform_data',
+        task_id=f'transform_data_{task_iterator}',
         postgres_conn_id='postgres_job_posting',
         sql=f'''select
                 distinct
@@ -187,6 +187,15 @@ for job_postings_sub_dag_id in range(int(total_number_of_sub_dags)):
             dag=dag,
         )
 
-        transform_limit_offset
+        transform_data = get_postgres_job_posting_operator(job_postings_sub_dag_id)
+
+        extract_python_data = PythonOperator(
+            task_id=f'extract_python_data_{job_postings_sub_dag_id}',
+            python_callable=extract_data_to_nested,
+            provide_context=True,
+            dag=dag
+        )
+
+        transform_limit_offset >> transform_data >> extract_python_data
 
     create_table >> extract_total_job_posting >> job_posting_sub_dag_task_group
