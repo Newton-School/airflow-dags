@@ -144,7 +144,7 @@ def get_postgres_job_posting_operator(task_iterator):
                 job_openings._airbyte_job_openings_hashid,
                 job_openings._airbyte_unique_key,
                 raw_response -> 'vacancy' as number_of_openings
-                from job_openings limit %(limit)d offset %(offset)d;
+                from job_openings limit {{{{ params.limit }}}} offset {{{{ params.offset }}}};
             ''',
         params={
             "limit": 10,
