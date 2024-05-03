@@ -31,8 +31,8 @@ def extract_data_to_nested(**kwargs):
     pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
     curr_itr = kwargs['current_iterator']
-    transform_data_output = ti.xcom_pull(f"job_posting_sub_dag_{curr_itr}.transform_limit_offset_{curr_itr}")
-    print("Drumil", transform_data_output)
+    transform_data_output = ti.xcom_pull(f"job_posting_sub_dag_{curr_itr}.transform_data_{curr_itr}")
+    print("Drumil", transform_data_output, f"job_posting_sub_dag_{curr_itr}.transform_data_{curr_itr}")
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO job_postings_v2 (other_skills,company,max_ctc,min_ctc,job_role,job_type,job_title,'
