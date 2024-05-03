@@ -149,7 +149,7 @@ def get_postgres_job_posting_operator(task_iterator):
         params={
             "limit": 10,
             "offset": 10,
-        }
+        },
         dag=dag
     )
 
