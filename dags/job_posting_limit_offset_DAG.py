@@ -147,8 +147,8 @@ def get_postgres_job_posting_operator(task_iterator):
                 from job_openings limit {{{{ params.limit }}}} offset {{{{ params.offset }}}};
             ''',
         params={
-            "limit": 10,
-            "offset": 10,
+            "limit": f"{{{{ti.xcom_pull(task_ids='job_posting_sub_dag_{task_iterator}.transform_limit_offset_{task_iterator}', key='query_limit_job_posting_{task_iterator}')}}}}",
+            "offset": f"{{{{ti.xcom_pull(task_ids='job_posting_sub_dag_{task_iterator}.transform_limit_offset_{task_iterator}', key='query_offset_job_posting_{task_iterator}')}}}}",
         },
         dag=dag
     )
