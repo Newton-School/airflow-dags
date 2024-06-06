@@ -227,6 +227,7 @@ transform_data = PostgresOperator(
                             on cum.user_id = ui.user_id 
                         left join recorded_lectures_course_user_reports rlcur 
                             on rlcur.course_user_mapping_id = cum.course_user_mapping_id
+                        where rlcur.lecture_watch_date NOT BETWEEN '2024-06-05 16:00:00' AND '2024-06-05 00:00:00'
                         group by 1),
                         
         group_sessions as 
