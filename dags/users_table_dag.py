@@ -40,7 +40,7 @@ create_table = PostgresOperator(
             utm_source varchar(256),
             utm_medium varchar(256),
             utm_campaign varchar(256),
-            utm_hash varchar(256),
+            utm_hash varchar(255),
             tenth_marks double precision,
             twelfth_marks double precision,
             bachelors_marks double precision,
