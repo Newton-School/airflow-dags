@@ -40,6 +40,7 @@ create_table = PostgresOperator(
             utm_source varchar(256),
             utm_medium varchar(256),
             utm_campaign varchar(256),
+            utm_hash varchar(255),
             tenth_marks double precision,
             twelfth_marks double precision,
             bachelors_marks double precision,
@@ -132,6 +133,7 @@ transform_data = PostgresOperator(
                 (users_userprofile.utm_param_json->'utm_source'::text) #>> '{}' as utm_source,
                 (users_userprofile.utm_param_json->'utm_medium'::text) #>> '{}' as utm_medium,
                 (users_userprofile.utm_param_json->'utm_campaign'::text) #>> '{}' as utm_campaign,
+                (users_userentrylog.utm_param_json->'utm_hash'::text) #>> '{}' as utm_hash,
                 A.grade as tenth_marks,B.grade as twelfth_marks,C.grade as bachelors_marks,
                 C.end_date as bachelors_grad_year,
                 E.name as bachelors_degree,F.name as bachelors_field_of_study,D.grade as masters_marks,
@@ -155,9 +157,10 @@ transform_data = PostgresOperator(
                 left join education_degree M on D.degree_id = M.id  
                 left join education_fieldofstudy MF on D.field_of_study_id = MF.id
                 left join lead_type_table on lead_type_table.user_id = auth_user.id
+                left join users_userentrylog on users_userentrylog.user_id = auth_user.id
                 )
                 select 
-                    distinct user_id,first_name,last_name,date_joined,last_login,username,email,phone,current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,
+                    distinct user_id,first_name,last_name,date_joined,last_login,username,email,phone,current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,utm_hash,
                     tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type,
                     course_structure_slug,marketing_url_structure_slug,signup_graduation_year
                 from t1
@@ -189,7 +192,7 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
             pg_cursor.execute(
                     'INSERT INTO users_info (user_id,first_name,last_name,date_joined,last_login,username,email,phone,'
-                    'current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,'
+                    'current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,utm_hash,'
                     'tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,'
                     'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type,'
                     'course_structure_slug,marketing_url_structure_slug,signup_graduation_year) '
@@ -199,7 +202,7 @@ def extract_data_to_nested(**kwargs):
                     'username=EXCLUDED.username,email=EXCLUDED.email,phone=EXCLUDED.phone,'
                     'current_location_city=EXCLUDED.current_location_city,current_location_state=EXCLUDED.current_location_state,'
                     'gender=EXCLUDED.gender,date_of_birth=EXCLUDED.date_of_birth,'
-                    'utm_source=EXCLUDED.utm_source,utm_medium=EXCLUDED.utm_medium,utm_campaign=EXCLUDED.utm_campaign,'
+                    'utm_source=EXCLUDED.utm_source,utm_medium=EXCLUDED.utm_medium,utm_campaign=EXCLUDED.utm_campaign,utm_hash,'
                     'tenth_marks=EXCLUDED.tenth_marks,twelfth_marks=EXCLUDED.twelfth_marks,'
                     'bachelors_marks=EXCLUDED.bachelors_marks,bachelors_grad_year=EXCLUDED.bachelors_grad_year,'
                     'bachelors_degree=EXCLUDED.bachelors_degree,bachelors_field_of_study=EXCLUDED.bachelors_field_of_study,'
