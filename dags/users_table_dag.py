@@ -202,7 +202,7 @@ def extract_data_to_nested(**kwargs):
                     'username=EXCLUDED.username,email=EXCLUDED.email,phone=EXCLUDED.phone,'
                     'current_location_city=EXCLUDED.current_location_city,current_location_state=EXCLUDED.current_location_state,'
                     'gender=EXCLUDED.gender,date_of_birth=EXCLUDED.date_of_birth,'
-                    'utm_source=EXCLUDED.utm_source,utm_medium=EXCLUDED.utm_medium,utm_campaign=EXCLUDED.utm_campaign,utm_hash,'
+                    'utm_source=EXCLUDED.utm_source,utm_medium=EXCLUDED.utm_medium,utm_campaign=EXCLUDED.utm_campaign,utm_hash=EXCLUDED.utm_hash,'
                     'tenth_marks=EXCLUDED.tenth_marks,twelfth_marks=EXCLUDED.twelfth_marks,'
                     'bachelors_marks=EXCLUDED.bachelors_marks,bachelors_grad_year=EXCLUDED.bachelors_grad_year,'
                     'bachelors_degree=EXCLUDED.bachelors_degree,bachelors_field_of_study=EXCLUDED.bachelors_field_of_study,'
