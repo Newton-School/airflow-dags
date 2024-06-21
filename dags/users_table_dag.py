@@ -190,7 +190,7 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
             pg_cursor.execute(
                     'INSERT INTO users_info (user_id,first_name,last_name,date_joined,last_login,username,email,phone,'
-                    'current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign'
+                    'current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,'
                     'tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,'
                     'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type,'
                     'course_structure_slug,marketing_url_structure_slug,signup_graduation_year) '
