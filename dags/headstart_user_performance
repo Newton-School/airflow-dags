@@ -1,0 +1,449 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[ ]:
+
+
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from datetime import datetime
+
+
+# In[ ]:
+
+
+course_ids = [982]
+
+
+# # Theoretical Performance
+
+# In[ ]:
+
+
+default_args = {
+    'owner': 'airflow',
+    'depends_on_past': False,
+    'start_date': datetime(2023, 6, 12),
+    'retries': 1,
+}
+
+
+# In[ ]:
+
+
+dag = DAG(
+    'user_performance_dag',
+    default_args=default_args,
+    description='A complex SQL query DAG to calculate user performance based on the assignment performance and lecture viewing',
+    schedule_interval='@daily',
+)
+
+
+# # Theoretical Performance
+
+# In[ ]:
+
+
+# Task 1: Newton_edge_user_X_lectureID_X_timespent
+process_newton_edge_user_x_lectureid_x_timespent = PostgresOperator(
+    task_id='process_newton_edge_user_x_lectureid_x_timespent',
+    postgres_conn_id='your_postgres_conn_id',  # Update this with your Postgres connection ID
+    sql="""
+    WITH topics AS (
+        SELECT courses_coursecomponent.id AS topic_id, courses_coursecomponent.title AS topic_title
+        FROM courses_coursecomponent
+        WHERE courses_coursecomponent.parent_id IN (
+            SELECT courses_coursecomponent.id
+            FROM courses_coursecomponent
+            LEFT JOIN courses_course ON courses_course.id = courses_coursecomponent.course_id
+            WHERE course_type = 8 AND parent_id IS NULL AND course_id IN %(course_ids)s
+        )
+    ),
+    lectures_topics_mapping AS (
+        SELECT 
+            courses_coursecomponent.id AS lecture_coursecomponent_id,
+            courses_coursecomponent.title AS entity_name,
+            video_sessions_lecture.id AS lecture_id,
+            topic_id,
+            topic_title,
+            courses_course.id AS course_id,
+            courses_course.title AS batch_name
+        FROM courses_coursecomponent
+        JOIN topics ON courses_coursecomponent.parent_id = topics.topic_id
+        JOIN video_sessions_lecture ON video_sessions_lecture.id = courses_coursecomponent.object_id
+        LEFT JOIN courses_course ON courses_course.id = courses_coursecomponent.course_id
+        WHERE course_id IN %(course_ids)s AND courses_coursecomponent.content_type_id = 46
+    ),
+    user_lecture_time_spent AS (
+        SELECT
+            CONCAT(auth_user.first_name, ' ', auth_user.last_name) AS student_name,
+            auth_user.email,
+            courses_courseusermapping.user_id,
+            video_sessions_lecture.title AS lecture_title,
+            topic_id,
+            topic_title,
+            CAST(EXTRACT(HOURS FROM video_recording_duration) AS INT)*60 + CAST(EXTRACT(MINUTES FROM video_recording_duration) AS INT) + EXTRACT(SECONDS FROM video_recording_duration)/60 AS lecture_duration,
+            SUM(video_sessions_lecturecourseuserreport.duration)/60 AS watch_time_mins
+        FROM video_sessions_lecture
+        LEFT JOIN courses_course ON video_sessions_lecture.course_id = courses_course.id 
+        LEFT JOIN courses_courseusermapping ON courses_courseusermapping.course_id = courses_course.id
+        LEFT JOIN auth_user ON auth_user.id = courses_courseusermapping.user_id
+        LEFT JOIN video_sessions_lecturecourseuserreport ON video_sessions_lecturecourseuserreport.course_user_mapping_id = courses_courseusermapping.id AND video_sessions_lecturecourseuserreport.lecture_id = video_sessions_lecture.id
+        LEFT JOIN lectures_topics_mapping ON video_sessions_lecture.id = lectures_topics_mapping.lecture_id
+        LEFT JOIN video_sessions_videosessionrecording ON video_sessions_videosessionrecording.video_session_object_id = video_sessions_lecture.id
+        WHERE course_id IN %(course_ids)s
+        GROUP BY 1,2,3,4,5,6,7
+    ),
+    user_details AS (
+        SELECT 
+            DISTINCT courses_courseusermapping.user_id, 
+            auth_user.first_name, 
+            auth_user.last_name, 
+            auth_user.email, 
+            users_userprofile.phone, 
+            courses_courseusermapping.created_at, 
+            courses_courseusermapping.utm_param_json->>'utm_source' AS utm_source,
+            courses_courseusermapping.utm_param_json->>'utm_campaign' AS utm_campaign,
+            courses_courseusermapping.utm_param_json->>'utm_medium' AS utm_medium,
+            courses_course.id AS course_id,
+            courses_course.title
+        FROM courses_courseusermapping
+        INNER JOIN courses_course ON courses_courseusermapping.course_id = courses_course.id 
+        INNER JOIN auth_user ON courses_courseusermapping.user_id = auth_user.id 
+        LEFT JOIN users_education ON users_education.user_id = auth_user.id
+        LEFT JOIN users_userprofile ON auth_user.id = users_userprofile.user_id 
+        LEFT JOIN courses_coursestructure ON courses_coursestructure.id = courses_course.course_structure_id
+        WHERE course_id IN %(course_ids)s
+    )
+    CREATE TABLE IF NOT EXISTS headstart_user_lecture_timespent AS
+    SELECT user_details.*,
+           user_lecture_time_spent.topic_id,
+           user_lecture_time_spent.topic_title,
+           user_lecture_time_spent.lecture_title,
+           user_lecture_time_spent.watch_time_mins,
+           user_lecture_time_spent.lecture_duration,
+           CASE WHEN user_lecture_time_spent.watch_time_mins >= 0.5 * user_lecture_time_spent.lecture_duration THEN 1 ELSE 0 END AS lecture_completion_flag
+    FROM user_details
+    JOIN user_lecture_time_spent ON user_details.user_id = user_lecture_time_spent.user_id AND user_details.email = user_lecture_time_spent.email
+    WHERE user_details.email NOT LIKE '%newtonschool.co%'
+    """,
+    dag=dag,
+    params={'course_ids': tuple(course_ids)},
+)
+
+# Task 2: lecture_completion_theoretical
+process_lecture_completion_theoretical = PostgresOperator(
+    task_id='lecture_completion_theoretical',
+    postgres_conn_id='your_postgres_conn_id',  # Update this with your Postgres connection ID
+    sql="""
+    WITH filtered_data AS (
+        SELECT 
+            user_id,
+            course_id,
+            email,
+            topic_id,
+            topic_title,
+            lecture_completion_flag
+        FROM headstart_user_lecture_timespent AS t
+        WHERE course_id IN %(course_ids)s
+    ), 
+    
+    aggregated_data AS (
+        SELECT
+            user_id,
+            course_id,
+            email,
+            topic_id,
+            topic_title,
+            COUNT(*) AS total_lectures, 
+            SUM(lecture_completion_flag) AS completed_lectures
+        FROM filtered_data
+        GROUP BY user_id, course_id, email, topic_id, topic_title
+    )
+
+    CREATE TABLE IF NOT EXISTS headstart_lecture_completion_theoretical AS
+    SELECT *,
+           CAST(completed_lectures AS FLOAT) * 100 / total_lectures AS lectures_completion_rate 
+    FROM aggregated_data
+    """,
+    dag=dag,
+    params={'course_ids': tuple(course_ids)},
+)
+
+
+# # Practical Performance
+
+# In[ ]:
+
+
+# Task 1: Process and save assignment_question_wise_data_X_topic
+process_assignment_question_wise_data = PostgresOperator(
+    task_id='process_assignment_question_wise_data',
+    postgres_conn_id='your_postgres_connection',
+    sql="""
+    WITH question_test_case_map AS 
+    ( SELECT assignments_assignmentquestion.*, 
+             COUNT(assignments_assignmentquestiontestcasemapping.id) AS total_test_case_count 
+      FROM assignments_assignmentquestion 
+      LEFT JOIN assignments_assignmentquestiontestcasemapping 
+      ON assignments_assignmentquestiontestcasemapping.assignment_question_id = assignments_assignmentquestion.id
+      GROUP BY assignments_assignmentquestion.id
+    ),
+    topics AS (
+      SELECT courses_coursecomponent.id AS topic_id, 
+             courses_coursecomponent.title AS topic_title
+      FROM courses_coursecomponent
+      WHERE courses_coursecomponent.parent_id IN 
+        (SELECT courses_coursecomponent.id
+         FROM courses_coursecomponent
+         LEFT JOIN courses_course ON courses_course.id = courses_coursecomponent.course_id
+         WHERE course_type = 8 AND parent_id IS NULL)
+    ),
+    assignments_topics_mapping AS (
+      SELECT courses_coursecomponent.id AS assignment_coursecomponent_id,
+             courses_coursecomponent.title AS entity_name,
+             assignments_assignment.id AS assignment_id,
+             topic_id,
+             topic_title,
+             courses_course.id AS course_id,
+             courses_course.title AS batch_name
+      FROM courses_coursecomponent
+      JOIN topics ON courses_coursecomponent.parent_id = topics.topic_id
+      LEFT JOIN courses_course ON courses_course.id = courses_coursecomponent.course_id
+      LEFT JOIN assignments_assignment ON assignments_assignment.id = courses_coursecomponent.object_id
+      WHERE course_id IN %(course_ids)s AND courses_coursecomponent.content_type_id = 60
+    ),
+    raw AS (
+      SELECT assignments_assignmentcourseuserquestionmapping.assignment_question_id AS qid,
+             assignments_assignmentcourseuserquestionmapping.id AS acuqm_id,
+             assignments_assignment.title,
+             assignments_topics_mapping.course_id,
+             topic_id,
+             topic_title,
+             amcq.question_text AS assignment_question,
+             batch_name,
+             ccum.user_id,
+             ccum.id AS cum_id,
+             assignments_assignmentcourseuserquestionmapping.started_at,
+             assignments_assignmentcourseuserquestionmapping.completed_at,
+             assignments_assignmentcourseuserquestionmapping.completed,
+             assignments_assignmentcourseuserquestionmapping.all_test_case_passed,
+             assignments_assignmentcourseuserquestionmapping.wrong_submissions,
+             acuam.id,
+             assignments_assignmentcourseuserquestionmapping.id AS amcqcumid,
+             assignments_assignment.end_timestamp,
+             amcq.total_test_case_count,
+             assignments_assignmentcourseuserquestionmapping.max_test_case_passed,
+             amcq.difficulty_type
+      FROM assignments_assignment
+      JOIN assignments_topics_mapping 
+          ON assignments_topics_mapping.assignment_id = assignments_assignment.id 
+      LEFT JOIN courses_courseusermapping ccum
+          ON ccum.course_id = assignments_topics_mapping.course_id
+      LEFT JOIN auth_user ON auth_user.id = ccum.user_id    
+      LEFT JOIN assignments_assignmentcourseusermapping acuam 
+          ON acuam.course_user_mapping_id = ccum.id AND acuam.assignment_id = assignments_assignment.id 
+      LEFT JOIN assignments_assignmentcourseuserquestionmapping
+          ON assignments_assignmentcourseuserquestionmapping.assignment_course_user_mapping_id = acuam.id 
+      LEFT JOIN question_test_case_map AS amcq
+          ON amcq.id = assignments_assignmentcourseuserquestionmapping.assignment_question_id
+      WHERE assignments_assignment.hidden IS FALSE 
+        AND assignments_assignmentcourseuserquestionmapping.assignment_question_id IS NOT NULL
+        AND auth_user.email NOT LIKE '%@newtonschool.co%'
+        AND auth_user.email NOT LIKE '%kapatia@gmail.com%'
+        AND auth_user.email NOT LIKE '%theboloapp.com%'
+        AND amcq.is_deleted IS NOT TRUE
+    ),
+    au AS (
+      SELECT id,
+             CONCAT(first_name, ' ', last_name) AS student_name,
+             auth_user.email
+      FROM auth_user
+    ),
+
+    
+    final AS (
+      SELECT DISTINCT raw.acuqm_id,
+                      raw.user_id,
+                      raw.cum_id,
+                      raw.qid,
+                      raw.course_id,
+                      au.student_name,
+                      raw.batch_name,
+                      raw.topic_id,
+                      raw.topic_title,
+                      raw.title AS assignment_title,
+                      raw.assignment_question,
+                      raw.difficulty_type,
+                      email,
+                      started_at,
+                      completed_at,
+                      raw.total_test_case_count,
+                      raw.max_test_case_passed,
+                      COUNT(DISTINCT raw.qid) AS open_count,
+                      COUNT(DISTINCT raw.qid) FILTER (WHERE (raw.end_timestamp >= raw.started_at) AND (raw.started_at IS NOT NULL)) AS attempt_count,
+                      COUNT(DISTINCT raw.qid) FILTER (WHERE (raw.completed IS TRUE) AND (raw.started_at IS NOT NULL)) AS correct_submission_count,
+                      COUNT(DISTINCT raw.qid) FILTER (WHERE (raw.end_timestamp >= raw.started_at) AND (raw.started_at IS NOT NULL)) - COUNT(DISTINCT raw.qid) FILTER (WHERE raw.completed IS TRUE AND raw.started_at IS NOT NULL) AS wrong_submission
+      FROM raw
+      JOIN au ON raw.user_id = au.id
+      GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17
+    )
+    CREATE TABLE IF NOT EXISTS headstart_assignment_question_wise_data_X_topic AS 
+    SELECT * INTO assignment_question_wise_data_X_topic
+    FROM final
+    WHERE open_count > 0 
+    ORDER BY 1,4;
+    """,
+    dag=dag,
+    params={'course_ids': tuple(course_ids)},
+)
+
+
+# In[ ]:
+
+
+# Task 2: Process and save questions_completion_practical
+process_questions_completion_practical = PostgresOperator(
+    task_id='process_questions_completion_practical',
+    postgres_conn_id='your_postgres_connection',
+    sql="""
+    WITH raw AS (
+      SELECT user_id,
+             student_name,
+             user_question_data.course_id,
+             topic_id,
+             topic_title,
+             courses_course.title AS course_title,
+             SUM(open_count) AS questions_opened, 
+             SUM(correct_submission_count) AS questions_completed 
+      FROM headstart_assignment_question_wise_data_X_topic AS user_question_data
+      JOIN courses_course ON courses_course.id = user_question_data.course_id
+      WHERE course_id IN %(course_ids)s
+      GROUP BY 1,2,3,4,5,6
+    ),
+    topics AS (
+      SELECT courses_coursecomponent.id AS topic_id,
+             courses_coursecomponent.title AS topic_title
+      FROM courses_coursecomponent
+      WHERE courses_coursecomponent.parent_id IN 
+        (SELECT courses_coursecomponent.id
+         FROM courses_coursecomponent
+         LEFT JOIN courses_course ON courses_course.id = courses_coursecomponent.course_id
+         WHERE course_type = 8 AND parent_id IS NULL)
+    ),
+    total_questions_normal_assignment AS (
+      SELECT topic_id,
+             topic_title,
+             COUNT(DISTINCT aqm.assignment_question_id) AS total_questions_topic_normal
+      FROM courses_coursecomponent
+      JOIN topics ON courses_coursecomponent.parent_id = topics.topic_id
+      LEFT JOIN courses_course ON courses_course.id = courses_coursecomponent.course_id
+      LEFT JOIN assignments_assignment ON assignments_assignment.id = courses_coursecomponent.object_id
+      LEFT JOIN assignments_assignmentquestionmapping aqm ON aqm.assignment_id = assignments_assignment.id
+      WHERE course_id IN %(course_ids)s AND courses_coursecomponent.content_type_id = 60 AND aqm.assignment_question_id IS NOT NULL 
+      GROUP BY 1,2
+    ),
+    total_questions_random_assignment AS (
+      SELECT topics.topic_id,
+             topics.topic_title, 
+             SUM(assignments_assignmenttopicdifficultynumbermapping.number) AS random_questions_number
+      FROM courses_coursecomponent
+      JOIN topics ON courses_coursecomponent.parent_id = topics.topic_id
+      LEFT JOIN courses_course ON courses_course.id = courses_coursecomponent.course_id
+      LEFT JOIN assignments_assignment ON assignments_assignment.id = courses_coursecomponent.object_id
+      JOIN assignments_assignmenttopicmapping ON assignments_assignmenttopicmapping.assignment_id = assignments_assignment.id AND assignments_assignment.random_assignment_questions IS TRUE
+      LEFT JOIN assignments_assignmenttopicdifficultynumbermapping ON assignments_assignmenttopicdifficultynumbermapping.assignment_topic_mapping_id = assignments_assignmenttopicmapping.id
+      WHERE course_id IN %(course_ids)s AND courses_coursecomponent.content_type_id = 60
+      GROUP BY 1,2
+    )
+
+    CREATE TABLE IF NOT EXISTS headstart_questions_completion_practical AS 
+    SELECT raw.*, 
+           (total_questions_topic_normal + COALESCE(random_questions_number, 0)) AS total_questions_topic,
+           ROUND(COALESCE(CAST(questions_completed AS numeric) * 100 / (total_questions_topic_normal + COALESCE(random_questions_number, 0)), 0), 2) AS questions_completion_rate
+    FROM raw
+    LEFT JOIN total_questions_normal_assignment ON total_questions_normal_assignment.topic_id = raw.topic_id
+    LEFT JOIN total_questions_random_assignment ON total_questions_random_assignment.topic_id = raw.topic_id
+    INTO questions_completion_practical;
+    """,
+    dag=dag,
+    params={'course_ids': tuple(course_ids)},
+)
+
+
+# # Combining the Theoritical And Practical Performance Data
+
+# In[ ]:
+
+
+# Task: headstart_user_performance_360
+process_headstart_user_performance_360 = PostgresOperator(
+    task_id='process_headstart_user_performance_360',
+    postgres_conn_id='your_postgres_conn_id',  # Update this with your Postgres connection ID
+    sql="""
+    CREATE TABLE IF NOT EXISTS headstart_user_performance_360 AS
+    WITH practical_performance AS (
+        SELECT practical_perf.*
+        FROM headstart_questions_completion_practical AS practical_perf
+        WHERE course_id IN %(course_ids)s 
+    ),
+    theoretical_performance AS (
+        SELECT theoretical_perf.*
+        FROM headstart_lecture_completion_theoretical AS theoretical_perf
+        WHERE course_id IN %(course_ids)s 
+    )
+    SELECT tp.user_id, tp.email, tp.course_id, tp.topic_title,
+           COALESCE(questions_completed, 0) AS questions_completed,
+           COALESCE(total_questions_topic, 0) AS total_questions_topic,
+           COALESCE(questions_completion_rate, 0) AS questions_completion_rate,
+           completed_lectures,
+           total_lectures,
+           lectures_completion_rate,
+           COALESCE((questions_completed + completed_lectures) * 100 / (total_lectures + total_questions_topic), 0) AS topic_completion_prcnt
+    FROM theoretical_performance tp
+    FULL OUTER JOIN practical_performance pp 
+        ON tp.user_id = pp.user_id AND tp.course_id = pp.course_id AND tp.topic_id = pp.topic_id
+    """,
+    dag=dag,
+    params={'course_ids': tuple(course_ids)},
+)
+
+
+# # User Cohort wise data
+
+# In[ ]:
+
+
+# process_headstart_user_performance_cohorts = PostgresOperator(
+#     task_id='process_headstart_user_performance_cohorts',
+#     postgres_conn_id='your_postgres_conn_id',  # Update this with your Postgres connection ID
+#     sql="""
+#     CREATE TABLE IF NOT EXISTS headstart_user_performance_cohorts AS
+#     SELECT topic_title, 
+#            COUNT(CASE WHEN topic_completion_prcnt > 0 AND topic_completion_prcnt <= 5 THEN user_id END) AS "0-5 completion",
+#            COUNT(CASE WHEN topic_completion_prcnt > 5 AND topic_completion_prcnt <= 10 THEN user_id END) AS "5-10 completion",
+#            COUNT(CASE WHEN topic_completion_prcnt > 10 AND topic_completion_prcnt <= 30 THEN user_id END) AS "10-30 completion",
+#            COUNT(CASE WHEN topic_completion_prcnt > 30 AND topic_completion_prcnt <= 50 THEN user_id END) AS "30-50 completion",
+#            COUNT(CASE WHEN topic_completion_prcnt > 50 AND topic_completion_prcnt <= 80 THEN user_id END) AS "50-80 completion",
+#            COUNT(CASE WHEN topic_completion_prcnt > 80 THEN user_id END) AS ">80 completion"
+#     FROM headstart_user_performance_360 AS t
+#     WHERE course_id IN %(course_ids)s AND topic_title IS NOT NULL 
+#     GROUP BY topic_title
+#     """,
+#     dag=dag,
+#     params={'course_ids': tuple(course_ids)},
+# )
+
+
+# # Setting task dependencies 
+# 
+
+# In[ ]:
+
+
+process_newton_edge_user_x_lectureid_x_timespent >> process_lecture_completion_theoretical >> process_assignment_question_wise_data >> process_questions_completion_practical >> process_headstart_user_performance_360
+
+
+# 
