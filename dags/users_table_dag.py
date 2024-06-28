@@ -162,7 +162,8 @@ transform_data = PostgresOperator(
                     tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type,
                     course_structure_slug,marketing_url_structure_slug,signup_graduation_year
                 from t1
-                    where rank =1 and user_id is not null;
+                    where rank =1 and user_id is not null and last_login >= CURRENT_DATE - INTERVAL '7' DAY
+                order by last_login desc;
         ''',
     dag=dag
 )
