@@ -67,18 +67,21 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
-    sql='''select
-        id,
-        user_id,
-        course_id,
-        apply_form_question_mapping_id,
-        course_user_mapping_id,
-        course_user_apply_form_mapping_id,
-        apply_form_question_id,
-        response,
-        created_at
-        from apply_forms_courseuserapplyformquestionmapping
-        where date(created_at) >= 'January 1,2023' ;
+    sql='''
+        SELECT
+            id,
+            user_id,
+            course_id,
+            apply_form_question_mapping_id,
+            course_user_mapping_id,
+            course_user_apply_form_mapping_id,
+            apply_form_question_id,
+            response,
+            created_at
+        FROM
+            apply_forms_courseuserapplyformquestionmapping
+        WHERE
+            created_at >= NOW() - INTERVAL '7 days';
         ''',
     dag=dag
 )
