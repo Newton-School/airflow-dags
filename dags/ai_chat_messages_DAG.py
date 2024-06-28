@@ -94,32 +94,36 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
-    sql='''
-    select
-        id as table_id,
-        user_id,
-        created_at,
-        sender_id,
-        case
-            when ai_chats_aichatmessage.sender_id = 196030 then 'Newton AI'
-            when ai_chats_aichatmessage.sender_id <> 196030 then 'User'
-        end as sender_type,
-        course_id,
-        case
-            when content_type_id = 62 then 'Assignments'
-            when content_type_id = 46 then 'Lecture'
-        end as content_type,
-        case when content_type_id = 62 then object_id end as assignment_question_id,
-        case when content_type_id = 46 then object_id end as lecture_id,
-        ai_chats_aichatmessage.message ->> 'type' as message_type,
-        ai_chats_aichatmessage.message ->> 'text' as senders_response,
-        failed_response,
-        ai_chats_aichatmessage.message ->> 'is_system_generated_nudge' as is_system_generated_nudge,
-        message ->> 'selected_response' as selected_response,
-        message ->> 'correct_option' as correct_option
-    from
-        ai_chats_aichatmessage;
-        ''',
+    sql='''SELECT
+            id AS table_id,
+            user_id,
+            created_at,
+            sender_id,
+            CASE
+                WHEN ai_chats_aichatmessage.sender_id = 196030 THEN 'Newton AI'
+                WHEN ai_chats_aichatmessage.sender_id <> 196030 THEN 'User'
+            END AS sender_type,
+            course_id,
+            CASE
+                WHEN content_type_id = 62 THEN 'Assignments'
+                WHEN content_type_id = 46 THEN 'Lecture'
+            END AS content_type,
+            CASE 
+                WHEN content_type_id = 62 THEN object_id 
+            END AS assignment_question_id,
+            CASE 
+                WHEN content_type_id = 46 THEN object_id 
+            END AS lecture_id,
+            ai_chats_aichatmessage.message ->> 'type' AS message_type,
+            ai_chats_aichatmessage.message ->> 'text' AS senders_response,
+            failed_response,
+            ai_chats_aichatmessage.message ->> 'is_system_generated_nudge' AS is_system_generated_nudge,
+            message ->> 'selected_response' AS selected_response,
+            message ->> 'correct_option' AS correct_option
+        FROM
+            ai_chats_aichatmessage
+        WHERE
+            created_at >= NOW() - INTERVAL '7 days';''',
     dag=dag
 )
 
