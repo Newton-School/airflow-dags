@@ -155,6 +155,7 @@ transform_data = PostgresOperator(
                 left join education_degree M on D.degree_id = M.id  
                 left join education_fieldofstudy MF on D.field_of_study_id = MF.id
                 left join lead_type_table on lead_type_table.user_id = auth_user.id
+                left join users_userentrylog on users_userentrylog.user_id = auth_user.id
                 )
                 select 
                     distinct user_id,first_name,last_name,date_joined,last_login,username,email,phone,current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,
