@@ -186,7 +186,10 @@ def extract_data_to_nested(**kwargs):
     pg_cursor = pg_conn.cursor()
     ti = kwargs['ti']
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
+    ctr = 0
     for transform_row in transform_data_output:
+            print("Execution", ctr)
+            ctr += 1
             pg_cursor.execute(
                     'INSERT INTO users_info (user_id,first_name,last_name,date_joined,last_login,username,email,phone,'
                     'current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,'
