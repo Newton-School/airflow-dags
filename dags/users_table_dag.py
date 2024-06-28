@@ -119,29 +119,32 @@ transform_data = PostgresOperator(
                 group by 1,2,3,4,5,6,7,8,9,10,11) raw
             ),
             t1 as(
-            select distinct auth_user.id as user_id,auth_user.first_name,auth_user.last_name,
-                auth_user.date_joined as date_joined,
-                auth_user.last_login as last_login,
-                auth_user.username,
-                auth_user.email,users_userprofile.phone,
-                internationalization_city.name as current_location_city,
-                internationalization_state.name as current_location_state,
-                case when users_userprofile.gender = 1 then 'Male' when users_userprofile.gender = 2 then 'Female' 
-                when users_userprofile.gender = 3 then 'Other' end as gender,
-                users_userprofile.date_of_birth as date_of_birth,
-                (users_userprofile.utm_param_json->'utm_source'::text) #>> '{}' as utm_source,
-                (users_userprofile.utm_param_json->'utm_medium'::text) #>> '{}' as utm_medium,
-                (users_userprofile.utm_param_json->'utm_campaign'::text) #>> '{}' as utm_campaign,
-                A.grade as tenth_marks,B.grade as twelfth_marks,C.grade as bachelors_marks,
-                C.end_date as bachelors_grad_year,
-                E.name as bachelors_degree,F.name as bachelors_field_of_study,D.grade as masters_marks,
-                D.end_date as masters_grad_year,M.name as masters_degree,MF.name as masters_field_of_study,
-                lead_type_table.lead_type,
-                (users_userprofile.utm_param_json->'course_structure_slug'::text) #>> '{}' as course_structure_slug,
-                (users_userprofile.utm_param_json->'marketing_url_structure_slug'::text) #>> '{}' as marketing_url_structure_slug,
-                users_extendeduserprofile.graduation_year as signup_graduation_year,
-                row_number() over(partition by auth_user.id order by date_joined) as rank
-                
+                select 
+                    distinct auth_user.id as user_id,
+                    auth_user.first_name,
+                    auth_user.last_name,
+                    auth_user.date_joined as date_joined,
+                    auth_user.last_login as last_login,
+                    auth_user.username,
+                    auth_user.email,users_userprofile.phone,
+                    internationalization_city.name as current_location_city,
+                    internationalization_state.name as current_location_state,
+                    case when users_userprofile.gender = 1 then 'Male' when users_userprofile.gender = 2 then 'Female' 
+                    when users_userprofile.gender = 3 then 'Other' end as gender,
+                    users_userprofile.date_of_birth as date_of_birth,
+                    (users_userprofile.utm_param_json->'utm_source'::text) #>> '{}' as utm_source,
+                    (users_userprofile.utm_param_json->'utm_medium'::text) #>> '{}' as utm_medium,
+                    (users_userprofile.utm_param_json->'utm_campaign'::text) #>> '{}' as utm_campaign,
+                    A.grade as tenth_marks,B.grade as twelfth_marks,C.grade as bachelors_marks,
+                    C.end_date as bachelors_grad_year,
+                    E.name as bachelors_degree,F.name as bachelors_field_of_study,D.grade as masters_marks,
+                    D.end_date as masters_grad_year,M.name as masters_degree,MF.name as masters_field_of_study,
+                    lead_type_table.lead_type,
+                    (users_userprofile.utm_param_json->'course_structure_slug'::text) #>> '{}' as course_structure_slug,
+                    (users_userprofile.utm_param_json->'marketing_url_structure_slug'::text) #>> '{}' as marketing_url_structure_slug,
+                    users_extendeduserprofile.graduation_year as signup_graduation_year,
+                    row_number() over(partition by auth_user.id order by date_joined) as rank
+                    
                 from auth_user left join users_userprofile on users_userprofile.user_id = auth_user.id 
                 left join users_extendeduserprofile on users_extendeduserprofile.user_id = auth_user.id
                 left join internationalization_city on users_userprofile.city_id = internationalization_city.id 
@@ -156,14 +159,14 @@ transform_data = PostgresOperator(
                 left join education_fieldofstudy MF on D.field_of_study_id = MF.id
                 left join lead_type_table on lead_type_table.user_id = auth_user.id
                 left join users_userentrylog on users_userentrylog.user_id = auth_user.id
+                where auth_user.last_login >= CURRENT_DATE - INTERVAL '7' DAY
                 )
                 select 
                     distinct user_id,first_name,last_name,date_joined,last_login,username,email,phone,current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,
                     tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type,
                     course_structure_slug,marketing_url_structure_slug,signup_graduation_year
                 from t1
-                    where rank =1 and user_id is not null and last_login >= CURRENT_DATE - INTERVAL '7' DAY
-                order by last_login desc;
+                    where rank =1 and user_id is not null;
         ''',
     dag=dag
 )
