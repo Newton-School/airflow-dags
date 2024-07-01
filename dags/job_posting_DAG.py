@@ -119,33 +119,37 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_job_posting',
-    sql='''select
-            distinct
-            skills -> 'otherSkills' as other_skills,
-            job_openings.company,
-            cast(job_openings.max_ctc as varchar) as max_ctc,
-            job_openings.min_ctc,
-            job_openings.job_role,
-            job_openings.job_type,
-            job_openings.job_title,
-            job_openings.department,
-            job_openings.job_source,
-            job_openings.is_duplicate,
-            job_openings.job_location,
-            skills -> 'preferredSkills' as preferred_skills,
-            job_openings.max_experience,
-            job_openings.min_experience,
-            job_openings.relevancy_score,
-            job_openings.job_description_url,
-            job_openings.job_description_raw_text,
-            job_openings.job_description_url_without_job_id,
-            job_openings._airbyte_ab_id,
-            job_openings._airbyte_emitted_at::timestamp + INTERVAL '5 hours 30 minutes' as _airbyte_emitted_at,
-            job_openings._airbyte_normalized_at::timestamp + INTERVAL '5 hours 30 minutes' as _airbyte_normalized_at,
-            job_openings._airbyte_job_openings_hashid,
-            job_openings._airbyte_unique_key,
-            raw_response -> 'vacancy' as number_of_openings
-            from job_openings;
+    sql='''
+            SELECT
+                DISTINCT
+                skills -> 'otherSkills' AS other_skills,
+                job_openings.company,
+                CAST(job_openings.max_ctc AS varchar) AS max_ctc,
+                job_openings.min_ctc,
+                job_openings.job_role,
+                job_openings.job_type,
+                job_openings.job_title,
+                job_openings.department,
+                job_openings.job_source,
+                job_openings.is_duplicate,
+                job_openings.job_location,
+                skills -> 'preferredSkills' AS preferred_skills,
+                job_openings.max_experience,
+                job_openings.min_experience,
+                job_openings.relevancy_score,
+                job_openings.job_description_url,
+                job_openings.job_description_raw_text,
+                job_openings.job_description_url_without_job_id,
+                job_openings._airbyte_ab_id,
+                job_openings._airbyte_emitted_at::timestamp + INTERVAL '5 hours 30 minutes' AS _airbyte_emitted_at,
+                job_openings._airbyte_normalized_at::timestamp + INTERVAL '5 hours 30 minutes' AS _airbyte_normalized_at,
+                job_openings._airbyte_job_openings_hashid,
+                job_openings._airbyte_unique_key,
+                raw_response -> 'vacancy' AS number_of_openings
+            FROM
+                job_openings
+            WHERE
+                job_openings._airbyte_emitted_at >= NOW() - INTERVAL '7 days';
         ''',
     dag=dag
 )
