@@ -19,52 +19,53 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO topic_node_utility_mapping (table_unique_key,'
-            'lecture_id,'
-            'course_id,'
-            'lecture_slot_id,'
-            'start_timestamp,'
-            'end_timestamp,'
-            'mandatory,'
-            'child_video_session,'
-            'is_topic_tree_independent,'
-            'lecture_slot_is_deleted,'
-            'topic_marked_completed,'
-            'topic_node_id,'
-            'activity_type,'
-            'activity_sub_type,'
-            'question_count)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set lecture_slot_id = EXCLUDED.lecture_slot_id,'
-            'start_timestamp = EXCLUDED.start_timestamp,'
-            'end_timestamp = EXCLUDED.end_timestamp,'
-            'mandatory = EXCLUDED.mandatory,'
-            'child_video_session = EXCLUDED.child_video_session,'
-            'is_topic_tree_independent = EXCLUDED.is_topic_tree_independent,'
-            'lecture_slot_is_deleted = EXCLUDED.lecture_slot_is_deleted,'
-            'topic_marked_completed = EXCLUDED.topic_marked_completed,'
-            'activity_type = EXCLUDED.activity_type,'
-            'activity_sub_type = EXCLUDED.activity_sub_type,'
-            'question_count = EXCLUDED.question_count;',
-            (
-                transform_row[0],
-                transform_row[1],
-                transform_row[2],
-                transform_row[3],
-                transform_row[4],
-                transform_row[5],
-                transform_row[6],
-                transform_row[7],
-                transform_row[8],
-                transform_row[9],
-                transform_row[10],
-                transform_row[11],
-                transform_row[12],
-                transform_row[13],
-                transform_row[14],
-            )
+                'INSERT INTO topic_node_utility_mapping (table_unique_key,'
+                'lecture_id,'
+                'course_id,'
+                'lecture_slot_id,'
+                'start_timestamp,'
+                'end_timestamp,'
+                'mandatory,'
+                'child_video_session,'
+                'is_topic_tree_independent,'
+                'lecture_slot_is_deleted,'
+                'topic_marked_completed,'
+                'topic_node_id,'
+                'activity_type,'
+                'activity_sub_type,'
+                'question_count)'
+                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'on conflict (table_unique_key) do update set lecture_slot_id = EXCLUDED.lecture_slot_id,'
+                'start_timestamp = EXCLUDED.start_timestamp,'
+                'end_timestamp = EXCLUDED.end_timestamp,'
+                'mandatory = EXCLUDED.mandatory,'
+                'child_video_session = EXCLUDED.child_video_session,'
+                'is_topic_tree_independent = EXCLUDED.is_topic_tree_independent,'
+                'lecture_slot_is_deleted = EXCLUDED.lecture_slot_is_deleted,'
+                'topic_marked_completed = EXCLUDED.topic_marked_completed,'
+                'activity_type = EXCLUDED.activity_type,'
+                'activity_sub_type = EXCLUDED.activity_sub_type,'
+                'question_count = EXCLUDED.question_count;',
+                (
+                    transform_row[0],
+                    transform_row[1],
+                    transform_row[2],
+                    transform_row[3],
+                    transform_row[4],
+                    transform_row[5],
+                    transform_row[6],
+                    transform_row[7],
+                    transform_row[8],
+                    transform_row[9],
+                    transform_row[10],
+                    transform_row[11],
+                    transform_row[12],
+                    transform_row[13],
+                    transform_row[14],
+                )
         )
     pg_conn.commit()
+
 
 def cleanup_assignment_question_mapping(**kwargs):
     pg_hook_read_replica = PostgresHook(postgres_conn_id='postgres_read_replica')  # Use the read replica connection
@@ -99,17 +100,17 @@ def cleanup_assignment_question_mapping(**kwargs):
 
 
 dag = DAG(
-    'topic_node_utility_mapping_DAG',
-    default_args=default_args,
-    description='topic node utility mapping for expected questions (assignments and assessments) per utility',
-    schedule_interval='15 21 * * *',
-    catchup=False
+        'topic_node_utility_mapping_DAG',
+        default_args=default_args,
+        description='topic node utility mapping for expected questions (assignments and assessments) per utility',
+        schedule_interval='15 21 * * *',
+        catchup=False
 )
 
 create_table = PostgresOperator(
-    task_id='create_table',
-    postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE IF NOT EXISTS topic_node_utility_mapping (
+        task_id='create_table',
+        postgres_conn_id='postgres_result_db',
+        sql='''CREATE TABLE IF NOT EXISTS topic_node_utility_mapping (
             id serial not null,
             table_unique_key text not null PRIMARY KEY,
             lecture_id bigint,
@@ -128,12 +129,12 @@ create_table = PostgresOperator(
             question_count int
         );
     ''',
-    dag=dag
+        dag=dag
 )
 transform_data = PostgresOperator(
-    task_id='transform_data',
-    postgres_conn_id='postgres_read_replica',
-    sql='''
+        task_id='transform_data',
+        postgres_conn_id='postgres_read_replica',
+        sql='''
         select 
             concat(video_sessions_lecture.id,'_',video_sessions_lecture.course_id,'_',technologies_topicnodeutilitymapping.topic_node_id,'_',technologies_topicnodeutilitymapping.entity_type,'_',technologies_topicnodeutilitymapping.utility_type) as table_unique_key,
             video_sessions_lecture.id as lecture_id,
@@ -168,20 +169,20 @@ transform_data = PostgresOperator(
             on technologies_topicnodeutilitymapping.topic_node_id = video_sessions_lectureslottopicnodemapping.topic_node_id
         order by 5 desc;
         ''',
-    dag=dag
+        dag=dag
 )
 extract_python_data = PythonOperator(
-    task_id='extract_python_data',
-    python_callable=extract_data_to_nested,
-    provide_context=True,
-    dag=dag
+        task_id='extract_python_data',
+        python_callable=extract_data_to_nested,
+        provide_context=True,
+        dag=dag
 )
 
 cleanup_data = PythonOperator(
-    task_id='cleanup_data',
-    python_callable=cleanup_assignment_question_mapping,
-    provide_context=True,
-    dag=dag
+        task_id='cleanup_data',
+        python_callable=cleanup_assignment_question_mapping,
+        provide_context=True,
+        dag=dag
 )
 
 create_table >> transform_data >> extract_python_data >> cleanup_data
