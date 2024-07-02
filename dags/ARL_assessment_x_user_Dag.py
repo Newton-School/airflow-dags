@@ -1,10 +1,9 @@
 from airflow import DAG
-# from airflow.decorators import dag
+
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.models import Variable
-from airflow.utils.task_group import TaskGroup
+
 from datetime import datetime
 
 from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
@@ -35,102 +34,102 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO arl_assessments_x_user (table_unique_key, user_id,'
-            'student_name, lead_type, label_mapping_status, '
-            'course_id, course_name, student_category, course_structure_class, '
-            'assessment_id, assessment_title, assessment_type, assessment_sub_type, generation_and_creation_type,'
-            'assessment_class, assessment_release_date,'
-            'assessment_open_date, assessment_submission_date, assessment_attempt_status,'
-            'assessment_submission_status, question_count, questions_marked, questions_correct,'
-            'max_marks, marks_obtained, cheated, activity_status_7_days,'
-            'activity_status_14_days,'
-            'activity_status_30_days,'
-            'user_placement_status,'
-            'admin_course_id,'
-            'admin_unit_name)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
-            'lead_type = EXCLUDED.lead_type,'
-            'label_mapping_status = EXCLUDED.label_mapping_status,'
-            'course_name = EXCLUDED.course_name,'
-            'student_category = EXCLUDED.student_category,'
-            'course_structure_class = EXCLUDED.course_structure_class,'
-            'assessment_title = EXCLUDED.assessment_title,'
-            'assessment_type = EXCLUDED.assessment_type,'
-            'assessment_sub_type = EXCLUDED.assessment_sub_type,'
-            'generation_and_creation_type = EXCLUDED.generation_and_creation_type,'
-            'assessment_class = EXCLUDED.assessment_class,'
-            'assessment_release_date = EXCLUDED.assessment_release_date,'
-            'assessment_open_date = EXCLUDED.assessment_open_date,'
-            'assessment_submission_date = EXCLUDED.assessment_submission_date,'
-            'assessment_attempt_status = EXCLUDED.assessment_attempt_status,'
-            'assessment_submission_status = EXCLUDED.assessment_submission_status,'
-            'question_count = EXCLUDED.question_count,'
-            'questions_marked = EXCLUDED.questions_marked,'
-            'questions_correct = EXCLUDED.questions_correct,'
-            'max_marks = EXCLUDED.max_marks,'
-            'marks_obtained = EXCLUDED.marks_obtained,'
-            'cheated = EXCLUDED.cheated,'
-            'activity_status_7_days = EXCLUDED.activity_status_7_days,'
-            'activity_status_14_days = EXCLUDED.activity_status_14_days,'
-            'activity_status_30_days = EXCLUDED.activity_status_30_days,'
-            'user_placement_status = EXCLUDED.user_placement_status,'
-            'admin_course_id = EXCLUDED.admin_course_id,'
-            'admin_unit_name = EXCLUDED.admin_unit_name;',
-            (
-                transform_row[0],
-                transform_row[1],
-                transform_row[2],
-                transform_row[3],
-                transform_row[4],
-                transform_row[5],
-                transform_row[6],
-                transform_row[7],
-                transform_row[8],
-                transform_row[9],
-                transform_row[10],
-                transform_row[11],
-                transform_row[12],
-                transform_row[13],
-                transform_row[14],
-                transform_row[15],
-                transform_row[16],
-                transform_row[17],
-                transform_row[18],
-                transform_row[19],
-                transform_row[20],
-                transform_row[21],
-                transform_row[22],
-                transform_row[23],
-                transform_row[24],
-                transform_row[25],
-                transform_row[26],
-                transform_row[27],
-                transform_row[28],
-                transform_row[29],
-                transform_row[30],
-                transform_row[31],
+                'INSERT INTO arl_assessments_x_user (table_unique_key, user_id,'
+                'student_name, lead_type, label_mapping_status, '
+                'course_id, course_name, student_category, course_structure_class, '
+                'assessment_id, assessment_title, assessment_type, assessment_sub_type, generation_and_creation_type,'
+                'assessment_class, assessment_release_date,'
+                'assessment_open_date, assessment_submission_date, assessment_attempt_status,'
+                'assessment_submission_status, question_count, questions_marked, questions_correct,'
+                'max_marks, marks_obtained, cheated, activity_status_7_days,'
+                'activity_status_14_days,'
+                'activity_status_30_days,'
+                'user_placement_status,'
+                'admin_course_id,'
+                'admin_unit_name)'
+                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
+                'lead_type = EXCLUDED.lead_type,'
+                'label_mapping_status = EXCLUDED.label_mapping_status,'
+                'course_name = EXCLUDED.course_name,'
+                'student_category = EXCLUDED.student_category,'
+                'course_structure_class = EXCLUDED.course_structure_class,'
+                'assessment_title = EXCLUDED.assessment_title,'
+                'assessment_type = EXCLUDED.assessment_type,'
+                'assessment_sub_type = EXCLUDED.assessment_sub_type,'
+                'generation_and_creation_type = EXCLUDED.generation_and_creation_type,'
+                'assessment_class = EXCLUDED.assessment_class,'
+                'assessment_release_date = EXCLUDED.assessment_release_date,'
+                'assessment_open_date = EXCLUDED.assessment_open_date,'
+                'assessment_submission_date = EXCLUDED.assessment_submission_date,'
+                'assessment_attempt_status = EXCLUDED.assessment_attempt_status,'
+                'assessment_submission_status = EXCLUDED.assessment_submission_status,'
+                'question_count = EXCLUDED.question_count,'
+                'questions_marked = EXCLUDED.questions_marked,'
+                'questions_correct = EXCLUDED.questions_correct,'
+                'max_marks = EXCLUDED.max_marks,'
+                'marks_obtained = EXCLUDED.marks_obtained,'
+                'cheated = EXCLUDED.cheated,'
+                'activity_status_7_days = EXCLUDED.activity_status_7_days,'
+                'activity_status_14_days = EXCLUDED.activity_status_14_days,'
+                'activity_status_30_days = EXCLUDED.activity_status_30_days,'
+                'user_placement_status = EXCLUDED.user_placement_status,'
+                'admin_course_id = EXCLUDED.admin_course_id,'
+                'admin_unit_name = EXCLUDED.admin_unit_name;',
+                (
+                    transform_row[0],
+                    transform_row[1],
+                    transform_row[2],
+                    transform_row[3],
+                    transform_row[4],
+                    transform_row[5],
+                    transform_row[6],
+                    transform_row[7],
+                    transform_row[8],
+                    transform_row[9],
+                    transform_row[10],
+                    transform_row[11],
+                    transform_row[12],
+                    transform_row[13],
+                    transform_row[14],
+                    transform_row[15],
+                    transform_row[16],
+                    transform_row[17],
+                    transform_row[18],
+                    transform_row[19],
+                    transform_row[20],
+                    transform_row[21],
+                    transform_row[22],
+                    transform_row[23],
+                    transform_row[24],
+                    transform_row[25],
+                    transform_row[26],
+                    transform_row[27],
+                    transform_row[28],
+                    transform_row[29],
+                    transform_row[30],
+                    transform_row[31],
 
-            )
+                )
         )
     pg_conn.commit()
 
 
 dag = DAG(
-    'ARL_Assessments_x_user',
-    default_args=default_args,
-    concurrency=4,
-    max_active_tasks=6,
-    max_active_runs=6,
-    description='An Analytics Reporting Layer DAG for Assessments x user level',
-    schedule_interval='35 0 * * *',
-    catchup=False
+        'ARL_Assessments_x_user',
+        default_args=default_args,
+        concurrency=4,
+        max_active_tasks=6,
+        max_active_runs=6,
+        description='An Analytics Reporting Layer DAG for Assessments x user level',
+        schedule_interval='35 0 * * *',
+        catchup=False
 )
 
 create_table = PostgresOperator(
-    task_id='create_table',
-    postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE IF NOT EXISTS arl_assessments_x_user (
+        task_id='create_table',
+        postgres_conn_id='postgres_result_db',
+        sql='''CREATE TABLE IF NOT EXISTS arl_assessments_x_user (
             id serial,
             table_unique_key text not null PRIMARY KEY,
             user_id bigint,
@@ -166,13 +165,13 @@ create_table = PostgresOperator(
             admin_unit_name text 
         );
     ''',
-    dag=dag
+        dag=dag
 )
 
 transform_data = PostgresOperator(
-    task_id='transform_data',
-    postgres_conn_id='postgres_result_db',
-    sql='''select
+        task_id='transform_data',
+        postgres_conn_id='postgres_result_db',
+        sql='''select
             concat(assessments.course_id, assessments.assessment_id, course_user_mapping.user_id) as table_unique_key,
             course_user_mapping.user_id,
             concat(ui.first_name,' ', ui.last_name) as student_name,
@@ -266,13 +265,13 @@ transform_data = PostgresOperator(
         	on uasm.user_id = course_user_mapping.user_id
         group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,24,25,26,27,28,29,30,31,32;
         ''',
-    dag=dag
+        dag=dag
 )
 
 extract_python_data = PythonOperator(
-    task_id='extract_python_data',
-    python_callable=extract_data_to_nested,
-    provide_context=True,
-    dag=dag
+        task_id='extract_python_data',
+        python_callable=extract_data_to_nested,
+        provide_context=True,
+        dag=dag
 )
 create_table >> transform_data >> extract_python_data

@@ -5,7 +5,6 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from datetime import datetime
 from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
-import json
 import math
 
 default_args = {

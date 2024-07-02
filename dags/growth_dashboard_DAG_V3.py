@@ -1,13 +1,10 @@
 from airflow import DAG
-# from airflow.decorators import dag
+
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.models import Variable
-from airflow.utils.task_group import TaskGroup
-from datetime import datetime
 
-from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
+from datetime import datetime
 
 default_args = {
     'owner': 'airflow',

@@ -7,8 +7,6 @@ from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from datetime import datetime
 
-from sqlalchemy_utils.types.enriched_datetime.pendulum_date import pendulum
-
 default_args = {
     'owner': 'airflow',
     'max_active_tasks': 6,

@@ -95,7 +95,6 @@ def cleanup_assignment_question_mapping(**kwargs):
         DELETE FROM topic_node_utility_mapping
         WHERE table_unique_key NOT IN ({','.join(['%s'] * len(unique_keys))})
     ''', unique_keys)
-
     pg_conn_result_db.commit()
 
 

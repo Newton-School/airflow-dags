@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 
-import pytz
 import requests
 from airflow import DAG
 from airflow.models import Variable

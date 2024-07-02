@@ -1,11 +1,13 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.hooks.S3_hook import S3Hook
 from datetime import datetime
 import pandas as pd
 import os
+
+
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
