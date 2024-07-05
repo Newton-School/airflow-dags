@@ -33,7 +33,8 @@ def extract_data_to_nested(**kwargs):
               'activity_id,'
               'email_address,'
               'lead_created_on,'
-              'event,modified_on,'
+              'event,'
+              'modified_on,'
               'prospect_stage,'
               'lead_owner,'
               'lead_sub_status,'
@@ -90,7 +91,7 @@ def extract_data_to_nested(**kwargs):
               'mx_entrance_exam_marks'
             ')'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
-            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set '
             'prospect_stage=EXCLUDED.prospect_stage,'
             'lead_owner = EXCLUDED.lead_owner,'
@@ -167,7 +168,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[57],
                 transform_row[58],
                 transform_row[59],
-                transform_row[60],
+                transform_row[60]
             )
         )
     pg_conn.commit()
