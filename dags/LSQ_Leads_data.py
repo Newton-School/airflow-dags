@@ -27,26 +27,80 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO lsq_leads_x_activities (table_unique_key,prospect_id,activity_id,email_address,lead_created_on,'
-            'event,modified_on,prospect_stage,lead_owner,lead_sub_status,lead_last_call_status,'
-            'lead_last_call_sub_status,lead_last_call_connection_status,'
-            'mid_funnel_count,mid_funnel_buckets,'
-            'reactivation_bucket,reactivation_date,source_intended_course,intended_course,created_by_name,event_name,'
-            'notable_event_description,previous_stage,current_stage,call_type,caller,duration,call_notes,'
-            'previous_owner,current_owner,has_attachments,mx_custom_1,mx_custom_2,mx_custom_status,'
-            'mx_custom_3,mx_custom_4,mx_custom_5,mx_custom_6,mx_custom_7,mx_custom_8,mx_custom_9,'
-            'mx_custom_10,mx_custom_11,mx_custom_12,mx_custom_13,mx_custom_14,mx_custom_15,'
-            'mx_custom_16,mx_custom_17,mx_priority_status,mx_rfd_date,'
-            'mx_total_fees, mx_total_revenue, mx_doc_approved, mx_doc_collected, mx_cibil_check,mx_bucket)'
+            'INSERT INTO lsq_leads_x_activities ('
+              'table_unique_key,'
+              'prospect_id,'
+              'activity_id,'
+              'email_address,'
+              'lead_created_on,'
+              'event,modified_on,'
+              'prospect_stage,'
+              'lead_owner,'
+              'lead_sub_status,'
+              'lead_last_call_status,'
+              'lead_last_call_sub_status,'
+              'lead_last_call_connection_status,'
+              'mid_funnel_count,'
+              'mid_funnel_buckets,'
+              'reactivation_bucket,'
+              'reactivation_date,'
+              'source_intended_course,'
+              'intended_course,'
+              'created_by_name,'
+              'event_name,'
+              'notable_event_description,'
+              'previous_stage,'
+              'current_stage,'
+              'call_type,'
+              'caller,'
+              'duration,'
+              'call_notes,'
+              'previous_owner,'
+              'current_owner,'
+              'has_attachments,'
+              'mx_custom_1,'
+              'mx_custom_2,'
+              'mx_custom_status,'
+              'mx_custom_3,'
+              'mx_custom_4,'
+              'mx_custom_5,'
+              'mx_custom_6,'
+              'mx_custom_7,'
+              'mx_custom_8,'
+              'mx_custom_9,'
+              'mx_custom_10,'
+              'mx_custom_11,'
+              'mx_custom_12,'
+              'mx_custom_13,'
+              'mx_custom_14,'
+              'mx_custom_15,'
+              'mx_custom_16,'
+              'mx_custom_17,'
+              'mx_priority_status,'
+              'mx_rfd_date,'
+              'mx_total_fees,'
+              'mx_total_revenue,'
+              'mx_doc_approved,'
+              'mx_doc_collected,'
+              'mx_cibil_check,'
+              'mx_bucket,'
+              'mx_icp,'
+              'mx_identifer,'
+              'mx_organic_inbound,'
+              'mx_entrance_exam_marks'
+            ')'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
             '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-            'on conflict (table_unique_key) do update set prospect_stage=EXCLUDED.prospect_stage,'
+            'on conflict (table_unique_key) do update set '
+            'prospect_stage=EXCLUDED.prospect_stage,'
             'lead_owner = EXCLUDED.lead_owner,'
-            'lead_sub_status=EXCLUDED.lead_sub_status,lead_last_call_status=EXCLUDED.lead_last_call_status,'
+            'lead_sub_status=EXCLUDED.lead_sub_status,'
+            'lead_last_call_status=EXCLUDED.lead_last_call_status,'
             'lead_last_call_sub_status=EXCLUDED.lead_last_call_sub_status,'
             'lead_last_call_connection_status=EXCLUDED.lead_last_call_connection_status,'
             'mx_priority_status = EXCLUDED.mx_priority_status,'
-            'mx_rfd_date=EXCLUDED.mx_rfd_date, mx_total_fees=EXCLUDED.mx_total_fees, '
+            'mx_rfd_date=EXCLUDED.mx_rfd_date,'
+            'mx_total_fees=EXCLUDED.mx_total_fees, '
             'mx_total_revenue=EXCLUDED.mx_total_revenue,'
             'mx_doc_approved = EXCLUDED.mx_doc_approved,'
             'mx_doc_collected=EXCLUDED.mx_doc_collected,'
@@ -110,6 +164,10 @@ def extract_data_to_nested(**kwargs):
                 transform_row[54],
                 transform_row[55],
                 transform_row[56],
+                transform_row[57],
+                transform_row[58],
+                transform_row[59],
+                transform_row[60],
             )
         )
     pg_conn.commit()
@@ -214,11 +272,12 @@ transform_data = PostgresOperator(
             mx_reactivation_date as reactivation_date,
             mx_source_intended_course as source_intended_course,
             case 
-            when lower(mx_source_intended_course) like ('%fsd%') then 'FSD'
-            when lower(mx_source_intended_course) like ('%full%') then 'FSD'
-            when lower(mx_source_intended_course) like ('%data%') then 'DS'
-            when lower(mx_source_intended_course) like ('%ds%') then 'DS'
-            when lower(mx_source_intended_course) like '%bs%' then 'Bachelors' end as intended_course,
+              when lower(mx_source_intended_course) like ('%fsd%') then 'FSD'
+              when lower(mx_source_intended_course) like ('%full%') then 'FSD'
+              when lower(mx_source_intended_course) like ('%data%') then 'DS'
+              when lower(mx_source_intended_course) like ('%ds%') then 'DS'
+              when lower(mx_source_intended_course) like '%bs%' then 'Bachelors' 
+            end as intended_course,
                 coalesce(cast((CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
                         WHERE (message->>'Key')::varchar = 'CreatedBy')
                     THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
@@ -380,7 +439,11 @@ transform_data = PostgresOperator(
                 l2.mx_doc_approved,
                 l2.mx_doc_collected,
                 l2.mx_cibil_check,
-                l2.mx_bucket
+                l2.mx_bucket,
+                l2.mx_icp,
+                l2.mx_identifer,
+                l2.mx_organic_inbound,
+                l2.mx_entrance_exam_marks
                 
             FROM leadsquareleadsdata l2
             left join leadsquareactivity l on l2.prospectid = l.relatedprospectid 
@@ -403,4 +466,16 @@ extract_python_data = PythonOperator(
     dag=dag
 )
 
-delete_table >> create_table >> transform_data >> extract_python_data
+add_columns = PostgresOperator(
+    task_id='add_columns',
+    postgres_conn_id='postgres_result_db',
+    sql='''ALTER TABLE lsq_leads_x_activities
+            ADD COLUMN IF NOT EXISTS mx_icp varchar(512),
+            ADD COLUMN IF NOT EXISTS mx_identifer varchar(512),
+            ADD COLUMN IF NOT EXISTS mx_organic_inbound varchar(512),
+            ADD COLUMN IF NOT EXISTS mx_entrance_exam_marks varchar(512)
+    ''',
+    dag=dag
+)
+
+delete_table >> create_table >> add_columns >> transform_data >> extract_python_data
