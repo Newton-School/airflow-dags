@@ -106,7 +106,11 @@ def extract_data_to_nested(**kwargs):
             'mx_doc_approved = EXCLUDED.mx_doc_approved,'
             'mx_doc_collected=EXCLUDED.mx_doc_collected,'
             'mx_cibil_check=EXCLUDED.mx_cibil_check,'
-            'mx_bucket=EXCLUDED.mx_bucket;',
+            'mx_bucket=EXCLUDED.mx_bucket,'
+            'mx_icp=EXCLUDED.mx_icp,'
+            'mx_identifer=EXCLUDED.mx_identifer,'
+            'mx_organic_inbound=EXCLUDED.mx_organic_inbound,'
+            'mx_entrance_exam_marks=EXCLUDED.mx_entrance_exam_marks;',
             (
                 transform_row[0],
                 transform_row[1],
