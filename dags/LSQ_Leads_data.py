@@ -402,5 +402,4 @@ extract_python_data = PythonOperator(
     provide_context=True,
     dag=dag
 )
-
 delete_table >> create_table >> transform_data >> extract_python_data
