@@ -89,10 +89,10 @@ def extract_data_to_nested(**kwargs):
               'mx_identifer,'
               'mx_organic_inbound,'
               'mx_entrance_exam_marks,'
-              'mx_Lead_Quality_Grade,'
-              'mx_Lead_Inherent_Intent,'
-              'mx_Test_Date_n_Time,'
-              'mx_Lead_Type'
+              'mx_lead_quality_grade,'
+              'mx_lead_inherent_intent,'
+              'mx_test_date_n_time,'
+              'mx_lead_type'
             ')'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
             '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
@@ -115,10 +115,10 @@ def extract_data_to_nested(**kwargs):
             'mx_identifer=EXCLUDED.mx_identifer,'
             'mx_organic_inbound=EXCLUDED.mx_organic_inbound,'
             'mx_entrance_exam_marks=EXCLUDED.mx_entrance_exam_marks,'
-            'mx_Lead_Quality_Grade=EXCLUDED.mx_Lead_Quality_Grade,'
-            'mx_Lead_Inherent_Intent=EXCLUDED.mx_Lead_Inherent_Intent,'
-            'mx_Test_Date_n_Time=EXCLUDED.mx_Test_Date_n_Time,'
-            'mx_Lead_Type=EXCLUDED.mx_Lead_Type;',
+            'mx_lead_quality_grade=EXCLUDED.mx_lead_quality_grade,'
+            'mx_lead_inherent_intent=EXCLUDED.mx_lead_inherent_intent,'
+            'mx_test_date_n_time=EXCLUDED.mx_test_date_n_time,'
+            'mx_lead_type=EXCLUDED.mx_lead_type;',
 
             (
                 transform_row[0],
@@ -462,10 +462,10 @@ transform_data = PostgresOperator(
                 l2.mx_identifer,
                 l2.mx_organic_inbound,
                 l2.mx_entrance_exam_marks,
-                l2.mx_Lead_Quality_Grade,
-                l2.mx_Lead_Inherent_Intent,
-                l2.mx_Test_Date_n_Time,
-                l2.mx_Lead_Type
+                l2.mx_lead_quality_grade,
+                l2.mx_lead_inherent_intent,
+                l2.mx_test_date_n_time,
+                l2.mx_lead_type
                 
             FROM leadsquareleadsdata l2
             left join leadsquareactivity l on l2.prospectid = l.relatedprospectid 
@@ -496,10 +496,10 @@ add_columns = PostgresOperator(
             ADD COLUMN IF NOT EXISTS mx_identifer varchar(512),
             ADD COLUMN IF NOT EXISTS mx_organic_inbound varchar(512),
             ADD COLUMN IF NOT EXISTS mx_entrance_exam_marks varchar(512),
-            ADD COLUMN IF NOT EXISTS mx_Lead_Quality_Grade varchar(512),
-            ADD COLUMN IF NOT EXISTS mx_Lead_Inherent_Intent varchar(512),
-            ADD COLUMN IF NOT EXISTS mx_Test_Date_n_Time TIMESTAMP,
-            ADD COLUMN IF NOT EXISTS mx_Lead_Type varchar(512)
+            ADD COLUMN IF NOT EXISTS mx_lead_quality_grade varchar(512),
+            ADD COLUMN IF NOT EXISTS mx_lead_inherent_intent varchar(512),
+            ADD COLUMN IF NOT EXISTS mx_test_date_n_time TIMESTAMP,
+            ADD COLUMN IF NOT EXISTS mx_lead_type varchar(512)
     ''',
     dag=dag
 )
