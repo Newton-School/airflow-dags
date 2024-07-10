@@ -46,7 +46,7 @@ dag = DAG(
     'wow_active_batches_dag',
     default_args=default_args,
     description='This DAG maintains WoW list of all Active batches',
-    schedule_interval='00 19 * * *',
+    schedule_interval='30 20 * * FRI',
     catchup=False
 )
 
