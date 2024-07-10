@@ -88,10 +88,14 @@ def extract_data_to_nested(**kwargs):
               'mx_icp,'
               'mx_identifer,'
               'mx_organic_inbound,'
-              'mx_entrance_exam_marks'
+              'mx_entrance_exam_marks,'
+              'mx_Lead_Quality_Grade,'
+              'mx_Lead_Inherent_Intent,'
+              'mx_Test_Date_n_Time,'
+              'mx_Lead_Type'
             ')'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
-            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set '
             'prospect_stage=EXCLUDED.prospect_stage,'
             'lead_owner = EXCLUDED.lead_owner,'
@@ -110,7 +114,12 @@ def extract_data_to_nested(**kwargs):
             'mx_icp=EXCLUDED.mx_icp,'
             'mx_identifer=EXCLUDED.mx_identifer,'
             'mx_organic_inbound=EXCLUDED.mx_organic_inbound,'
-            'mx_entrance_exam_marks=EXCLUDED.mx_entrance_exam_marks;',
+            'mx_entrance_exam_marks=EXCLUDED.mx_entrance_exam_marks,'
+            'mx_Lead_Quality_Grade=EXCLUDED.mx_Lead_Quality_Grade,'
+            'mx_Lead_Inherent_Intent=EXCLUDED.mx_Lead_Inherent_Intent,'
+            'mx_Test_Date_n_Time=EXCLUDED.mx_Test_Date_n_Time,'
+            'mx_Lead_Type=EXCLUDED.mx_Lead_Type;',
+
             (
                 transform_row[0],
                 transform_row[1],
@@ -172,7 +181,11 @@ def extract_data_to_nested(**kwargs):
                 transform_row[57],
                 transform_row[58],
                 transform_row[59],
-                transform_row[60]
+                transform_row[60],
+                transform_row[61],
+                transform_row[62],
+                transform_row[63],
+                transform_row[64]
             )
         )
     pg_conn.commit()
@@ -448,7 +461,11 @@ transform_data = PostgresOperator(
                 l2.mx_icp,
                 l2.mx_identifer,
                 l2.mx_organic_inbound,
-                l2.mx_entrance_exam_marks
+                l2.mx_entrance_exam_marks,
+                l2.mx_Lead_Quality_Grade,
+                l2.mx_Lead_Inherent_Intent,
+                l2.mx_Test_Date_n_Time,
+                l2.mx_Lead_Type
                 
             FROM leadsquareleadsdata l2
             left join leadsquareactivity l on l2.prospectid = l.relatedprospectid 
@@ -478,7 +495,11 @@ add_columns = PostgresOperator(
             ADD COLUMN IF NOT EXISTS mx_icp varchar(512),
             ADD COLUMN IF NOT EXISTS mx_identifer varchar(512),
             ADD COLUMN IF NOT EXISTS mx_organic_inbound varchar(512),
-            ADD COLUMN IF NOT EXISTS mx_entrance_exam_marks varchar(512)
+            ADD COLUMN IF NOT EXISTS mx_entrance_exam_marks varchar(512),
+            ADD COLUMN IF NOT EXISTS mx_Lead_Quality_Grade varchar(512),
+            ADD COLUMN IF NOT EXISTS mx_Lead_Inherent_Intent varchar(512),
+            ADD COLUMN IF NOT EXISTS mx_Test_Date_n_Time TIMESTAMP,
+            ADD COLUMN IF NOT EXISTS mx_Lead_Type varchar(512)
     ''',
     dag=dag
 )
