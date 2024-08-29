@@ -192,7 +192,7 @@ transform_data = PostgresOperator(
             email_address as email
         from lsq_leads_x_activities
         where 
-            now() - modified_on <= interval '3' hour
+            now() - modified_on <= interval '1' day
     
         union all
     
