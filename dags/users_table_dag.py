@@ -164,7 +164,7 @@ transform_data = PostgresOperator(
                 select 
                     distinct user_id,first_name,last_name,date_joined,last_login,username,email,phone,current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,
                     tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type,
-                    course_structure_slug,marketing_url_structure_slug,signup_graduation_year
+                    course_structure_slug,marketing_url_structure_slug,signup_graduation_year, current_date as modified_on
                 from t1
                     where rank =1 and user_id is not null;
         ''',
@@ -196,26 +196,42 @@ def extract_data_to_nested(**kwargs):
         print("Execution", ctr)
         ctr += 1
         pg_cursor.execute(
-                'INSERT INTO users_info (user_id,first_name,last_name,date_joined,last_login,username,email,phone,'
-                'current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,'
-                'tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,'
-                'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type,'
-                'course_structure_slug,marketing_url_structure_slug,signup_graduation_year) '
-                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
-                'on conflict (user_id) do update set first_name=EXCLUDED.first_name,'
-                'last_name=EXCLUDED.last_name,last_login=EXCLUDED.last_login,'
-                'username=EXCLUDED.username,email=EXCLUDED.email,phone=EXCLUDED.phone,'
-                'current_location_city=EXCLUDED.current_location_city,current_location_state=EXCLUDED.current_location_state,'
-                'gender=EXCLUDED.gender,date_of_birth=EXCLUDED.date_of_birth,'
-                'utm_source=EXCLUDED.utm_source,utm_medium=EXCLUDED.utm_medium,utm_campaign=EXCLUDED.utm_campaign,'
-                'tenth_marks=EXCLUDED.tenth_marks,twelfth_marks=EXCLUDED.twelfth_marks,'
-                'bachelors_marks=EXCLUDED.bachelors_marks,bachelors_grad_year=EXCLUDED.bachelors_grad_year,'
-                'bachelors_degree=EXCLUDED.bachelors_degree,bachelors_field_of_study=EXCLUDED.bachelors_field_of_study,'
-                'masters_marks=EXCLUDED.masters_marks,masters_grad_year=EXCLUDED.masters_grad_year,'
-                'masters_degree=EXCLUDED.masters_degree,masters_field_of_study=EXCLUDED.masters_field_of_study,'
-                'lead_type=EXCLUDED.lead_type,course_structure_slug=EXCLUDED.course_structure_slug,'
-                'marketing_url_structure_slug=EXCLUDED.marketing_url_structure_slug,'
-                'signup_graduation_year=EXCLUDED.signup_graduation_year ;',
+                'INSERT INTO users_info ('
+                    'user_id,first_name,last_name,date_joined,last_login,username,email,phone,'
+                    'current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,'
+                    'tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,'
+                    'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type,'
+                    'course_structure_slug,marketing_url_structure_slug,signup_graduation_year) '
+                    'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
+                    'on conflict (user_id) do update set' 
+                    'first_name = EXCLUDED.first_name,'
+                    'last_name = EXCLUDED.last_name,'
+                    'last_login = EXCLUDED.last_login,'
+                    'username = EXCLUDED.username,'
+                    'email = EXCLUDED.email,'
+                    'phone = EXCLUDED.phone,'
+                    'current_location_city = EXCLUDED.current_location_city,'
+                    'current_location_state = EXCLUDED.current_location_state,'
+                    'gender = EXCLUDED.gender,'
+                    'date_of_birth = EXCLUDED.date_of_birth,'
+                    'utm_source = EXCLUDED.utm_source,'
+                    'utm_medium = EXCLUDED.utm_medium,'
+                    'utm_campaign = EXCLUDED.utm_campaign,'
+                    'tenth_marks = EXCLUDED.tenth_marks,'
+                    'twelfth_marks = EXCLUDED.twelfth_marks,'
+                    'bachelors_marks = EXCLUDED.bachelors_marks,'
+                    'bachelors_grad_year = EXCLUDED.bachelors_grad_year,'
+                    'bachelors_degree = EXCLUDED.bachelors_degree,'
+                    'bachelors_field_of_study = EXCLUDED.bachelors_field_of_study,'
+                    'masters_marks = EXCLUDED.masters_marks,'
+                    'masters_grad_year = EXCLUDED.masters_grad_year,'
+                    'masters_degree = EXCLUDED.masters_degree,'
+                    'masters_field_of_study = EXCLUDED.masters_field_of_study,'
+                    'lead_type = EXCLUDED.lead_type,'
+                    'course_structure_slug = EXCLUDED.course_structure_slug,'
+                    'marketing_url_structure_slug = EXCLUDED.marketing_url_structure_slug,'
+                    'signup_graduation_year = EXCLUDED.signup_graduation_year,'
+                    'modified_on = COALESCE(GREATEST(EXCLUDED.modified_on, usersinfo.modified_on), EXCLUDED.modified_on);',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -246,6 +262,7 @@ def extract_data_to_nested(**kwargs):
                     transform_row[26],
                     transform_row[27],
                     transform_row[28],
+                    transform_row[29],
                 )
         )
     pg_conn.commit()
@@ -257,11 +274,11 @@ extract_python_data = PythonOperator(
     dag=dag
 )
 
-# extract_data = PostgresOperator(
-#     task_id='extract_data',
-#     postgres_conn_id='postgres_result_db',
-#     sql='''SELECT * FROM {{ task_instance.xcom_pull(task_ids='transform_data') }}''',
-#     dag=dag
-# )
+add_columns = PostgresOperator(
+    task_id='add_columns',
+    postgres_conn_id='postgres_result_db',
+    sql='''ALTER TABLE users_info ADD COLUMN IF NOT EXISTS modified_on TIMESTAMP''',
+    dag=dag
+)
 
-create_table >> transform_data >> extract_python_data
+create_table >> add_columns >> transform_data >> extract_python_data
