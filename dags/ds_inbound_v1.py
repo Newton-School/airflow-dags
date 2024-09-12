@@ -33,7 +33,7 @@ def extract_data_to_nested(**kwargs):
             'INSERT INTO temp_table ('
                 'id,response_type,from_source,email,full_name,phone_number,current_status,graduation_year,'
                 'highest_qualification,course_type_interested_in,is_inquiry_for_data_science_certification,'
-                'form_created_at,user_date_joined,key,first_action,eligible'
+                'form_created_at,user_date_joined,inbound_key,first_action,eligible'
                 'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
             (
                 transform_row[0],
@@ -82,7 +82,7 @@ create_table = PostgresOperator(
             is_inquiry_for_data_science_certification varchar(512),
             form_created_at TIMESTAMP,
             user_date_joined TIMESTAMP,
-            key varchar(256),
+            inbound_key varchar(256),
             first_action varchar(256),
             eligible boolean
         );
@@ -132,7 +132,7 @@ transform_data = PostgresOperator(
             WHEN response_type = 'PUBLIC_WEBSITE_DS_HOME_REQUEST_CALLBACK_FORM' 
                  AND response_json->>'from' = 'download_brochure' THEN 'DB'
             ELSE 'UNKNOWN'
-        END AS Key
+        END AS inbound_key
     FROM 
         marketing_genericformresponse
     WHERE
@@ -186,7 +186,7 @@ SELECT
     r.is_inquiry_for_data_science_certification,
     r.created_at AS form_created_at,
     u.date_joined AS user_date_joined,
-    r.Key,
+    r.inbound_key,
     CASE 
         WHEN u.date_joined < r.created_at THEN 'Signed In First'
         ELSE 'Filled Form First'
