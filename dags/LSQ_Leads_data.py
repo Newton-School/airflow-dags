@@ -97,28 +97,68 @@ def extract_data_to_nested(**kwargs):
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
             '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set '
-            'prospect_stage=EXCLUDED.prospect_stage,'
+            'email_address = EXCLUDED.email_address,'
+            'lead_created_on = EXCLUDED.lead_created_on,'
+            'event = EXCLUDED.event,'
+            'modified_on = EXCLUDED.modified_on,'
+            'prospect_stage = EXCLUDED.prospect_stage,'
             'lead_owner = EXCLUDED.lead_owner,'
-            'lead_sub_status=EXCLUDED.lead_sub_status,'
-            'lead_last_call_status=EXCLUDED.lead_last_call_status,'
-            'lead_last_call_sub_status=EXCLUDED.lead_last_call_sub_status,'
-            'lead_last_call_connection_status=EXCLUDED.lead_last_call_connection_status,'
+            'lead_sub_status = EXCLUDED.lead_sub_status,'
+            'lead_last_call_status = EXCLUDED.lead_last_call_status,'
+            'lead_last_call_sub_status = EXCLUDED.lead_last_call_sub_status,'
+            'lead_last_call_connection_status = EXCLUDED.lead_last_call_connection_status,'
+            'mid_funnel_count = EXCLUDED.mid_funnel_count,'
+            'mid_funnel_buckets = EXCLUDED.mid_funnel_buckets,'
+            'reactivation_bucket = EXCLUDED.reactivation_bucket,'
+            'reactivation_date = EXCLUDED.reactivation_date,'
+            'source_intended_course = EXCLUDED.source_intended_course,'
+            'intended_course = EXCLUDED.intended_course,'
+            'created_by_name = EXCLUDED.created_by_name,'
+            'event_name = EXCLUDED.event_name,'
+            'notable_event_description = EXCLUDED.notable_event_description,'
+            'previous_stage = EXCLUDED.previous_stage,'
+            'current_stage = EXCLUDED.current_stage,'
+            'call_type = EXCLUDED.call_type,'
+            'caller = EXCLUDED.caller,'
+            'duration = EXCLUDED.duration,'
+            'call_notes = EXCLUDED.call_notes,'
+            'previous_owner = EXCLUDED.previous_owner,'
+            'current_owner = EXCLUDED.current_owner,'
+            'has_attachments = EXCLUDED.has_attachments,'
+            'mx_custom_1 = EXCLUDED.mx_custom_1,'
+            'mx_custom_2 = EXCLUDED.mx_custom_2,'
+            'mx_custom_status = EXCLUDED.mx_custom_status,'
+            'mx_custom_3 = EXCLUDED.mx_custom_3,'
+            'mx_custom_4 = EXCLUDED.mx_custom_4,'
+            'mx_custom_5 = EXCLUDED.mx_custom_5,'
+            'mx_custom_6 = EXCLUDED.mx_custom_6,'
+            'mx_custom_7 = EXCLUDED.mx_custom_7,'
+            'mx_custom_8 = EXCLUDED.mx_custom_8,'
+            'mx_custom_9 = EXCLUDED.mx_custom_9,'
+            'mx_custom_10 = EXCLUDED.mx_custom_10,'
+            'mx_custom_11 = EXCLUDED.mx_custom_11,'
+            'mx_custom_12 = EXCLUDED.mx_custom_12,'
+            'mx_custom_13 = EXCLUDED.mx_custom_13,'
+            'mx_custom_14 = EXCLUDED.mx_custom_14,'
+            'mx_custom_15 = EXCLUDED.mx_custom_15,'
+            'mx_custom_16 = EXCLUDED.mx_custom_16,'
+            'mx_custom_17 = EXCLUDED.mx_custom_17,'
             'mx_priority_status = EXCLUDED.mx_priority_status,'
-            'mx_rfd_date=EXCLUDED.mx_rfd_date,'
-            'mx_total_fees=EXCLUDED.mx_total_fees, '
-            'mx_total_revenue=EXCLUDED.mx_total_revenue,'
+            'mx_rfd_date = EXCLUDED.mx_rfd_date,'
+            'mx_total_fees = EXCLUDED.mx_total_fees,'
+            'mx_total_revenue = EXCLUDED.mx_total_revenue,'
             'mx_doc_approved = EXCLUDED.mx_doc_approved,'
-            'mx_doc_collected=EXCLUDED.mx_doc_collected,'
-            'mx_cibil_check=EXCLUDED.mx_cibil_check,'
-            'mx_bucket=EXCLUDED.mx_bucket,'
-            'mx_icp=EXCLUDED.mx_icp,'
-            'mx_identifer=EXCLUDED.mx_identifer,'
-            'mx_organic_inbound=EXCLUDED.mx_organic_inbound,'
-            'mx_entrance_exam_marks=EXCLUDED.mx_entrance_exam_marks,'
-            'mx_lead_quality_grade=EXCLUDED.mx_lead_quality_grade,'
-            'mx_lead_inherent_intent=EXCLUDED.mx_lead_inherent_intent,'
-            'mx_test_date_n_time=EXCLUDED.mx_test_date_n_time,'
-            'mx_lead_type=EXCLUDED.mx_lead_type;',
+            'mx_doc_collected = EXCLUDED.mx_doc_collected,'
+            'mx_cibil_check = EXCLUDED.mx_cibil_check,'
+            'mx_bucket = EXCLUDED.mx_bucket,'
+            'mx_icp = EXCLUDED.mx_icp,'
+            'mx_identifer = EXCLUDED.mx_identifer,'
+            'mx_organic_inbound = EXCLUDED.mx_organic_inbound,'
+            'mx_entrance_exam_marks = EXCLUDED.mx_entrance_exam_marks,'
+            'mx_lead_quality_grade = EXCLUDED.mx_lead_quality_grade,'
+            'mx_lead_inherent_intent = EXCLUDED.mx_lead_inherent_intent,'
+            'mx_test_date_n_time = EXCLUDED.mx_test_date_n_time,'
+            'mx_lead_type = EXCLUDED.mx_lead_type;',
 
             (
                 transform_row[0],
@@ -195,7 +235,7 @@ dag = DAG(
     'LSQ_Leads_and_activities',
     default_args=default_args,
     description='An Analytics Data Layer DAG for Leads and their activities. Data Source = Leadsquared',
-    schedule_interval='45 1 * * *',
+    schedule_interval='10 * * * *',
     catchup=False
 )
 
@@ -260,7 +300,15 @@ create_table = PostgresOperator(
             mx_doc_approved varchar(512),
             mx_doc_collected varchar(512),
             mx_cibil_check varchar(512),
-            mx_bucket varchar(512)
+            mx_bucket varchar(512),
+            mx_icp varchar(512),
+            mx_identifer varchar(512),
+            mx_organic_inbound varchar(512),
+            mx_entrance_exam_marks varchar(512),
+            mx_lead_quality_grade varchar(512),
+            mx_lead_inherent_intent varchar(512),
+            mx_test_date_n_time TIMESTAMP,
+            mx_lead_type varchar(512)
         );
     ''',
     dag=dag
@@ -269,13 +317,14 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_lsq_leads',
-    sql='''select
+    sql='''
+        select
             distinct 
             concat(l2.prospectid,l.activityid) as table_unique_key,
             l2.prospectid as prospect_id,
             l.activityid as activity_id,
             l2.emailaddress as email_address,
-            l2.createdon::timestamp + INTERVAL '5 hours 30 minutes' as lead_created_on,
+            l2.createdon as lead_created_on,
             eventname as event,
             l.createdon::timestamp + INTERVAL '5 hours 30 minutes' as modified_on,
             l2.prospectstage as prospect_stage,
@@ -296,182 +345,219 @@ transform_data = PostgresOperator(
               when lower(mx_source_intended_course) like ('%ds%') then 'DS'
               when lower(mx_source_intended_course) like '%bs%' then 'Bachelors' 
             end as intended_course,
-                coalesce(cast((CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'CreatedBy')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'CreatedBy' LIMIT 1 ) ELSE null end) as varchar),
-                      cast((CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'CreatedByName')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'CreatedByName' LIMIT 1 ) ELSE null end)as varchar)) AS created_by_name,
-                        
-                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'EventName')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'EventName' LIMIT 1 ) ELSE null end) AS event_name,
-                        
-                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'NotableEventDescription')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'NotableEventDescription' LIMIT 1 ) ELSE null end) AS notable_event_description,
-                        
-                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'PreviousStage')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'PreviousStage' LIMIT 1 ) ELSE null end) AS previous_stage,
-                        
-                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'CurrentStage')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'CurrentStage' LIMIT 1 ) ELSE null end) AS current_stage,
-                        
-                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'CallType')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'CallType' LIMIT 1 ) ELSE null end) AS call_type,
-                        
-                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'Caller')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'Caller' LIMIT 1 ) ELSE null end) AS caller,
-                        
-                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'Duration')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'Duration' LIMIT 1 ) ELSE null end) AS duration,
-                        
-                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'CallNotes')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'CallNotes' LIMIT 1 ) ELSE null end) AS call_notes,
-                        
-                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'PreviousOwner')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'PreviousOwner' LIMIT 1 ) ELSE null end) AS previous_owner,
-                        
-                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'CurrentOwner')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'CurrentOwner' LIMIT 1 ) ELSE null end) AS current_owner,
-                        
-                (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'HasAttachments')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
-                        WHERE (message->>'Key')::varchar = 'HasAttachments' LIMIT 1 ) ELSE null end) AS has_attachments,
-                        
-                (CASE when jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_1')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_1' LIMIT 1 )ELSE null END) AS mx_custom_1,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_2')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_2' LIMIT 1 )ELSE null END) AS mx_custom_2,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'Status')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'Status' LIMIT 1 )ELSE null END) AS mx_custom_status,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_3')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_3' LIMIT 1 )ELSE null END) AS mx_custom_3,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_4')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_4' LIMIT 1 )ELSE null END) AS mx_custom_4,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_5')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_5' LIMIT 1 )ELSE null END) AS mx_custom_5,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_6')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_6' LIMIT 1 )ELSE null END) AS mx_custom_6,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_7')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_7' LIMIT 1 )ELSE null END) AS mx_custom_7,
+            coalesce(cast((CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'CreatedBy')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'CreatedBy' LIMIT 1 ) ELSE null end) as varchar),
+                  cast((CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'CreatedByName')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'CreatedByName' LIMIT 1 ) ELSE null end)as varchar)) AS created_by_name,
+                    
+            (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'EventName')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'EventName' LIMIT 1 ) ELSE null end) AS event_name,
+                    
+            (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'NotableEventDescription')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'NotableEventDescription' LIMIT 1 ) ELSE null end) AS notable_event_description,
+                    
+            (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'PreviousStage')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'PreviousStage' LIMIT 1 ) ELSE null end) AS previous_stage,
+                    
+            (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'CurrentStage')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'CurrentStage' LIMIT 1 ) ELSE null end) AS current_stage,
+                    
+            (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'CallType')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'CallType' LIMIT 1 ) ELSE null end) AS call_type,
+                    
+            (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'Caller')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'Caller' LIMIT 1 ) ELSE null end) AS caller,
+                    
+            (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'Duration')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'Duration' LIMIT 1 ) ELSE null end) AS duration,
+                    
+            (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'CallNotes')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'CallNotes' LIMIT 1 ) ELSE null end) AS call_notes,
+                    
+            (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'PreviousOwner')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'PreviousOwner' LIMIT 1 ) ELSE null end) AS previous_owner,
+                    
+            (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'CurrentOwner')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'CurrentOwner' LIMIT 1 ) ELSE null end) AS current_owner,
+                    
+            (CASE when jsonb_typeof(activitydata) <> 'object' AND EXISTS ( SELECT 1 FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'HasAttachments')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitydata) AS message
+                    WHERE (message->>'Key')::varchar = 'HasAttachments' LIMIT 1 ) ELSE null end) AS has_attachments,
+                    
+            (CASE when jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_1')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_1' LIMIT 1 )ELSE null END) AS mx_custom_1,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_2')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_2' LIMIT 1 )ELSE null END) AS mx_custom_2,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'Status')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'Status' LIMIT 1 )ELSE null END) AS mx_custom_status,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_3')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_3' LIMIT 1 )ELSE null END) AS mx_custom_3,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_4')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_4' LIMIT 1 )ELSE null END) AS mx_custom_4,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_5')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_5' LIMIT 1 )ELSE null END) AS mx_custom_5,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_6')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_6' LIMIT 1 )ELSE null END) AS mx_custom_6,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_7')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_7' LIMIT 1 )ELSE null END) AS mx_custom_7,
 
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_8')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_8' LIMIT 1 )ELSE null END) AS mx_custom_8,
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_8')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_8' LIMIT 1 )ELSE null END) AS mx_custom_8,
 
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_9')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_9' LIMIT 1 )ELSE null END) AS mx_custom_9,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_10')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_10' LIMIT 1 )ELSE null END) AS mx_custom_10,
-
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_11')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_11' LIMIT 1 )ELSE null END) AS mx_custom_11,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_12')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_12' LIMIT 1 )ELSE null END) AS mx_custom_12,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_13')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_13' LIMIT 1 )ELSE null END) AS mx_custom_13,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_14')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_14' LIMIT 1 )ELSE null END) AS mx_custom_14,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_15')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_15' LIMIT 1 )ELSE null END) AS mx_custom_15,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_16')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_16' LIMIT 1 )ELSE null END) AS mx_custom_16,
-                      
-                (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
-                      FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_17')
-                    THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
-                      WHERE (message->>'Key')::varchar = 'mx_Custom_17' LIMIT 1 )ELSE null END) AS mx_custom_17,
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_9')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_9' LIMIT 1 )ELSE null END) AS mx_custom_9,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_10')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_10' LIMIT 1 )ELSE null END) AS mx_custom_10,
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_11')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_11' LIMIT 1 )ELSE null END) AS mx_custom_11,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_12')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_12' LIMIT 1 )ELSE null END) AS mx_custom_12,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_13')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_13' LIMIT 1 )ELSE null END) AS mx_custom_13,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_14')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_14' LIMIT 1 )ELSE null END) AS mx_custom_14,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_15')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_15' LIMIT 1 )ELSE null END) AS mx_custom_15,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_16')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_16' LIMIT 1 )ELSE null END) AS mx_custom_16,
+                  
+            (CASE WHEN jsonb_typeof(activitycustomfields) <> 'object' AND EXISTS (SELECT 1
+                  FROM jsonb_array_elements(activitycustomfields) AS message WHERE (message->>'Key')::varchar = 'mx_Custom_17')
+                THEN ( SELECT message->>'Value' FROM jsonb_array_elements(activitycustomfields) AS message
+                  WHERE (message->>'Key')::varchar = 'mx_Custom_17' LIMIT 1 )ELSE null END) AS mx_custom_17,
                 
-                l2.mx_priority_status,
-                l2.mx_rfd_date, 
-                l2.mx_total_fees,
-                l2.mx_total_revenue,
-                l2.mx_doc_approved,
-                l2.mx_doc_collected,
-                l2.mx_cibil_check,
-                l2.mx_bucket,
-                l2.mx_icp,
-                l2.mx_identifer,
-                l2.mx_organic_inbound,
-                l2.mx_entrance_exam_marks,
-                l2.mx_lead_quality_grade,
-                l2.mx_lead_inherent_intent,
-                l2.mx_test_date_n_time,
-                l2.mx_lead_type
+            l2.mx_priority_status,
+            l2.mx_rfd_date, 
+            l2.mx_total_fees,
+            l2.mx_total_revenue,
+            l2.mx_doc_approved,
+            l2.mx_doc_collected,
+            l2.mx_cibil_check,
+            l2.mx_bucket,
+            l2.mx_icp,
+            l2.mx_identifer,
+            l2.mx_organic_inbound,
+            l2.mx_entrance_exam_marks,
+            l2.mx_lead_quality_grade,
+            l2.mx_lead_inherent_intent,
+            l2.mx_test_date_n_time,
+            l2.mx_lead_type
                 
-            FROM leadsquareleadsdata l2
-            left join leadsquareactivity l on l2.prospectid = l.relatedprospectid 
-            where date(l.createdon) >= 'January 1,2024' 
-            order by 2,5;
-        ''',
+        FROM (
+            select *
+            from leadsquareactivity l
+            where 
+                to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') >= now() - interval '13 hours 30 minute'
+        ) as l
+        left join (
+            select distinct
+                prospectid,
+                emailaddress,
+                createdon::timestamp + INTERVAL '5 hours 30 minutes' as createdon,
+                prospectstage,
+                owneridname,
+                mx_substatus,
+                mx_last_call_status,
+                mx_last_call_sub_status,
+                mx_last_call_connection_status,
+                mx_priority_status,
+                mx_rfd_date, 
+                mx_total_fees,
+                mx_total_revenue,
+                mx_doc_approved,
+                mx_doc_collected,
+                mx_cibil_check,
+                mx_bucket,
+                mx_icp,
+                mx_identifer,
+                mx_organic_inbound,
+                mx_entrance_exam_marks,
+                mx_lead_quality_grade,
+                mx_lead_inherent_intent,
+                mx_test_date_n_time,
+                mx_lead_type,
+                mx_mid_funnel_count,
+                mx_mid_funnel_buckets,
+                mx_reactivation_bucket,
+                mx_reactivation_date,
+                mx_source_intended_course
+            from leadsquareleadsdata 
+        ) as l2 
+            on l.relatedprospectid = l2.prospectid
+        order by 2,5;
+    ''',
     dag=dag
 )
 delete_table = PostgresOperator(
@@ -488,20 +574,4 @@ extract_python_data = PythonOperator(
     dag=dag
 )
 
-add_columns = PostgresOperator(
-    task_id='add_columns',
-    postgres_conn_id='postgres_result_db',
-    sql='''ALTER TABLE lsq_leads_x_activities
-            ADD COLUMN IF NOT EXISTS mx_icp varchar(512),
-            ADD COLUMN IF NOT EXISTS mx_identifer varchar(512),
-            ADD COLUMN IF NOT EXISTS mx_organic_inbound varchar(512),
-            ADD COLUMN IF NOT EXISTS mx_entrance_exam_marks varchar(512),
-            ADD COLUMN IF NOT EXISTS mx_lead_quality_grade varchar(512),
-            ADD COLUMN IF NOT EXISTS mx_lead_inherent_intent varchar(512),
-            ADD COLUMN IF NOT EXISTS mx_test_date_n_time TIMESTAMP,
-            ADD COLUMN IF NOT EXISTS mx_lead_type varchar(512)
-    ''',
-    dag=dag
-)
-
-delete_table >> create_table >> add_columns >> transform_data >> extract_python_data
+delete_table >> create_table >> transform_data >> extract_python_data
