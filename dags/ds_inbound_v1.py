@@ -74,7 +74,7 @@ create_table = PostgresOperator(
             from_source varchar(256),
             email varchar(256),
             full_name varchar(512),
-            phone_number bigint,
+            phone_number varchar(20),
             current_status varchar(512),
             graduation_year varchar(512),
             highest_qualification varchar(256),
