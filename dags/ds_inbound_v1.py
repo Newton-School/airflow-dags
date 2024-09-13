@@ -30,7 +30,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO temp_table ('
+            'INSERT INTO ds_inbound_form_filled ('
                 'id,response_type,from_source,email,full_name,phone_number,current_status,graduation_year,'
                 'highest_qualification,course_type_interested_in,is_inquiry_for_data_science_certification,'
                 'form_created_at,user_date_joined,inbound_key,first_action,eligible)'
