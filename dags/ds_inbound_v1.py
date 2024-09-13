@@ -74,8 +74,8 @@ create_table = PostgresOperator(
             from_source varchar(256),
             email varchar(256),
             full_name varchar(512),
-            phone_number int,
-            current_status,
+            phone_number bigint,
+            current_status varchar(512),
             graduation_year varchar(512),
             highest_qualification varchar(256),
             course_type_interested_in varchar(512),
@@ -92,7 +92,7 @@ create_table = PostgresOperator(
 
 transform_data = PostgresOperator(
     task_id='transform_data',
-    postgres_conn_id='postgres_result_db',
+    postgres_conn_id='postgres_read_replica',
     sql='''
     WITH RankedResponses AS (
     SELECT 
