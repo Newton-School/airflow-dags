@@ -147,7 +147,6 @@ transform_data = PostgresOperator(
         ( response_type = 'PUBLIC_WEBSITE_CONTACT_FORM'
             AND response_json->>'is_inquiry_for_data_science_certification' = 'professional_certification_in_ds_ai')
     )
-    [[AND created_at > {{Date}}]]
 ),
 UserSignIn AS (
     SELECT 
