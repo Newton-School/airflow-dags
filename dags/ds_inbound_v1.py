@@ -33,7 +33,7 @@ def extract_data_to_nested(**kwargs):
             'INSERT INTO temp_table ('
                 'id,response_type,from_source,email,full_name,phone_number,current_status,graduation_year,'
                 'highest_qualification,course_type_interested_in,is_inquiry_for_data_science_certification,'
-                'form_created_at,user_date_joined,inbound_key,first_action,eligible'
+                'form_created_at,user_date_joined,inbound_key,first_action,eligible)'
                 'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
             (
                 transform_row[0],
