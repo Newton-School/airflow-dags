@@ -46,7 +46,7 @@ def extract_data_to_nested(**kwargs):
 
 
 dag = DAG(
-    'DS_Inbound_DAG_v1',
+    'pop_data_DAG_v1',
     default_args=default_args,
     description='POP users data',
     schedule_interval='30 * * * *',
