@@ -280,7 +280,7 @@ raw as(
             true as a_t_prospect,
             min(date(modified_on)) as prospect_date
             from lsq_leads_x_activities
-            where lower(event_name) in ('log phone call') and mx_custom_1 in ('Prospect')
+            where lower(event) in ('stagechange') and current_stage = 'Prospect'
             group by 1,2
             ),
             docs as(
