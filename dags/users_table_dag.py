@@ -15,7 +15,7 @@ dag = DAG(
     'users_table_transformation_DAG',
     default_args=default_args,
     description='A DAG for users table transformation',
-    schedule_interval='30 20 * * *',
+    schedule_interval='5,20,35,50 * * * *',
     catchup=False
 )
 
