@@ -563,7 +563,7 @@ transform_data = PostgresOperator(
 delete_table = PostgresOperator(
     task_id='delete_table',
     postgres_conn_id='postgres_result_db',
-    sql='''delete from lsq_leads_x_activities where modifed_on::date >= date_trunc('month', current_date) - interval '1' month;
+    sql='''delete from lsq_leads_x_activities where modified_on::date >= date_trunc('month', current_date) - interval '1' month;
     ''',
     dag=dag
 )
