@@ -235,7 +235,7 @@ dag = DAG(
     'LSQ_Leads_and_activities',
     default_args=default_args,
     description='An Analytics Data Layer DAG for Leads and their activities. Data Source = Leadsquared',
-    schedule_interval='0,15,30,45 * * * *',
+    schedule_interval='15 * * * *',
     catchup=False
 )
 
@@ -519,7 +519,7 @@ transform_data = PostgresOperator(
             select *
             from leadsquareactivity l
             where 
-                to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') >= now() - interval '13 hours 30 minute'
+                to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') >= now() - interval '4' day
         ) as l
         left join (
             select distinct
