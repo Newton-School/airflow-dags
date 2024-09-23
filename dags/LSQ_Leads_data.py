@@ -519,7 +519,7 @@ transform_data = PostgresOperator(
             select *
             from leadsquareactivity l
             where 
-                to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') >= now() - interval '4' day
+                to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') >= current_date - interval '4' day
         ) as l
         left join (
             select distinct
