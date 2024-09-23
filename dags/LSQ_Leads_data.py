@@ -519,7 +519,7 @@ transform_data = PostgresOperator(
             select *
             from leadsquareactivity l
             where 
-                to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') >= now() - interval '4' day
+                to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') >= current_date - interval '4' day
         ) as l
         left join (
             select distinct
@@ -563,7 +563,7 @@ transform_data = PostgresOperator(
 delete_table = PostgresOperator(
     task_id='delete_table',
     postgres_conn_id='postgres_result_db',
-    sql='''delete from lsq_leads_x_activities where activity_id is null;
+    sql='''delete from lsq_leads_x_activities where activity_id is null or modified_on::date > (date_trunc('month', current_date) - interval '4' day)::date or prospect_id is null;
     ''',
     dag=dag
 )
