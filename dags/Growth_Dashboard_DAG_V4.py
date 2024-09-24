@@ -30,7 +30,7 @@ def extract_data_to_nested(**kwargs):
     for transform_row in transform_data_output:
         pg_cursor.execute(
             'INSERT INTO growth_dashboard_v4 (prospect_id,email,lead_created_on,latest_stage,'
-            'latest_stage_timestamp timestamp,prospect_stage,lead_assigned_flag,first_lead_assigned_timestamp,'
+            'latest_stage_timestamp, prospect_stage, lead_assigned_flag, first_lead_assigned_timestamp,'
             'prospect_flag, first_prospect_timestamp, test_taken_flag, test_taken_timestamp, test_cleared_flag,'
             'test_cleared_timestamp, session_done_flag, first_session_done_timestamp, docs_collected_flag,'
             'docs_collected_timestamp, lead_owner, first_call_timestamp, last_call_timestamp, dials, connects,'
