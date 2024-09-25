@@ -520,7 +520,7 @@ transform_data = PostgresOperator(
             from leadsquareactivity l
             where 
                 to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') > date_trunc('year', current_date) - interval '1' year
-                and to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') <= date_trunc('year', current_date) - interval '6' month
+                and to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') <= date_trunc('year', current_date) - interval '11' month
         ) as l
         left join (
             select * from (
