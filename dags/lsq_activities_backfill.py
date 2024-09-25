@@ -265,7 +265,7 @@ create_table = PostgresOperator(
             intended_course varchar(512),
             created_by_name varchar(512),
             event_name varchar(512),
-            notable_event_description varchar(3000),
+            notable_event_description varchar(5000),
             previous_stage varchar(512),
             current_stage varchar(512),
             call_type varchar(512),
