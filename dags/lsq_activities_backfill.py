@@ -566,6 +566,14 @@ transform_data = PostgresOperator(
     dag=dag
 )
 
+drop_table = PostgresOperator(
+    task_id='drop_table',
+    postgres_conn_id='postgres_result_db',
+    sql='''DROP TABLE IF EXISTS lsq_leads_x_activities_temp;
+    ''',
+    dag=dag
+)
+
 extract_python_data = PythonOperator(
     task_id='extract_python_data',
     python_callable=extract_data_to_nested,
