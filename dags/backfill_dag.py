@@ -12,10 +12,10 @@ default_args = {
 
 
 dag = DAG(
-    'users_table_transformation_DAG',
+    'backfiller_temp_dag',
     default_args=default_args,
-    description='A DAG for users table transformation',
-    schedule_interval='5,20,35,50 * * * *',
+    description='Backfiller/temp DAG',
+    schedule_interval=None,
     catchup=False
 )
 
