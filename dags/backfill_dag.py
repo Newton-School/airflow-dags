@@ -58,9 +58,7 @@ create_table = PostgresOperator(
             course_slug varchar(512),
             marketing_slug varchar(512),
             utm_hash varchar(512),
-            course_structure_slug varchar(512),
             incoming_course_structure_slug varchar(512),
-            marketing_url_structure_slug varchar(512),
             latest_utm_source varchar(512),
             latest_utm_campaign varchar(512),
             latest_utm_medium varchar(512),
@@ -157,9 +155,7 @@ transform_data = PostgresOperator(
                 (users_userprofile.utm_param_json->'course_structure_slug') #>> '{}' as course_slug,
                 (users_userprofile.utm_param_json -> 'marketing_url_structure_slug') #>> '{}' AS marketing_slug,
                 (users_userprofile.utm_param_json -> 'utm_hash') #>> '{}' AS utm_hash,
-                (users_userprofile.utm_param_json->'course_structure_slug'::text) #>> '{}' as course_structure_slug,
                 (users_userprofile.utm_param_json -> 'incoming_course_structure_slug') #>> '{}' AS incoming_course_structure_slug,
-                (users_userprofile.utm_param_json->'marketing_url_structure_slug'::text) #>> '{}' as marketing_url_structure_slug,
                 (courses_courseusermapping.utm_param_json -> 'utm_source') #>> '{}' as latest_utm_source,
                 (courses_courseusermapping.utm_param_json -> 'utm_campaign') #>> '{}' as latest_utm_campaign,
                 (courses_courseusermapping.utm_param_json -> 'utm_medium') #>> '{}' as latest_utm_medium,
@@ -220,9 +216,7 @@ transform_data = PostgresOperator(
             course_slug,
             marketing_slug,
             utm_hash,
-            course_structure_slug,
             incoming_course_structure_slug,
-            marketing_url_structure_slug,
             latest_utm_source,
             latest_utm_campaign,
             latest_utm_medium,
@@ -274,12 +268,11 @@ def extract_data_to_nested(**kwargs):
         pg_cursor.execute(
                 'INSERT INTO users_info (user_id,first_name,last_name,date_joined,last_login,username,email,phone,'
                 'current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,'
-                'utm_referer,course_slug,marketing_slug,utm_hash,course_structure_slug,incoming_course_structure_slug,'
-                'marketing_url_structure_slug,latest_utm_source,latest_utm_campaign,latest_utm_medium,'
-                'tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,bachelors_degree,'
-                'bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,masters_field_of_study,lead_type,'
-                'course_structure_slug,marketing_url_structure_slug,signup_graduation_year) '
-                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
+                'utm_referer,course_slug,marketing_slug,utm_hash,incoming_course_structure_slug,'
+                'latest_utm_source,latest_utm_campaign,latest_utm_medium,tenth_marks,twelfth_marks,bachelors_marks,
+                'bachelors_grad_year,bachelors_degree,bachelors_field_of_study,masters_marks,masters_grad_year,'
+                'masters_degree,masters_field_of_study,lead_type,signup_graduation_year) '
+                'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
                 'on conflict (user_id) do update set first_name=EXCLUDED.first_name,'
                 'last_name=EXCLUDED.last_name,last_login=EXCLUDED.last_login,'
                 'username=EXCLUDED.username,email=EXCLUDED.email,phone=EXCLUDED.phone,'
@@ -287,17 +280,15 @@ def extract_data_to_nested(**kwargs):
                 'gender=EXCLUDED.gender,date_of_birth=EXCLUDED.date_of_birth,'
                 'utm_source=EXCLUDED.utm_source,utm_medium=EXCLUDED.utm_medium,utm_campaign=EXCLUDED.utm_campaign,'
                 'utm_referer=EXCLUDED.utm_referer,course_slug=EXCLUDED.course_slug,marketing_slug=EXCLUDED.marketing_slug,'
-                'utm_hash=EXCLUDED.utm_hash,course_structure_slug=EXCLUDED.course_structure_slug,'
-                'incoming_course_structure_slug=EXCLUDED.incoming_course_structure_slug,marketing_url_structure_slug=EXCLUDED.marketing_url_structure_slug,'
-                'latest_utm_source=EXCLUDED.latest_utm_source,latest_utm_campaign=EXCLUDED.latest_utm_campaign,latest_utm_medium=EXCLUDED.latest_utm_medium,'
+                'utm_hash=EXCLUDED.utm_hash,incoming_course_structure_slug=EXCLUDED.incoming_course_structure_slug,'
+                'latest_utm_source=EXCLUDED.latest_utm_source,'
+                'latest_utm_campaign=EXCLUDED.latest_utm_campaign,latest_utm_medium=EXCLUDED.latest_utm_medium,'
                 'tenth_marks=EXCLUDED.tenth_marks,twelfth_marks=EXCLUDED.twelfth_marks,'
                 'bachelors_marks=EXCLUDED.bachelors_marks,bachelors_grad_year=EXCLUDED.bachelors_grad_year,'
                 'bachelors_degree=EXCLUDED.bachelors_degree,bachelors_field_of_study=EXCLUDED.bachelors_field_of_study,'
                 'masters_marks=EXCLUDED.masters_marks,masters_grad_year=EXCLUDED.masters_grad_year,'
                 'masters_degree=EXCLUDED.masters_degree,masters_field_of_study=EXCLUDED.masters_field_of_study,'
-                'lead_type=EXCLUDED.lead_type,course_structure_slug=EXCLUDED.course_structure_slug,'
-                'marketing_url_structure_slug=EXCLUDED.marketing_url_structure_slug,'
-                'signup_graduation_year=EXCLUDED.signup_graduation_year ;',
+                'lead_type=EXCLUDED.lead_type,signup_graduation_year=EXCLUDED.signup_graduation_year ;',
                 (
                     transform_row[0],
                     transform_row[1],
@@ -334,8 +325,6 @@ def extract_data_to_nested(**kwargs):
                     transform_row[32],
                     transform_row[33],
                     transform_row[34],
-                    transform_row[35],
-                    transform_row[36],
                 )
         )
     pg_conn.commit()
