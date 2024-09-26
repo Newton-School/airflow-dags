@@ -21,7 +21,7 @@ dag = DAG(
 create_copy = PostgresOperator(
     task_id='create_copy',
     postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE users_info_backup as SELECT * FROM users_info;
+    sql='''CREATE TABLE IF NOT EXISTS users_info_backup as SELECT * FROM users_info;
     ''',
     dag=dag
 )
