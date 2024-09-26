@@ -268,10 +268,10 @@ def extract_data_to_nested(**kwargs):
         pg_cursor.execute(
                 'INSERT INTO users_info (user_id,first_name,last_name,date_joined,last_login,username,email,phone,'
                 'current_location_city,current_location_state,gender,date_of_birth,utm_source,utm_medium,utm_campaign,'
-                'utm_referer,course_slug,marketing_slug,utm_hash,incoming_course_structure_slug,'
-                'latest_utm_source,latest_utm_campaign,latest_utm_medium,tenth_marks,twelfth_marks,bachelors_marks,
-                'bachelors_grad_year,bachelors_degree,bachelors_field_of_study,masters_marks,masters_grad_year,'
-                'masters_degree,masters_field_of_study,lead_type,signup_graduation_year) '
+                'utm_referer,course_slug,marketing_slug,utm_hash,incoming_course_structure_slug,latest_utm_source,'
+                'latest_utm_campaign,latest_utm_medium,tenth_marks,twelfth_marks,bachelors_marks,bachelors_grad_year,'
+                'bachelors_degree,bachelors_field_of_study,masters_marks,masters_grad_year,masters_degree,'
+                'masters_field_of_study,lead_type,signup_graduation_year)'
                 'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
                 'on conflict (user_id) do update set first_name=EXCLUDED.first_name,'
                 'last_name=EXCLUDED.last_name,last_login=EXCLUDED.last_login,'
@@ -288,7 +288,7 @@ def extract_data_to_nested(**kwargs):
                 'bachelors_degree=EXCLUDED.bachelors_degree,bachelors_field_of_study=EXCLUDED.bachelors_field_of_study,'
                 'masters_marks=EXCLUDED.masters_marks,masters_grad_year=EXCLUDED.masters_grad_year,'
                 'masters_degree=EXCLUDED.masters_degree,masters_field_of_study=EXCLUDED.masters_field_of_study,'
-                'lead_type=EXCLUDED.lead_type,signup_graduation_year=EXCLUDED.signup_graduation_year ;',
+                'lead_type=EXCLUDED.lead_type,signup_graduation_year=EXCLUDED.signup_graduation_year;',
                 (
                     transform_row[0],
                     transform_row[1],
