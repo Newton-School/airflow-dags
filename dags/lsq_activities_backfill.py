@@ -284,8 +284,8 @@ create_table = PostgresOperator(
             mx_custom_6 varchar(512),
             mx_custom_7 varchar(512),
             mx_custom_8 varchar(512),
-            mx_custom_9 varchar(512),
-            mx_custom_10 varchar(512),
+            mx_custom_9 varchar(5000),
+            mx_custom_10 varchar(5000),
             mx_custom_11 varchar(512),
             mx_custom_12 varchar(512),
             mx_custom_13 varchar(512),
@@ -574,4 +574,22 @@ extract_python_data = PythonOperator(
     dag=dag
 )
 
-create_table >> transform_data >> extract_python_data
+alter_table_a = PostgresOperator(
+    task_id='delete_table',
+    postgres_conn_id='postgres_result_db',
+    sql='''
+        ALTER TABLE lsq_leads_x_activities_temp ALTER COLUMN mx_custom_9 TYPE varchar(5000)
+    ''',
+    dag=dag
+)
+
+alter_table_b = PostgresOperator(
+    task_id='delete_table',
+    postgres_conn_id='postgres_result_db',
+    sql='''
+        ALTER TABLE lsq_leads_x_activities_temp ALTER COLUMN mx_custom_10 TYPE varchar(5000)
+    ''',
+    dag=dag
+)
+
+alter_table_a >> alter_table_b >> create_table >> transform_data >> extract_python_data
