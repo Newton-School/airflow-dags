@@ -11,7 +11,7 @@ default_args = {
 }
 
 dag = DAG(
-    'LSQ_Leads_and_activities_backfiller',
+    'backfiller_temp_dag',
     default_args=default_args,
     description='Backfiller/temp DAG',
     schedule_interval=None,
