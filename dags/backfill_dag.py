@@ -18,14 +18,6 @@ dag = DAG(
     catchup=False
 )
 
-create_copy = PostgresOperator(
-    task_id='create_copy',
-    postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE IF NOT EXISTS users_info_backup as SELECT * FROM users_info;
-    ''',
-    dag=dag
-)
-
 drop_table = PostgresOperator(
     task_id='drop_table',
     postgres_conn_id='postgres_result_db',
@@ -336,4 +328,12 @@ extract_python_data = PythonOperator(
     dag=dag
 )
 
-create_copy >> transform_data >> drop_table >> create_table >> extract_python_data
+alter_table = PostgresOperator(
+    task_id='alter_table',
+    postgres_conn_id='postgres_result_db',
+    sql='''ALTER TABLE growth_dashboard_v4 ADD UNIQUE (prospect_id);
+    ''',
+    dag=dag
+)
+
+transform_data >> drop_table >> create_table >> alter_table >> extract_python_data
