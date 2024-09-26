@@ -235,7 +235,7 @@ dag = DAG(
     'LSQ_Leads_and_activities',
     default_args=default_args,
     description='An Analytics Data Layer DAG for Leads and their activities. Data Source = Leadsquared',
-    schedule_interval='15 * * * *',
+    schedule_interval='0,15,30,45 * * * *',
     catchup=False
 )
 
@@ -265,7 +265,7 @@ create_table = PostgresOperator(
             intended_course varchar(512),
             created_by_name varchar(512),
             event_name varchar(512),
-            notable_event_description varchar(3000),
+            notable_event_description varchar(5000),
             previous_stage varchar(512),
             current_stage varchar(512),
             call_type varchar(512),
@@ -284,8 +284,8 @@ create_table = PostgresOperator(
             mx_custom_6 varchar(512),
             mx_custom_7 varchar(512),
             mx_custom_8 varchar(512),
-            mx_custom_9 varchar(512),
-            mx_custom_10 varchar(512),
+            mx_custom_9 varchar(5000),
+            mx_custom_10 varchar(5000),
             mx_custom_11 varchar(512),
             mx_custom_12 varchar(512),
             mx_custom_13 varchar(512),
@@ -522,38 +522,43 @@ transform_data = PostgresOperator(
                 to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') >= current_date - interval '1' day
         ) as l
         left join (
-            select distinct
-                prospectid,
-                emailaddress,
-                createdon::timestamp + INTERVAL '5 hours 30 minutes' as createdon,
-                prospectstage,
-                owneridname,
-                mx_substatus,
-                mx_last_call_status,
-                mx_last_call_sub_status,
-                mx_last_call_connection_status,
-                mx_priority_status,
-                mx_rfd_date, 
-                mx_total_fees,
-                mx_total_revenue,
-                mx_doc_approved,
-                mx_doc_collected,
-                mx_cibil_check,
-                mx_bucket,
-                mx_icp,
-                mx_identifer,
-                mx_organic_inbound,
-                mx_entrance_exam_marks,
-                mx_lead_quality_grade,
-                mx_lead_inherent_intent,
-                mx_test_date_n_time,
-                mx_lead_type,
-                mx_mid_funnel_count,
-                mx_mid_funnel_buckets,
-                mx_reactivation_bucket,
-                mx_reactivation_date,
-                mx_source_intended_course
-            from leadsquareleadsdata 
+            select * from (
+                select distinct
+                    prospectid,
+                    emailaddress,
+                    createdon::timestamp + INTERVAL '5 hours 30 minutes' as createdon,
+                    prospectstage,
+                    owneridname,
+                    mx_substatus,
+                    mx_last_call_status,
+                    mx_last_call_sub_status,
+                    mx_last_call_connection_status,
+                    mx_priority_status,
+                    mx_rfd_date, 
+                    mx_total_fees,
+                    mx_total_revenue,
+                    mx_doc_approved,
+                    mx_doc_collected,
+                    mx_cibil_check,
+                    mx_bucket,
+                    mx_icp,
+                    mx_identifer,
+                    mx_organic_inbound,
+                    mx_entrance_exam_marks,
+                    mx_lead_quality_grade,
+                    mx_lead_inherent_intent,
+                    mx_test_date_n_time,
+                    mx_lead_type,
+                    mx_mid_funnel_count,
+                    mx_mid_funnel_buckets,
+                    mx_reactivation_bucket,
+                    mx_reactivation_date,
+                    mx_source_intended_course,
+                    modifiedon,
+                    row_number() over (partition by prospectid order by modifiedon desc) as rn
+                from leadsquareleadsdata 
+            ) a
+            where rn = 1
         ) as l2 
             on l.relatedprospectid = l2.prospectid
         order by 2,5;
