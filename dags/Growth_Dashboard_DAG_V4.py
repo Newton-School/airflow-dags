@@ -105,8 +105,8 @@ def extract_data_to_nested(**kwargs):
 dag = DAG(
     'Growth_Dashboard_DAG_V4',
     default_args=default_args,
-    description='Analytics DAG for Growth Dashboard',
-    schedule_interval='0 12 * * *',
+    description='DAG for collating user metrics/milestones for growth & sales',
+    schedule_interval=None,
     catchup=False
 )
 
@@ -590,7 +590,7 @@ transform_data = PostgresOperator(
             mx_identifer,
             mx_lead_inherent_intent,
             mx_lead_quality_grade,
-            case when mx_lead_quality_grade in ('Grade A') and lower(mx_lead_inherent_intent) in ('high', 'medium', 'low', '', ) then true
+            case when mx_lead_quality_grade in ('Grade A') and lower(mx_lead_inherent_intent) in ('high', 'medium', 'low', '') then true
                 when mx_lead_quality_grade in ('Grade B', Grade C', 'Grade D', 'Grade E', 'Grade F') and lower(mx_lead_inherent_intent) in ('high', 'medium') then true
                 else false end as icp_status
         from lead_data a
