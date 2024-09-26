@@ -582,7 +582,7 @@ extract_python_data = PythonOperator(
 alter_table = PostgresOperator(
     task_id='alter_table',
     postgres_conn_id='postgres_result_db',
-    sql='''ALTER TABLE lsq_leads_x_activities ADD PRIMARY KEY (table_unique_key);
+    sql='''ALTER TABLE lsq_leads_x_activities ADD CONSTRAINT unique_table_unique_key UNIQUE (table_unique_key);
     ''',
     dag=dag
 )
