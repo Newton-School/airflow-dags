@@ -575,7 +575,7 @@ extract_python_data = PythonOperator(
 )
 
 alter_table_a = PostgresOperator(
-    task_id='delete_table',
+    task_id='alter_table_a',
     postgres_conn_id='postgres_result_db',
     sql='''
         ALTER TABLE lsq_leads_x_activities_temp ALTER COLUMN mx_custom_9 TYPE varchar(5000)
@@ -584,7 +584,7 @@ alter_table_a = PostgresOperator(
 )
 
 alter_table_b = PostgresOperator(
-    task_id='delete_table',
+    task_id='alter_table_b',
     postgres_conn_id='postgres_result_db',
     sql='''
         ALTER TABLE lsq_leads_x_activities_temp ALTER COLUMN mx_custom_10 TYPE varchar(5000)
