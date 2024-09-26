@@ -29,17 +29,16 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO growth_dashboard_v4 (prospect_id, email, lead_created_on, latest_stage,' 
-            'latest_stage_timestamp, prospect_stage,  lead_assigned_flag, first_lead_assigned_timestamp,'
-            'prospect_flag, first_prospect_timestamp, test_taken_flag, test_taken_timestamp, test_cleared_flag,' 
-            'test_cleared_timestamp, session_done_flag, first_session_done_timestamp, docs_collected_flag,' 
-            'docs_collected_timestamp, lead_owner, first_call_timestamp, last_call_timestamp, dials, connects,'
-            'connects_gt_3min, duration, churn_flag, churn_timestamp, true_churn_flag, true_churn_timestamp,'
-            'course_timeline_flow, course_id, cum_created_at, date_joined, cutfm_created_at, utm_source, utm_medium,' 
-            'utm_campaign, utm_referer, course_slug, marketing_slug, utm_hash, incoming_course_structure_slug, latest_utm_source,'
-            'latest_utm_campaign, latest_utm_medium, twelfth_marks, graduation_year, degree, life_status, work_ex, salary,' 
-            'current_location, reason_to_join, conviction, mx_identifer, mx_lead_inherent_intent, mx_lead_quality_grade, icp_status)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
+            'INSERT INTO growth_dashboard_v4 (prospect_id, email, lead_created_on, latest_stage, latest_stage_timestamp,'
+            'prospect_stage, lead_assigned_flag, first_lead_assigned_timestamp, prospect_flag, first_prospect_timestamp,test_taken_flag,'
+            'test_taken_timestamp, test_cleared_flag, test_cleared_timestamp, session_done_flag,first_session_done_timestamp,'
+            'docs_collected_flag, docs_collected_timestamp, lead_owner, first_call_timestamp,last_call_timestamp, dials, connects,'
+            'connects_gt_3min, duration, churn_flag, churn_timestamp, true_churn_flag,true_churn_timestamp, course_timeline_flow,'
+            'course_id, cum_created_at, date_joined, cutfm_created_at, utm_source,utm_medium, utm_campaign, utm_referer, course_slug,'
+            'marketing_slug, utm_hash, incoming_course_structure_slug,latest_utm_source, latest_utm_campaign, latest_utm_medium,'
+            'twelfth_marks, graduation_year, degree, life_status,work_ex, salary, current_location, reason_to_join, conviction,'
+            'mx_identifer, mx_lead_inherent_intent,mx_lead_quality_grade, icp_status)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
             (
                 transform_row[0],
                 transform_row[1],
@@ -97,6 +96,8 @@ def extract_data_to_nested(**kwargs):
                 transform_row[53],
                 transform_row[54],
                 transform_row[55],
+                transform_row[56],
+                transform_row[57]
             )
         )
     pg_conn.commit()
@@ -163,10 +164,12 @@ create_table = PostgresOperator(
             twelfth_marks varchar(512),
             graduation_year varchar(512),
             degree varchar(512),
+            life_status varchar(512),
             work_ex varchar(512),
             salary varchar(512),
             current_location varchar(512),
             reason_to_join varchar(512),
+            conviction varchar(512),
             mx_identifer varchar(256),
             mx_lead_inherent_intent varchar(256),
             mx_lead_quality_grade varchar(256),
