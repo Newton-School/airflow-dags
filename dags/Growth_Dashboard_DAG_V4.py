@@ -38,7 +38,20 @@ def extract_data_to_nested(**kwargs):
             'marketing_slug, utm_hash, incoming_course_structure_slug,latest_utm_source, latest_utm_campaign, latest_utm_medium,'
             'twelfth_marks, graduation_year, degree, life_status,work_ex, salary, current_location, reason_to_join, conviction,'
             'mx_identifer, mx_lead_inherent_intent,mx_lead_quality_grade, icp_status)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            'on conflict (prospect_id) do update set email = EXCLUDED.email, lead_created_on = EXCLUDED.lead_created_on, latest_stage = EXCLUDED.latest_stage, latest_stage_timestamp = EXCLUDED.latest_stage_timestamp,'
+            'prospect_stage = EXCLUDED.prospect_stage, lead_assigned_flag = EXCLUDED.lead_assigned_flag, first_lead_assigned_timestamp = EXCLUDED.first_lead_assigned_timestamp, prospect_flag = EXCLUDED.prospect_flag,'
+            'first_prospect_timestamp = EXCLUDED.first_prospect_timestamp, test_taken_flag = EXCLUDED.test_taken_flag, test_taken_timestamp = EXCLUDED.test_taken_timestamp, test_cleared_flag = EXCLUDED.test_cleared_flag,'
+            'test_cleared_timestamp = EXCLUDED.test_cleared_timestamp, session_done_flag = EXCLUDED.session_done_flag, first_session_done_timestamp = EXCLUDED.first_session_done_timestamp,'
+            'docs_collected_flag = EXCLUDED.docs_collected_flag, docs_collected_timestamp = EXCLUDED.docs_collected_timestamp, lead_owner = EXCLUDED.lead_owner, first_call_timestamp = EXCLUDED.first_call_timestamp,'
+            'last_call_timestamp = EXCLUDED.last_call_timestamp, dials = EXCLUDED.dials, connects = EXCLUDED.connects, connects_gt_3min = EXCLUDED.connects_gt_3min, duration = EXCLUDED.duration,'
+            'churn_flag = EXCLUDED.churn_flag, churn_timestamp = EXCLUDED.churn_timestamp, true_churn_flag = EXCLUDED.true_churn_flag, true_churn_timestamp = EXCLUDED.true_churn_timestamp,'
+            'course_timeline_flow = EXCLUDED.course_timeline_flow, course_id = EXCLUDED.course_id, cum_created_at = EXCLUDED.cum_created_at, date_joined = EXCLUDED.date_joined, cutfm_created_at = EXCLUDED.cutfm_created_at,'
+            'utm_source = EXCLUDED.utm_source, utm_medium = EXCLUDED.utm_medium, utm_campaign = EXCLUDED.utm_campaign, utm_referer = EXCLUDED.utm_referer, course_slug = EXCLUDED.course_slug, marketing_slug = EXCLUDED.marketing_slug,'
+            'utm_hash = EXCLUDED.utm_hash, incoming_course_structure_slug = EXCLUDED.incoming_course_structure_slug, latest_utm_source = EXCLUDED.latest_utm_source, latest_utm_campaign = EXCLUDED.latest_utm_campaign,'
+            'latest_utm_medium = EXCLUDED.latest_utm_medium, twelfth_marks = EXCLUDED.twelfth_marks, graduation_year = EXCLUDED.graduation_year, degree = EXCLUDED.degree, life_status = EXCLUDED.life_status, work_ex = EXCLUDED.work_ex,'
+            'salary = EXCLUDED.salary, current_location = EXCLUDED.current_location, reason_to_join = EXCLUDED.reason_to_join, conviction = EXCLUDED.conviction, mx_identifer = EXCLUDED.mx_identifer,'
+            'mx_lead_inherent_intent = EXCLUDED.mx_lead_inherent_intent, mx_lead_quality_grade = EXCLUDED.mx_lead_quality_grade, icp_status = EXCLUDED.icp_status;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -209,7 +222,7 @@ transform_data = PostgresOperator(
                         modified_on,
                         row_number() over (partition by prospect_id order by modified_on desc) as rn
                     from lsq_leads_x_activities
-                    -- where modified_on >= now() - interval '12' hour
+                    where modified_on >= current_date - interval '1' day
                 ) a
                 where rn = 1
             ) as a
@@ -259,7 +272,6 @@ transform_data = PostgresOperator(
                     from lsq_leads_x_activities
                     where 
                         current_stage is not null
-                        -- and modified_on >= now() - interval '12' hour
                 ) a 
                 where rn_stage = 1
             ) as b on a.prospect_id = b.prospect_id
@@ -277,13 +289,11 @@ transform_data = PostgresOperator(
                     from lsq_leads_x_activities
                     where 
                         event = 'Log Phone Call'
-                        -- and modified_on >= now() - interval '12' hour
                 ) as b 
                 where rn_log = 1
             ) as c
             on a.prospect_id = c.prospect_id
         ),
-
 
         call_data as (
             select 
@@ -304,48 +314,7 @@ transform_data = PostgresOperator(
             where 
                 event in ('Outbound Phone Call Activity', 'Inbound Phone Call Activity')
                 and prospect_id in (select prospect_id from prospect_list)
-                -- and modified_on >= now() - interval '12' hour
         ),
-
-
-        -- call_data_summarized as (
-        --     select 
-        --         a.prospect_id as prospect_id,
-        --         email_address,
-        --         BDE,
-        --         max(b.lead_owner) as lead_owner,
-
-        --         min(call_timestamp) as first_call_timestamp_bde,
-        --         max(call_timestamp) as last_call_timestamp_bde,
-        --         count(distinct activity_id) as calls_attempted_bde,
-        --         count(distinct case when call_type = 'Answered' then activity_id end) as calls_answered_bde,
-        --         count(distinct case when call_type = 'Answered' and duration >180 then activity_id end) as calls_answered_gt3min_bde,
-        --         sum(case when call_type = 'Answered' then duration else 0 end) as duration_bde,
-
-        --         max(first_call_timestamp_overall) as first_call_timestamp_overall,
-        --         max(last_call_timestamp_overall) as last_call_timestamp_overall,
-        --         max(sixth_call_timestamp_overall) as sixth_call_timestamp_overall,
-        --         max(calls_attempted_overall) as calls_attempted_overall,
-        --         max(calls_answered_overall) as calls_answered_overall,
-        --         max(calls_answered_gt3min_overall) as calls_answered_gt3min_overall,
-        --         max(duration_overall) as duration_overall
-        --     from call_data a
-        --     left join (
-        --         select 
-        --             prospect_id,
-        --             max(case when rn_desc = 1 then lead_owner end) as lead_owner,
-        --             min(call_timestamp) as first_call_timestamp_overall,
-        --             max(call_timestamp) as last_call_timestamp_overall,
-        --             min(case when rn_asc = 6 then call_timestamp end) as sixth_call_timestamp_overall,
-        --             count(distinct activity_id) as calls_attempted_overall,
-        --             count(distinct case when call_type = 'Answered' then activity_id end) as calls_answered_overall,
-        --             count(distinct case when call_type = 'Answered' and duration > 180 then activity_id end) as calls_answered_gt3min_overall,
-        --             sum(case when call_type = 'Answered' then duration else 0 end) as duration_overall
-        --         from call_data
-        --         group by 1
-        --     ) b on a.prospect_id = b.prospect_id
-        --     group by 1,2,3
-        -- ),
 
         call_data_summarized as (
             select 
@@ -519,7 +488,7 @@ transform_data = PostgresOperator(
                     date(course_user_mapping.created_at) as cum_created_at,
                     date(course_user_timeline_flow_mapping.created_at) as cutfm_created_at,
                     date(users_info.date_joined) as date_joined
-                from users_info
+                from (select * from users_info where email in (select distinct email_address from prospect_list))
                 left join course_user_timeline_flow_mapping on course_user_timeline_flow_mapping.user_id = users_info.user_id and course_user_timeline_flow_mapping.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041)
                 left join apply_form_course_user_question_mapping on apply_form_course_user_question_mapping.user_id = course_user_timeline_flow_mapping.user_id and apply_form_course_user_question_mapping.course_id = course_user_timeline_flow_mapping.course_id
                 left join apply_forms_and_questions on apply_forms_and_questions.apply_form_question_id = apply_form_course_user_question_mapping.apply_form_question_id
