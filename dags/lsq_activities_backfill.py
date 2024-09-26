@@ -18,7 +18,7 @@ dag = DAG(
     catchup=False
 )
 
-create_copy = PythonOperator(
+create_copy = PostgresOperator(
     task_id='create_copy',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE lsq_leads_x_activities_backup as SELECT * FROM lsq_leads_x_activities;
@@ -34,7 +34,7 @@ drop_table = PostgresOperator(
     dag=dag
 )
 
-create_table = PythonOperator(
+create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''CREATE lsq_leads_x_activities as SELECT * FROM lsq_leads_x_activities_temp;
