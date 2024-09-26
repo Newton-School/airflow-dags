@@ -117,10 +117,10 @@ def extract_data_to_nested(**kwargs):
 
 
 dag = DAG(
-    'Growth_Dashboard_DAG_V4',
+    'backfiller_temp_dag',
     default_args=default_args,
-    description='DAG for collating user metrics/milestones for growth & sales',
-    schedule_interval='10,25,40,55 * * * *',
+    description='Backfiller/temp DAG',
+    schedule_interval=None,
     catchup=False
 )
 
