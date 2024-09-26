@@ -571,10 +571,11 @@ transform_data = PostgresOperator(
         ''',
     dag=dag
 )
-drop_table = PostgresOperator(
-    task_id='drop_table',
+
+alter_table = PostgresOperator(
+    task_id='alter_table',
     postgres_conn_id='postgres_result_db',
-    sql='''DROP TABLE IF EXISTS growth_dashboard_v4;
+    sql='''ALTER TABLE growth_dashboard_v4 ADD UNIQUE (prospect_id);
     ''',
     dag=dag
 )
@@ -585,4 +586,4 @@ extract_python_data = PythonOperator(
     provide_context=True,
     dag=dag
 )
-transform_data >> drop_table >> create_table >> extract_python_data
+transform_data >> create_table >> alter_table >> extract_python_data
