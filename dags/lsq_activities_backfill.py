@@ -519,8 +519,8 @@ transform_data = PostgresOperator(
             select *
             from leadsquareactivity l
             where 
-                to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') > date_trunc('year', current_date) - interval '5' month
-                and to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') <= date_trunc('year', current_date) - interval '1' month
+                to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') > date_trunc('year', current_date) - interval '1' month
+                and to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') <= date_trunc('year', current_date) + interval '1' month
         ) as l
         left join (
             select * from (
@@ -574,22 +574,4 @@ extract_python_data = PythonOperator(
     dag=dag
 )
 
-alter_table_a = PostgresOperator(
-    task_id='alter_table_a',
-    postgres_conn_id='postgres_result_db',
-    sql='''
-        ALTER TABLE lsq_leads_x_activities_temp ALTER COLUMN mx_custom_9 TYPE varchar(5000)
-    ''',
-    dag=dag
-)
-
-alter_table_b = PostgresOperator(
-    task_id='alter_table_b',
-    postgres_conn_id='postgres_result_db',
-    sql='''
-        ALTER TABLE lsq_leads_x_activities_temp ALTER COLUMN mx_custom_10 TYPE varchar(5000)
-    ''',
-    dag=dag
-)
-
-alter_table_a >> alter_table_b >> create_table >> transform_data >> extract_python_data
+create_table >> transform_data >> extract_python_data
