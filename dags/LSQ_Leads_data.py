@@ -579,12 +579,4 @@ extract_python_data = PythonOperator(
     dag=dag
 )
 
-alter_table = PostgresOperator(
-    task_id='alter_table',
-    postgres_conn_id='postgres_result_db',
-    sql='''ALTER TABLE lsq_leads_x_activities ADD CONSTRAINT unique_table_unique_key UNIQUE (table_unique_key);
-    ''',
-    dag=dag
-)
-
-alter_table >> delete_table >> create_table >> transform_data >> extract_python_data
+delete_table >> create_table >> transform_data >> extract_python_data
