@@ -36,8 +36,10 @@ def extract_data_to_nested(**kwargs):
             'docs_collected_timestamp, lead_owner, first_call_timestamp, last_call_timestamp, dials, connects,'
             'connects_gt_3min, duration, churn_flag, churn_timestamp, true_churn_flag, true_churn_timestamp,'
             'course_timeline_flow, course_id, cum_created_at, date_joined, cutfm_created_at, utm_source, utm_medium,'
-            'utm_campaign, twelfth_marks, graduation_year, degree, work_ex, salary, current_location, reason_to_join,icp_status)'
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
+            'utm_campaign, utm_referer, course_slug, marketing_slug, utm_hash, incoming_course_structure_slug, latest_utm_source,'
+            'latest_utm_campaign, latest_utm_medium, twelfth_marks, graduation_year, degree, work_ex, salary, current_location,'
+            'reason_to_join, mx_identifer, mx_lead_inherent_intent, mx_lead_quality_grade, icp_status)'
+            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);',
             (
                 transform_row[0],
                 transform_row[1],
@@ -84,6 +86,17 @@ def extract_data_to_nested(**kwargs):
                 transform_row[42],
                 transform_row[43],
                 transform_row[44],
+                transform_row[45],
+                transform_row[46],
+                transform_row[47],
+                transform_row[48],
+                transform_row[49],
+                transform_row[50],
+                transform_row[51],
+                transform_row[52],
+                transform_row[53],
+                transform_row[54],
+                transform_row[55],
             )
         )
     pg_conn.commit()
@@ -139,6 +152,14 @@ create_table = PostgresOperator(
             utm_source varchar(512),
             utm_medium varchar(512),
             utm_campaign varchar(512),
+            utm_referer varchar(512),
+            course_slug varchar(512),
+            marketing_slug varchar(512),
+            utm_hash varchar(512),
+            incoming_course_structure_slug varchar(512),
+            latest_utm_source varchar(512),
+            latest_utm_campaign varchar(512),
+            latest_utm_medium varchar(512),
             twelfth_marks varchar(512),
             graduation_year varchar(512),
             degree varchar(512),
@@ -146,7 +167,10 @@ create_table = PostgresOperator(
             salary varchar(512),
             current_location varchar(512),
             reason_to_join varchar(512),
-            icp_status varchar(512)
+            mx_identifer varchar(256),
+            mx_lead_inherent_intent varchar(256),
+            mx_lead_quality_grade varchar(256),
+            icp_status boolean
         );
     ''',
     dag=dag
@@ -157,24 +181,44 @@ transform_data = PostgresOperator(
     postgres_conn_id='postgres_result_db',
     sql='''
         with prospect_list as (
-            select distinct
-                prospect_id,
+            select distinct 
+                a.prospect_id,
                 email_address,
                 prospect_stage,
                 lead_created_on,
-                modified_on as latest_timestamp
+                latest_timestamp,
+                mx_identifer,
+                mx_lead_inherent_intent,
+                mx_lead_quality_grade
             from (
-                select 
+                select distinct
                     prospect_id,
                     email_address,
                     prospect_stage,
                     lead_created_on,
-                    modified_on,
-                    row_number() over (partition by prospect_id order by modified_on desc) as rn
+                    modified_on as latest_timestamp
+                from (
+                    select 
+                        prospect_id,
+                        email_address,
+                        prospect_stage,
+                        lead_created_on,
+                        modified_on,
+                        row_number() over (partition by prospect_id order by modified_on desc) as rn
+                    from lsq_leads_x_activities
+                    -- where modified_on >= now() - interval '12' hour
+                ) a
+                where rn = 1
+            ) as a
+            left join (
+                select 
+                    prospect_id,
+                    min(case when mx_lead_inherent_intent is not null then mx_lead_inherent_intent end) as mx_lead_inherent_intent,
+                    min(case when mx_identifer is not null then mx_identifer end) as mx_identifer,
+                    min(case when mx_lead_quality_grade is not null then mx_lead_quality_grade end) as mx_lead_quality_grade
                 from lsq_leads_x_activities
-                -- where modified_on >= now() - interval '12' hour
-            ) a
-            where rn = 1
+                group by 1
+            ) as b on a.prospect_id = b.prospect_id
         ),
 
         latest_stage as (
@@ -323,6 +367,9 @@ transform_data = PostgresOperator(
                 max(latest_stage) as latest_stage,
                 max(latest_stage_timestamp) as latest_stage_timestamp,
                 max(prospect_stage) as prospect_stage,
+                max(a.mx_identifer) as mx_identifer,
+                max(a.mx_lead_inherent_intent) as mx_lead_inherent_intent,
+                max(a.mx_lead_quality_grade) as mx_lead_quality_grade,
                 
                 max(lead_assigned_flag) as lead_assigned_flag,
                 max(first_lead_assigned_timestamp) as first_lead_assigned_timestamp,
@@ -421,6 +468,14 @@ transform_data = PostgresOperator(
                 max(utm_source) as utm_source,
                 max(utm_medium) as utm_medium,
                 max(utm_campaign) as utm_campaign,
+                max(utm_referer) as utm_referer,
+                max(course_slug) as course_slug,
+                max(marketing_slug) as marketing_slug,
+                max(utm_hash) as utm_hash,
+                max(incoming_course_structure_slug) as incoming_course_structure_slug,
+                max(latest_utm_source) as latest_utm_source,
+                max(latest_utm_campaign) as latest_utm_campaign,
+                max(latest_utm_medium) as latest_utm_medium,
                 max(case when question_text in ('12th Passing Marks (in Percentage)') then apply_form_response end) as "12th",
                 max(case when question_text = 'Graduation Year (College passing out year)' then apply_form_response end) as "Graduation Year",
                 max(case when question_text in ('What degree did you graduate in?') then apply_form_response end) as "Degree",
@@ -450,6 +505,14 @@ transform_data = PostgresOperator(
                     users_info.utm_source,
                     users_info.utm_medium,
                     users_info.utm_campaign,
+                    users_info.utm_referer,
+                    users_info.course_slug,
+                    users_info.marketing_slug,
+                    users_info.utm_hash,
+                    users_info.incoming_course_structure_slug,
+                    users_info.latest_utm_source,
+                    users_info.latest_utm_campaign,
+                    users_info.latest_utm_medium,
                     date(course_user_mapping.created_at) as cum_created_at,
                     date(course_user_timeline_flow_mapping.created_at) as cutfm_created_at,
                     date(users_info.date_joined) as date_joined
@@ -499,7 +562,6 @@ transform_data = PostgresOperator(
             true_churn_flag,
             true_churn_timestamp,
 
-
             course_timeline_flow,
             course_id,
             cum_created_at,
@@ -508,6 +570,14 @@ transform_data = PostgresOperator(
             utm_source,
             utm_medium,
             utm_campaign,
+            utm_referer,
+            course_slug,
+            marketing_slug,
+            utm_hash,
+            incoming_course_structure_slug,
+            latest_utm_source,
+            latest_utm_campaign,
+            latest_utm_medium,
             "12th" as twelfth_marks,
             "Graduation Year" as graduation_year,
             "Degree" as degree,
@@ -517,9 +587,12 @@ transform_data = PostgresOperator(
             "Current location" as current_location,
             "Reason to Join" as reason_to_join,
             "Conviction" as conviction,
-            case when "Salary" in ('Rs 25000 - Rs 30000 per month','Rs 30000 - Rs 40000 per month','Rs 40000 - Rs 50000 per month','Rs 50000 - Rs 75000 per month','Rs 75000 - Rs 100000 per month','More than 100000','3 LPA - 4.99 LPA','5 LPA or more') then 'ICP'
-                when "Salary" in ('Rs 20000 - Rs 30000 per month','Rs 10000 - Rs 20000 per month','Rs 20000 - Rs 24999 per month','2 LPA - 2.99 LPA','Below 2 LPA','Less than 3LPA') then 'Close to ICP'
-                when "Salary" in ('I am not earning right now','Not Earning') then 'Not ICP' end as icp_status
+            mx_identifer,
+            mx_lead_inherent_intent,
+            mx_lead_quality_grade,
+            case when mx_lead_quality_grade in ('Grade A') and lower(mx_lead_inherent_intent) in ('high', 'medium', 'low', '', ) then true
+                when mx_lead_quality_grade in ('Grade B', Grade C', 'Grade D', 'Grade E', 'Grade F') and lower(mx_lead_inherent_intent) in ('high', 'medium') then true
+                else false end as icp_status
         from lead_data a
         left join user_data b on a.email = b.email
         ;
