@@ -591,7 +591,7 @@ transform_data = PostgresOperator(
             mx_lead_inherent_intent,
             mx_lead_quality_grade,
             case when mx_lead_quality_grade in ('Grade A') and lower(mx_lead_inherent_intent) in ('high', 'medium', 'low', '') then true
-                when mx_lead_quality_grade in ('Grade B', Grade C', 'Grade D', 'Grade E', 'Grade F') and lower(mx_lead_inherent_intent) in ('high', 'medium') then true
+                when mx_lead_quality_grade in ('Grade B', 'Grade C', 'Grade D', 'Grade E', 'Grade F') and lower(mx_lead_inherent_intent) in ('high', 'medium') then true
                 else false end as icp_status
         from lead_data a
         left join user_data b on a.email = b.email
