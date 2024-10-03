@@ -489,12 +489,12 @@ transform_data = PostgresOperator(
                     date(course_user_timeline_flow_mapping.created_at) as cutfm_created_at,
                     date(users_info.date_joined) as date_joined
                 from (select * from users_info where email in (select distinct email_address from prospect_list)) as users_info
-                left join course_user_timeline_flow_mapping on course_user_timeline_flow_mapping.user_id = users_info.user_id and course_user_timeline_flow_mapping.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041)
+                left join course_user_timeline_flow_mapping on course_user_timeline_flow_mapping.user_id = users_info.user_id and course_user_timeline_flow_mapping.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041,1042)
                 left join apply_form_course_user_question_mapping on apply_form_course_user_question_mapping.user_id = course_user_timeline_flow_mapping.user_id and apply_form_course_user_question_mapping.course_id = course_user_timeline_flow_mapping.course_id
                 left join apply_forms_and_questions on apply_forms_and_questions.apply_form_question_id = apply_form_course_user_question_mapping.apply_form_question_id
                 left join course_user_mapping on course_user_mapping.user_id = course_user_timeline_flow_mapping.user_id and course_user_timeline_flow_mapping.course_id = course_user_mapping.course_id
-                left join courses on courses.course_id = course_user_timeline_flow_mapping.course_id and courses.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041)
-                where courses.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041)
+                left join courses on courses.course_id = course_user_timeline_flow_mapping.course_id and courses.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041,1042)
+                where courses.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041,1042)
                 order by 1
             ) as a
             group by 1
