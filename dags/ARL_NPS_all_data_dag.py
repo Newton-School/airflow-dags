@@ -207,6 +207,7 @@ transform_data = PostgresOperator(
                     end as student_nps_class,
                     
                     case 
+                        whne ffar.feedback_question_id = 654 then feedback_answer
                         when ffar.feedback_question_id = 323 then feedback_answer
                     end as subjective_feedback,
                     case 
