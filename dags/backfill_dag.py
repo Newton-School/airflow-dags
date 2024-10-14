@@ -225,6 +225,7 @@ transform_data = PostgresOperator(
                         lead_owner,
                         row_number() over (partition by prospect_id order by modified_on desc) as rn
                     from lsq_leads_x_activities
+                    where modified_on >= date_trunc('year', current_date)
                 ) a
                 where rn = 1
             ) as a
