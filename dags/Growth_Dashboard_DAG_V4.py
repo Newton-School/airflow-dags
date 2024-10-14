@@ -120,7 +120,7 @@ dag = DAG(
     'Growth_Dashboard_DAG_V4',
     default_args=default_args,
     description='DAG for collating user metrics/milestones for growth & sales',
-    schedule_interval='10,25,40,55 * * * *',
+    schedule_interval='10,40 * * * *',
     catchup=False
 )
 
@@ -205,13 +205,15 @@ transform_data = PostgresOperator(
                 latest_timestamp,
                 mx_identifer,
                 mx_lead_inherent_intent,
-                mx_lead_quality_grade
+                mx_lead_quality_grade,
+                lead_owner
             from (
                 select distinct
                     prospect_id,
                     email_address,
                     prospect_stage,
                     lead_created_on,
+                    lead_owner,
                     modified_on as latest_timestamp
                 from (
                     select 
@@ -220,6 +222,7 @@ transform_data = PostgresOperator(
                         prospect_stage,
                         lead_created_on,
                         modified_on,
+                        lead_owner,
                         row_number() over (partition by prospect_id order by modified_on desc) as rn
                     from lsq_leads_x_activities
                     where modified_on >= current_date - interval '1' day
@@ -319,7 +322,6 @@ transform_data = PostgresOperator(
         call_data_summarized as (
             select 
                 prospect_id,
-                max(case when rn_desc = 1 then lead_owner end) as lead_owner,
                 min(call_timestamp) as first_call_timestamp,
                 max(call_timestamp) as last_call_timestamp,
                 min(case when rn_asc = 6 then call_timestamp end) as sixth_call_timestamp,
