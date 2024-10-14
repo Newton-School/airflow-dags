@@ -153,7 +153,7 @@ transform_data = PostgresOperator(
         LEFT JOIN auth_user ON courses_courseusermapping.user_id = auth_user.id
         LEFT JOIN users_userprofile ON users_userprofile.user_id = auth_user.id
         WHERE invoices_invoicetemplate.type = 'ADMISSION_PROCESS_BOOKING_FEE'
-        AND courses_course.id IN (800,818,819,820,821,822,823,824,825,826,1040,1041)
+        AND courses_course.id IN (800,818,819,820,821,822,823,824,825,826,1040,1041,1042)
         AND "courses_courseusermapping".user_id IS NOT NULL
         AND auth_user.email NOT LIKE '%newtonschool.co'
     ) AS t
@@ -167,7 +167,7 @@ SELECT DISTINCT
     DATE(cum_created) AS cum_created
 FROM A
 WHERE Bucket IN ('499 Paid','499 Timer', '999 Paid','999 Timer','249 Timer','249 Paid','99 Paid','99 Timer')
-AND course_id IN (800,818,819,820,821,822,823,824,825,826,1040,1041)
+AND course_id IN (800,818,819,820,821,822,823,824,825,826,1040,1041,1042)
 ORDER BY 1, 2;
         ''',
     dag=dag
