@@ -86,7 +86,7 @@ left join courses_subbatch
 left join courses_subbatchcourseusermapping
     on courses_subbatchcourseusermapping.sub_batch_id = courses_subbatch.id and courses_subbatchcourseusermapping.is_deleted = false
 left join courses_course
-    on courses_course.id = courses_subbatch.course_id and courses_course.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,32,50,51,52,53,54,55,56,57,58,59,60)
+    on courses_course.id = courses_subbatch.course_id and courses_course.course_structure_id in (1,6,8,11,12,13,14,18,19,20,22,23,26,32,50,51,52,53,54,55,56,57,58,59,60,72,127,118,119,122,121)
 left join courses_courseusermapping
     on courses_courseusermapping.course_id = courses_course.id and courses_courseusermapping.id = courses_subbatchcourseusermapping.course_user_mapping_id and courses_courseusermapping.status in (5,8,9)
 left join auth_user au2
