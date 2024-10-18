@@ -106,6 +106,7 @@ transform_data = PostgresOperator(
         when courses_course.course_structure_id in (6,12,19) then 'Upfront - FSD'
         when courses_course.course_structure_id in (32) then 'Upfront - FSD: Instructor - 2'
         when courses_course.course_structure_id in (7,40,62,63,64,65,66,67,70) then 'Newton School of Technology'
+        when courses_course.course_structure_id in (127,118,119,122,121) then 'Advanced Software Development'
         else 'Other'
     end as course_structure_class,
     courses_course.start_timestamp as course_start_timestamp,
