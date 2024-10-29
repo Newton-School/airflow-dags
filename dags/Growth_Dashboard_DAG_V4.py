@@ -120,7 +120,7 @@ dag = DAG(
     'Growth_Dashboard_DAG_V4',
     default_args=default_args,
     description='DAG for collating user metrics/milestones for growth & sales',
-    schedule_interval='10,40 * * * *',
+    schedule_interval='10 * * * *', # To run every 10th min of every hours
     catchup=False
 )
 
