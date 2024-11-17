@@ -239,6 +239,15 @@ dag = DAG(
     catchup=False
 )
 
+# Task 1: Delete existing records for the current date
+delete_table = PostgresOperator(
+    task_id='delete_table',
+    postgres_conn_id='postgres_result_db',
+    sql="delete from lsq_leads_x_activities where modified_on::date >= current_date - interval '1' day;",
+    dag=dag
+)
+
+# Task 2: Create table if not exists
 create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
@@ -314,6 +323,22 @@ create_table = PostgresOperator(
     dag=dag
 )
 
+
+
+# Task 3: Alter table to increase column sizes
+alter_table = PostgresOperator(
+    task_id='alter_table',
+    postgres_conn_id='postgres_result_db',
+    sql='''
+        ALTER TABLE lsq_leads_x_activities 
+        ALTER COLUMN notable_event_description TYPE varchar(10000),
+        ALTER COLUMN mx_custom_9 TYPE varchar(10000),
+        ALTER COLUMN mx_custom_10 TYPE varchar(10000);
+    ''',
+    dag=dag
+)
+
+# Task 4: Transform data
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_lsq_leads',
@@ -565,13 +590,8 @@ transform_data = PostgresOperator(
     ''',
     dag=dag
 )
-delete_table = PostgresOperator(
-    task_id='delete_table',
-    postgres_conn_id='postgres_result_db',
-    sql='''delete from lsq_leads_x_activities where modified_on::date >= current_date - interval '1' day;
-    ''',
-    dag=dag
-)
+
+# Task 5: Extract data to nested
 extract_python_data = PythonOperator(
     task_id='extract_python_data',
     python_callable=extract_data_to_nested,
@@ -579,4 +599,5 @@ extract_python_data = PythonOperator(
     dag=dag
 )
 
-delete_table >> create_table >> transform_data >> extract_python_data
+# Define Task Dependencies
+delete_table >> create_table >> alter_table >> transform_data >> extract_python_data
