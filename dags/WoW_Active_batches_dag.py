@@ -187,7 +187,7 @@ left join
                             on courses_course.id = courses_courseusermapping.course_id
                         left join auth_user
                             on auth_user.id = courses_courseusermapping.user_id
-                        where ((courses_course.course_structure_id in (6,8,11,12,13,14,19,20,22,23,26,24,32,50,51,52,53,54,55,56,57,58,59,60,72,127,118,119,122,121,,94,95,131,132) and courses_courseusermapping.status in (8)) or (courses_course.course_structure_id in (1,18) and courses_courseusermapping.status in (5,9)))),
+                        where ((courses_course.course_structure_id in (6,8,11,12,13,14,19,20,22,23,26,24,32,50,51,52,53,54,55,56,57,58,59,60,72,127,118,119,122,121,94,95,131,132) and courses_courseusermapping.status in (8)) or (courses_course.course_structure_id in (1,18) and courses_courseusermapping.status in (5,9)))),
                         
                     student_raw as 
                         (select 
@@ -210,7 +210,7 @@ left join
                             on courses_course.id = courses_courseusermapping.course_id
                         left join auth_user
                             on auth_user.id = courses_courseusermapping.user_id
-                        where ((courses_course.course_structure_id in (6,8,7,11,12,13,14,19,20,22,23,26,24,32,44,50,51,52,53,54,55,56,57,58,59,60,72,127,118,119,122,121,,94,95,131,132) and courses_courseusermapping.status in (8)) or (courses_course.course_structure_id in (1,18) and courses_courseusermapping.status in (5,9)))
+                        where ((courses_course.course_structure_id in (6,8,7,11,12,13,14,19,20,22,23,26,24,32,44,50,51,52,53,54,55,56,57,58,59,60,72,127,118,119,122,121,94,95,131,132) and courses_courseusermapping.status in (8)) or (courses_course.course_structure_id in (1,18) and courses_courseusermapping.status in (5,9)))
                         )
                         
                         
