@@ -151,6 +151,8 @@ from
             when lu_csid in (11,14,20,26,50,51,52,53,54,55,56,57,58,59,60) then 'Data Science + IU'
             when lu_csid in (7,44) then 'Newton School of Technology'
             when lu_csid in (127,118,119,122,121) then 'Advanced Software Development'
+            when lu_csid in (1058,1059) then 'DS Xcelerate'
+            when lu_csid in (1334,1335) then 'ASD Xcelerate' 
             else 'No Tag' 
         end as course_type,
         au_course_id,
@@ -208,7 +210,7 @@ left join
                             on courses_course.id = courses_courseusermapping.course_id
                         left join auth_user
                             on auth_user.id = courses_courseusermapping.user_id
-                        where ((courses_course.course_structure_id in (6,8,7,11,12,13,14,19,20,22,23,26,24,32,44,50,51,52,53,54,55,56,57,58,59,60,72,127,118,119,122,121) and courses_courseusermapping.status in (8)) or (courses_course.course_structure_id in (1,18) and courses_courseusermapping.status in (5,9)))
+                        where ((courses_course.course_structure_id in (6,8,7,11,12,13,14,19,20,22,23,26,24,32,44,50,51,52,53,54,55,56,57,58,59,60,72,127,118,119,122,121,1058,1059,1334,1335) and courses_courseusermapping.status in (8)) or (courses_course.course_structure_id in (1,18) and courses_courseusermapping.status in (5,9)))
                         )
                         
                         
