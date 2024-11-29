@@ -357,7 +357,7 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
             from
                 courses c
             join course_user_mapping cum
-                on cum.course_id = c.course_id and c.course_structure_id in (1,6,7,8,11,12,14,18,19,20,22,23,26,32,34,44,47,50,51,52,53,54,55,56,57,58,59,60,72,127,118,119,122,121,,94,95,131,132)
+                on cum.course_id = c.course_id and c.course_structure_id in (1,6,7,8,11,12,14,18,19,20,22,23,26,32,34,44,47,50,51,52,53,54,55,56,57,58,59,60,72,127,118,119,122,121,94,95,131,132)
                     and cum.status in (8,9,11,12,30) and (c.course_id in (select distinct wab.lu_course_id from wow_active_batches wab) or c.course_id = 798) 
             join lectures l
                 on l.course_id = c.course_id and l.start_timestamp >= '2022-07-01'
