@@ -73,6 +73,42 @@ create_table = PostgresOperator(
 )
 
 
+alter_table = PostgresOperator(
+    task_id='alter_table',
+    postgres_conn_id='postgres_result_db',
+    sql='''
+        DO $$
+        BEGIN
+            -- Check if the column is already of type BIGINT
+            IF EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'assignment_question_user_mapping_new'
+                  AND column_name = 'id'
+                  AND data_type = 'bigint'
+            ) THEN
+                -- Column is already BIGINT, skip the ALTER statement
+                RAISE NOTICE 'Column "id" is already BIGINT. Skipping ALTER.';
+            ELSE
+                -- Step 1: Alter column type to BIGINT
+                ALTER TABLE assignment_question_user_mapping_new 
+                ALTER COLUMN id TYPE BIGINT;
+
+                -- Step 2: Change the sequence associated with the column to BIGINT
+                ALTER SEQUENCE assignment_question_user_mapping_new_id_seq 
+                AS BIGINT;
+
+                -- Step 3: Ensure the column uses the sequence correctly
+                ALTER TABLE assignment_question_user_mapping_new 
+                ALTER COLUMN id SET DEFAULT nextval('assignment_question_user_mapping_new_id_seq');
+                
+                RAISE NOTICE 'Column "id" successfully updated to BIGINT.';
+            END IF;
+        END $$;
+    ''',
+    dag=dag
+)
+
 # Leaf Level Abstraction
 def extract_data_to_nested(**kwargs):
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
@@ -687,4 +723,4 @@ for assignment_sub_dag_id in range(int(total_number_of_sub_dags)):
 
             number_of_rows_per_assignment_sub_dag >> cps_sub_dag
 
-    create_table >> assignment_sub_dag_task_group
+    create_table >> alter_table >> assignment_sub_dag_task_group
