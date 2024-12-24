@@ -16,7 +16,7 @@ class CompanyManager(LoggingMixin):
     Manager class for companies.
     """
 
-    def __init__(self, source: int, pg_conn_id: str = "postgres_result_db"):
+    def __init__(self, source: int, pg_conn_id: str = "postgres_job_posting"):
         super().__init__()
         self.source = source
         self.pg_hook = PostgresHook(postgres_conn_id=pg_conn_id)
@@ -30,7 +30,7 @@ class CompanyManager(LoggingMixin):
             with conn.cursor() as cur:
                 cur.execute(
                         """SELECT slug, normalized_names 
-                            FROM companies
+                            FROM airflow_companies
                         """
                 )
 

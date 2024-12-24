@@ -13,14 +13,14 @@ from job_scrapers.transformers.weekday import WeekdayJobTransformer
 
 # Constants
 BATCH_SIZE = 100
-POSTGRES_CONN_ID = "postgres_result_db"
+POSTGRES_CONN_ID = "postgres_job_posting"
 
 
 def create_scraper_dag(
         dag_id: str,
         scraper_class: Type[BaseJobScraper],
         transformer_class: Type[BaseJobTransformer],
-        schedule: str = "0 */4 * * *",
+        schedule: str = "30 0 * * *",
         scraper_args: Dict[str, Any] = None,
         transformer_args: Dict[str, Any] = None,
         tags: List[str] = None
@@ -46,7 +46,7 @@ def create_scraper_dag(
 
             tables = [
                     """
-                    CREATE TABLE IF NOT EXISTS companies (
+                    CREATE TABLE IF NOT EXISTS airflow_companies (
                         slug VARCHAR(255) PRIMARY KEY,
                         name VARCHAR(255) NOT NULL,
                         normalized_names TEXT[] NOT NULL,
@@ -56,7 +56,7 @@ def create_scraper_dag(
                     )
                     """,
                     """
-                    CREATE TABLE IF NOT EXISTS raw_job_openings (
+                    CREATE TABLE IF NOT EXISTS airflow_raw_job_openings (
                         id SERIAL PRIMARY KEY,
                         external_job_id VARCHAR(255) NOT NULL,
                         source_name VARCHAR(255) NOT NULL,
@@ -67,7 +67,7 @@ def create_scraper_dag(
                     )
                     """,
                     """
-                    CREATE TABLE IF NOT EXISTS processed_job_openings (
+                    CREATE TABLE IF NOT EXISTS airflow_processed_job_openings (
                         id SERIAL PRIMARY KEY,
                         external_job_id VARCHAR(255) NOT NULL,
                         title VARCHAR(255) NOT NULL,
@@ -114,7 +114,7 @@ def create_scraper_dag(
                         with conn.cursor() as cur:
                             values_template = ','.join(['(%s, %s, %s)'] * len(batch))
                             insert_query = f"""
-                                INSERT INTO raw_job_openings 
+                                INSERT INTO airflow_raw_job_openings 
                                     (external_job_id, source_name, raw_data)
                                 VALUES {values_template}
                                 ON CONFLICT (external_job_id) 
@@ -148,7 +148,7 @@ def create_scraper_dag(
                         cur.execute(
                                 """
                                 SELECT id, external_job_id, source_name, raw_data, is_external_for_job_board
-                                FROM raw_job_openings
+                                FROM airflow_raw_job_openings
                                 WHERE id = ANY(%s)
                                 AND is_external_for_job_board = TRUE
                                 """,
@@ -188,7 +188,7 @@ def create_scraper_dag(
                     with conn.cursor() as cur:
                         values_template = ','.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * len(jobs_to_process))
                         insert_query = f"""
-                            INSERT INTO processed_job_openings (
+                            INSERT INTO airflow_processed_job_openings (
                                 external_job_id, title, company_slug, role_hash, description,
                                 min_ctc, max_ctc, city, state, employment_type,
                                 min_experience_years, max_experience_years,
@@ -264,7 +264,7 @@ def create_scraper_dag(
                         with conn.cursor() as cur:
                             update_template = ','.join(['(%s::varchar, %s::varchar, %s::text)'] * len(newton_results))
                             update_query = f"""
-                                UPDATE processed_job_openings AS p
+                                UPDATE airflow_processed_job_openings AS p
                                 SET 
                                     newton_sync_status = c.status,
                                     newton_sync_error = c.error,
