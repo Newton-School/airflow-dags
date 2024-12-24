@@ -100,6 +100,7 @@ more-itertools==10.3.0
 multidict==6.0.5
 numpy==2.0.0
 oauthlib==3.2.2
+openai==1.58.1
 opentelemetry-api==1.25.0
 opentelemetry-exporter-otlp==1.25.0
 opentelemetry-exporter-otlp-proto-common==1.25.0
@@ -123,6 +124,7 @@ pyasn1==0.6.0
 pyasn1_modules==0.4.0
 PyAthena==3.8.3
 pycparser==2.22
+pycryptodome==3.21.0
 Pygments==2.18.0
 PyJWT==2.8.0
 pyrsistent==0.19.3
