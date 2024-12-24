@@ -126,7 +126,7 @@ class CompanyManager(LoggingMixin):
         with self.pg_hook.get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                        """INSERT INTO companies (slug, name, normalized_names)
+                        """INSERT INTO airflow_companies (slug, name, normalized_names)
                             VALUES (%s, %s, %s)
                         """,
                         (company_slug, company.name, [self._normalize_name(company.name)])
@@ -143,7 +143,7 @@ class CompanyManager(LoggingMixin):
             with conn.cursor() as cur:
                 cur.execute(
                         """SELECT name, slug
-                            FROM companies
+                            FROM airflow_companies
                             WHERE similarity(name, %s) > 0.5
                             LIMIT 10
                         """,
@@ -171,7 +171,7 @@ class CompanyManager(LoggingMixin):
                 with self.pg_hook.get_conn() as conn:
                     with conn.cursor() as cur:
                         cur.execute(
-                                """UPDATE companies
+                                """UPDATE airflow_companies
                                     SET normalized_names = normalized_names || %s
                                     WHERE slug = %s
                                 """,
