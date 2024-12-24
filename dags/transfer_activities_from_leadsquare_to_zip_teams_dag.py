@@ -97,6 +97,7 @@ def transfer_activities_from_leadsquare_to_zip_teams_nested(**kwargs):
                 response = requests.request(
                     "POST", ZIP_TEAMS_URL, headers=zipteam_headers, json=body_to_post
                 )
+                print(f"Response status: {response.status_code} for ProspectActivityId - {activity["ProspectActivityId"]}")
             print("Finished for index: ", index)
         print("Finished for ACTIVITY_EVENT: ", ACTIVITY_EVENT)
 
