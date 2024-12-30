@@ -15,11 +15,12 @@ class JobDetails(BaseModel):
 
     Fields:
     - job_role_hash: (str) Hash of the job role. This cannot be empty
-    - max_ctc: (Optional[int]) Maximum CTC offered by the company in INR lakhs.
-    - min_ctc: (Optional[int]) Minimum CTC offered by the company in INR lakhs.
+    - max_ctc: (Optional[int]) Maximum CTC offered by the company in INR. For example, Rs. 5 Lakhs will be represented as 500000
+    - min_ctc: (Optional[int]) Minimum CTC offered by the company in INR. For example, Rs. 5 Lakhs will be represented as 500000
     - city: (Optional[str]) City where the job is located.
     - state: (Optional[str]) State where the job is located.
     - skills: List[str]: List of skills required for the job.
+    - job_description: (str) Description of the job
     """
 
     job_role_hash: str
@@ -28,6 +29,7 @@ class JobDetails(BaseModel):
     city: Optional[str]
     state: Optional[str]
     skills: List[str]
+    job_description: str
 
 
 class WeekdayJobTransformer(BaseJobTransformer):
@@ -55,12 +57,12 @@ class WeekdayJobTransformer(BaseJobTransformer):
         company_logo_url = raw_job_opening_data.get("companyLogo")
 
         return Company(
-            slug=company_slug,
-            name=company_name,
-            normalized_names=normalized_company_names,
-            website=company_website,
-            description=company_description,
-            logo_url=company_logo_url
+                slug=company_slug,
+                name=company_name,
+                normalized_names=normalized_company_names,
+                website=company_website,
+                description=company_description,
+                logo_url=company_logo_url
         )
 
     def _extract_job_details_ai(self, raw_job: RawJobOpening) -> JobDetails:
@@ -71,7 +73,27 @@ class WeekdayJobTransformer(BaseJobTransformer):
         location = raw_job_opening_data.get("location")
         skills = raw_job_opening_data.get("skills")
         role = raw_job_opening_data.get("role")
+        description = raw_job_opening_data.get("jobDetailsFromCompany")
         existing_job_roles = Variable.get('JOB_ROLES', default_var=None)
+        popular_job_locations = Variable.get('POPULAR_JOB_LOCATIONS', default_var=None)
+
+        job_description_md = (
+                "# Job Description\n"
+                "A brief, high-level summary of the role, its importance, and what the candidate will contribute to the team "
+                "or company.\n\n"
+                "## Roles & Responsibilities\n"
+                "A detailed list of specific tasks, activities, and duties the candidate will be expected to perform.\n\n"
+                "## Key Skills Required\n"
+                "The technical and soft skills necessary for the job.\n\n"
+                "## Minimum Qualifications\n"
+                "The must-have credentials, educational background, or experience.\n\n"
+                "## Preferred Qualifications\n"
+                "Nice-to-have qualifications or additional experience that would give a candidate an advantage.\n\n"
+                "## Perks & Benefits\n"
+                "Details about salary, benefits like health insurance, work flexibility, learning opportunities, "
+                "and other perks.\n\n"
+                "# About the Company\n"
+        )
 
         system_prompt = (
                 "Extract the job details accurately from the given information.\n"
@@ -80,22 +102,34 @@ class WeekdayJobTransformer(BaseJobTransformer):
                 "their hashes in the variable existing_job_roles. Use this information to map the CLOSEST job role to the hash."
                 "Mapping of the job role is compulsory\n"
                 "Do not make up any data. If any data is missing, just fill it's value as None.\n"
+                "You are also given a list of popular cities and states. Use the specified values for city and state if the given location "
+                "matches any of them.\n"
                 "For CTC, give the annual CTC response in INR. For example CTC of Rs. 5 Lakhs will be represented as 500000\n"
-                "If CTC is in dollars, convert it to INR using the conversion 1 USD = 80 INR.\n"
-                "CTC value won't be more than 100000000 in any case"
+                "If CTC is in dollars, convert it to INR using the conversion 1 USD = 80 INR. Be careful with number of zeroes while "
+                "reporting the CTC. Always double check it.\n"
+                "CTC value won't be more than 100000000 in any case\n"
+                "Here is the format of the job description required\n"
+                f"```\n{job_description_md}\n{description}\n``` In case anything is not available then skip the title itself."
+                "Give the job description as very beautiful simple html, with each heading as h4 with font weight 500 and black color. "
+                "Don't do too much formatting. Also remove all the links from the description. Keep the description withing 1000 words."
+                "There should be no extra spacing within the paragraphs and headings should look like heading. Add a ':' after it\n"
+                f"\n```Job description: {description}```\n"
+                f"Existing Job Roles: {existing_job_roles}\n"
+                f"Popular locations: {popular_job_locations}\n"
                 "<Job Details>\n"
                 f"Job Role: {role}\n"
-                f"Existing Job Roles: {existing_job_roles}\n"
                 f"Max CTC: {max_ctc}\n"
                 f"Min CTC: {min_ctc}\n"
                 f"CTC Currency: {ctc_currency}\n"
                 f"Location: {location}\n"
                 f"Skills: {skills}\n"
+                f"</Job Details>"
+
         )
         completion = self.openai_client.beta.chat.completions.parse(
                 model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": system_prompt},
+                        {"role": "system", "content": system_prompt},
                 ],
                 response_format=JobDetails
         )
@@ -109,24 +143,23 @@ class WeekdayJobTransformer(BaseJobTransformer):
         title = raw_job_opening_data.get("role")
         external_job_id = raw_job.external_job_id
         external_apply_link = raw_job_opening_data.get("careersPageLink")
-        description = raw_job_opening_data.get("jobDetailsFromCompany")
         min_experience_years = raw_job_opening_data.get("minExp")
         max_experience_years = raw_job_opening_data.get("maxExp")
         job_details = self._extract_job_details_ai(raw_job)
 
         return ProcessedJobListing(
-            external_job_id=external_job_id,
-            title=title,
-            company_slug=company_slug,
-            role_hash=job_details.job_role_hash,
-            description=description,
-            min_ctc=job_details.min_ctc or 0,
-            max_ctc=job_details.max_ctc or 0,
-            external_apply_link=external_apply_link,
-            city=job_details.city,
-            state=job_details.state,
-            employment_type=1,  # Currently only full-time jobs are supported
-            min_experience_years=min_experience_years,
-            max_experience_years=max_experience_years,
-            skills=job_details.skills
+                external_job_id=external_job_id,
+                title=title,
+                company_slug=company_slug,
+                role_hash=job_details.job_role_hash,
+                description=job_details.job_description,
+                min_ctc=job_details.min_ctc or 0,
+                max_ctc=job_details.max_ctc or 0,
+                external_apply_link=external_apply_link,
+                city=job_details.city,
+                state=job_details.state,
+                employment_type=1,  # Currently only full-time jobs are supported
+                min_experience_years=min_experience_years,
+                max_experience_years=max_experience_years,
+                skills=job_details.skills
         )
