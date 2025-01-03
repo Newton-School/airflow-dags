@@ -153,7 +153,7 @@ transform_data = PostgresOperator(
                     from
                         assessments a 
                     join courses c 
-                        on c.course_id = a.course_id and c.course_id in (800,818,819,820,821,822,823,824,825,826,1040,1041,1042,1043,1044)
+                        on c.course_id = a.course_id and c.course_id in (800,818,819,820,821,822,823,824,825,826,1040,1041,1042,1043,1044,1045)
                     left join course_user_mapping as cum on cum.course_id = c.course_id
                     left join assessment_question_user_mapping aqum 
                         on aqum.assessment_id = a.assessment_id 
@@ -223,12 +223,12 @@ raw as(
             date(course_user_timeline_flow_mapping.created_at) as cutfm_created_at,
             date(users_info.date_joined) as date_joined
             from users_info
-            left join course_user_timeline_flow_mapping on course_user_timeline_flow_mapping.user_id = users_info.user_id and course_user_timeline_flow_mapping.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041,1042,1043,1044)
+            left join course_user_timeline_flow_mapping on course_user_timeline_flow_mapping.user_id = users_info.user_id and course_user_timeline_flow_mapping.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041,1042,1043,1044,1045)
             left join apply_form_course_user_question_mapping on apply_form_course_user_question_mapping.user_id = course_user_timeline_flow_mapping.user_id and apply_form_course_user_question_mapping.course_id = course_user_timeline_flow_mapping.course_id
             left join apply_forms_and_questions on apply_forms_and_questions.apply_form_question_id = apply_form_course_user_question_mapping.apply_form_question_id
             left join course_user_mapping on course_user_mapping.user_id = course_user_timeline_flow_mapping.user_id and course_user_timeline_flow_mapping.course_id = course_user_mapping.course_id
-            left join courses on courses.course_id = course_user_timeline_flow_mapping.course_id and courses.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041,1042,1043,1044)
-            where courses.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041,1042,1043,1044)
+            left join courses on courses.course_id = course_user_timeline_flow_mapping.course_id and courses.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041,1042,1043,1044,1045)
+            where courses.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041,1042,1043,1044,1045)
             order by 1
             ),
             b as(
