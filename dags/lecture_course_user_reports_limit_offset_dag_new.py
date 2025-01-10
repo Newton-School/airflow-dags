@@ -371,7 +371,7 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
             left join lecture_topic_mapping ltm
                 on ltm.lecture_id = l.lecture_id and ltm.completed = true
             left join topics t
-                on t.topic_id = ltm.topic_id and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410,208,209,367,447,489,544,555,577,1232,1247)
+                on t.topic_id = ltm.topic_id and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410,208,209,367,447,489,544,555,577,1232,1247,1490)
             left join users_info ui
                 on ui.user_id = cum.user_id
             left join course_user_category_mapping cucm
@@ -575,7 +575,7 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
         left join lecture_topic_mapping ltm
             on ltm.lecture_id = l.lecture_id and ltm.completed = true
         left join topics t
-            on t.topic_id = ltm.topic_id and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410,208,209,367,447,489,544,555,577,1232,1247)
+            on t.topic_id = ltm.topic_id and t.topic_template_id in (102,103,119,334,336,338,339,340,341,342,344,410,208,209,367,447,489,544,555,577,1232,1247,1490)
         left join users_info ui
             on ui.user_id = cum.user_id
         left join course_user_category_mapping cucm
