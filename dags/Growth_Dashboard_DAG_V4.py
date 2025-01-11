@@ -577,7 +577,20 @@ transform_data = PostgresOperator(
 alter_table = PostgresOperator(
     task_id='alter_table',
     postgres_conn_id='postgres_result_db',
-    sql='''ALTER TABLE growth_dashboard_v4 ADD UNIQUE (prospect_id);
+    sql='''DO $$
+BEGIN
+    -- Check if the unique constraint already exists
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint c
+        JOIN pg_class t ON c.conrelid = t.oid
+        WHERE t.relname = 'growth_dashboard_v4'
+          AND c.conname = 'growth_dashboard_v4_prospect_id_key'
+    ) THEN
+        -- Add the unique constraint if it doesn't exist
+        ALTER TABLE growth_dashboard_v4 ADD CONSTRAINT growth_dashboard_v4_prospect_id_key UNIQUE (prospect_id);
+    END IF;
+END $$;
     ''',
     dag=dag
 )
