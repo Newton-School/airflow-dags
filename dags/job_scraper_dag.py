@@ -1,6 +1,9 @@
 import json
-from typing import List, Type, Any, Iterator, Dict
+import requests
+from typing import List, Type, Any, Iterator, Dict, Tuple
 from datetime import datetime
+from urllib.parse import urljoin
+
 from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
@@ -87,6 +90,7 @@ def create_scraper_dag(
                         newton_sync_error TEXT,
                         newton_sync_attempts INTEGER DEFAULT 0,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP,
                         UNIQUE (external_job_id)
                     )
                     """
@@ -308,9 +312,80 @@ def create_scraper_dag(
     return job_scraper_dag()
 
 
+@dag(
+    dag_id="remove_expired_job_openings",
+    schedule_interval="0 0 * * *",
+    start_date=datetime(2025, 1, 9),
+    catchup=False,
+    tags=['job-scraping']
+)
+def remove_expired_job_openings_dag():
+
+    @task
+    def remove_expired_job_openings() -> None:
+        def fetch_jobs(cursor, offset: int, batch_size: int) -> List[Tuple[int, str, str]]:
+            query = """
+                SELECT id, external_job_id, external_apply_link
+                FROM airflow_processed_job_openings
+                WHERE expires_at IS NULL
+                ORDER BY id
+                LIMIT %s OFFSET %s
+            """
+            cursor.execute(query, (batch_size, offset))
+            return cursor.fetchall()
+
+        def mark_job_expired(cursor, job_id: int) -> None:
+            update_query = """
+                UPDATE airflow_processed_job_openings 
+                SET expires_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """
+            cursor.execute(update_query, (job_id,))
+
+        def process_job(job: Tuple[int, str, str], cursor) -> None:
+            job_id, external_job_id, external_apply_link = job
+            if not external_apply_link:
+                return
+
+            headers = {
+                "accept": "*/*",
+                "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
+                "content-type": "application/json",
+                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                "origin": urljoin(external_apply_link, "/"),
+            }
+
+            try:
+                response = requests.get(external_apply_link, timeout=10, headers=headers)
+                if response.status_code != 200:
+                    request_url = '/api/v1/job_scrapers/job_opening/expire/'
+                    payload = {'external_apply_link': external_apply_link}
+                    newton_api_request(request_url, payload)
+                    mark_job_expired(cursor, job_id)
+            except Exception as e:
+                print(f"Error while checking job opening {external_job_id}: {str(e)}")
+
+        pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+        with pg_hook.get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM airflow_processed_job_openings")
+                total_jobs = cur.fetchone()[0]
+
+                for offset in range(0, total_jobs, BATCH_SIZE):
+                    job_openings = fetch_jobs(cur, offset, BATCH_SIZE)
+                    for job in job_openings:
+                        process_job(job, cur)
+
+                    conn.commit()
+
+    remove_expired_job_openings()
+
+
 weekday_dag = create_scraper_dag(
         dag_id="scrape_and_transform_weekday_job_openings",
         scraper_class=WeekdayJobScraper,
         transformer_class=WeekdayJobTransformer,
         tags=['weekday', 'job-scraping']
 )
+
+expired_job_openings_dag = remove_expired_job_openings_dag()
