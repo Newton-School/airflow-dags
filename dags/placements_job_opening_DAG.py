@@ -155,6 +155,29 @@ alter_table_v1 = PostgresOperator(
     dag=dag
 )
 
+alter_table_v2 = PostgresOperator(
+    task_id='alter_table_v2',
+    postgres_conn_id='postgres_result_db',
+    sql='''
+        DO $$
+        BEGIN
+            -- Check if the column job_description is not already of type TEXT
+            IF EXISTS (
+                SELECT 1 
+                FROM information_schema.columns 
+                WHERE table_name = 'placements_job_openings' 
+                  AND column_name = 'job_description'
+                  AND data_type != 'text'
+            ) THEN
+                -- Alter the column to change its type to TEXT
+                ALTER TABLE placements_job_openings 
+                ALTER COLUMN job_description TYPE TEXT;
+            END IF;
+        END $$;
+    ''',
+    dag=dag
+)
+
 # Task to transform data from the database
 transform_data = PostgresOperator(
     task_id='transform_data',
@@ -264,4 +287,4 @@ extract_python_data = PythonOperator(
     provide_context=True,
     dag=dag
 )
-create_table >> alter_table_v1 >> transform_data >> extract_python_data
+create_table >> alter_table_v1 >> alter_table_v2 >> transform_data >> extract_python_data
