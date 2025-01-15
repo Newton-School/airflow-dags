@@ -24,7 +24,7 @@ class WeekdayScraperConfig:
     request_aes_key: str  # Payload encryption key
     response_aes_key: str  # Response decryption key
     salt: bytes  # Fixed salt for encryption
-    base_url: str = "https://prod3.weekday.technology/jds/fetchAllActiveJds"
+    base_url: str = "https://prod3.weekday.technology/jds/fetchJds"
     page_size: int = 100
 
     @classmethod
