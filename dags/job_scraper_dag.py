@@ -320,6 +320,16 @@ def create_scraper_dag(
     tags=['job-scraping']
 )
 def remove_expired_job_openings_dag():
+    @task
+    def update_table() -> None:
+        pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+        with pg_hook.get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    ALTER TABLE airflow_processed_job_openings
+                    ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP
+                """)
+                conn.commit()
 
     @task
     def remove_expired_job_openings() -> None:
@@ -378,7 +388,10 @@ def remove_expired_job_openings_dag():
 
                     conn.commit()
 
-    remove_expired_job_openings()
+    update_table_task = update_table()
+    remove_expired_job_openings_task = remove_expired_job_openings()
+
+    update_table_task >> remove_expired_job_openings_task
 
 
 weekday_dag = create_scraper_dag(
