@@ -9,7 +9,7 @@ from .base import BaseJobTransformer
 from .constants import JOB_DESCRIPTION_FORMAT
 from .schema import JobDetails
 from ..models import RawJobOpening, Company, ProcessedJobListing
-from ..scrapers.galssdoor import GlassdoorScraperConfig
+from ..scrapers.glassdoor import GlassdoorScraperConfig
 
 
 @dataclass
