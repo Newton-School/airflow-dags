@@ -1,0 +1,17 @@
+JOB_DESCRIPTION_FORMAT = (
+        "# Job Description\n"
+        "A brief, high-level summary of the role, its importance, and what the candidate will contribute to the team "
+        "or company.\n\n"
+        "## Roles & Responsibilities\n"
+        "A detailed list of specific tasks, activities, and duties the candidate will be expected to perform.\n\n"
+        "## Key Skills Required\n"
+        "The technical and soft skills necessary for the job.\n\n"
+        "## Minimum Qualifications\n"
+        "The must-have credentials, educational background, or experience.\n\n"
+        "## Preferred Qualifications\n"
+        "Nice-to-have qualifications or additional experience that would give a candidate an advantage.\n\n"
+        "## Perks & Benefits\n"
+        "Details about salary, benefits like health insurance, work flexibility, learning opportunities, "
+        "and other perks.\n\n"
+        "# About the Company\n"
+)

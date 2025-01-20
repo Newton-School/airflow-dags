@@ -126,10 +126,10 @@ class CompanyManager(LoggingMixin):
         with self.pg_hook.get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                        """INSERT INTO airflow_companies (slug, name, normalized_names)
-                            VALUES (%s, %s, %s)
+                        """INSERT INTO airflow_companies (slug, name, normalized_names, logo_url, website)
+                            VALUES (%s, %s, %s, %s, %s)
                         """,
-                        (company_slug, company.name, [self._normalize_name(company.name)])
+                        (company_slug, company.name, [self._normalize_name(company.name)], company.logo_url, company.website)
                 )
 
         self._company_cache[self._normalize_name(company.name)] = company_slug

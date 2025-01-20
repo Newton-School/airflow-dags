@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import time
 from typing import Iterator
 from airflow.utils.log.logging_mixin import LoggingMixin
 
@@ -60,11 +61,13 @@ class BaseJobTransformer(LoggingMixin, ABC):
             for attempt in range(self._max_retries):
                 try:
                     company = self._extract_company(raw_job)
+                    print(company)
                     company_slug = self.company_manager.get_or_create_company_slug(company)
 
                     processed_job = self._process_job(
                             raw_job, company_slug
                     )
+                    print(processed_job)
                     yield processed_job
                     break
 
@@ -73,3 +76,8 @@ class BaseJobTransformer(LoggingMixin, ABC):
                         self.log.error(
                                 f"Failed to transform job after {self._max_retries} attempts: {str(e)}"
                         )
+                    else:
+                        self.log.warning(
+                                f"Failed to transform job. Retrying attempt {attempt + 1}: {str(e)}"
+                        )
+                        time.sleep(1)

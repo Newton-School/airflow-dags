@@ -75,7 +75,7 @@ class BaseJobScraper(LoggingMixin, ABC):
         pass
 
     @abstractmethod
-    def _fetch_batch(self, batch_number: int) -> List[Dict[str, Any]]:
+    def _fetch_batch(self, batch_number: int, *args, **kwargs) -> List[Dict[str, Any]]:
         """
         Fetch a batch of jobs from the source.
 
@@ -174,7 +174,7 @@ class BaseJobScraper(LoggingMixin, ABC):
         finally:
             self.cleanup()
 
-    def _fetch_batch_with_retry(self, batch_number: int) -> List[Dict[str, Any]]:
+    def _fetch_batch_with_retry(self, batch_number: int, *args, **kwargs) -> List[Dict[str, Any]]:
         """
         Fetch a batch with retry logic.
 
@@ -191,7 +191,7 @@ class BaseJobScraper(LoggingMixin, ABC):
 
         for attempt in range(self._max_retries + 1):
             try:
-                return self._fetch_batch(batch_number)
+                return self._fetch_batch(batch_number, *args, **kwargs)
 
             except RateLimitError as e:
                 self.log.warning(f"Rate limit hit on attempt {attempt + 1}")
