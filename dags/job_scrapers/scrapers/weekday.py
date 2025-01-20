@@ -194,7 +194,7 @@ class WeekdayJobScraper(BaseJobScraper):
             self._session.close()
             self._session = None
 
-    def _fetch_batch(self, batch_number: int) -> List[Dict[str, Any]]:
+    def _fetch_batch(self, batch_number: int, *args, **kwargs) -> List[Dict[str, Any]]:
         """Fetch a batch of jobs from Weekday"""
         if not self._session:
             raise JobScrapingError("Scraper not properly initialized")

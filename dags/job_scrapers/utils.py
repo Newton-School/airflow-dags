@@ -1,3 +1,6 @@
+import string
+import random
+
 import requests
 from airflow.models import Variable
 
@@ -18,3 +21,9 @@ def newton_api_request(url: str, payload: dict = None, method='POST') -> request
             headers=headers
     )
     return response
+
+
+def generate_random_string(length):
+    characters = string.ascii_letters + string.digits + string.punctuation
+    random_string = ''.join(random.choice(characters) for _ in range(length))
+    return random_string

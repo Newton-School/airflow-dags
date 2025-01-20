@@ -165,7 +165,7 @@ class IndeedJobScraper(BaseJobScraper):
         except json.JSONDecodeError as e:
             raise JobScrapingError(f"Failed to parse job data: {str(e)}")
 
-    def _fetch_batch(self, batch_number: int) -> List[Dict[str, Any]]:
+    def _fetch_batch(self, batch_number: int, *args, **kwargs) -> List[Dict[str, Any]]:
         """Fetch a batch of jobs from Indeed"""
         if not self._session:
             raise JobScrapingError("Scraper not properly initialized")

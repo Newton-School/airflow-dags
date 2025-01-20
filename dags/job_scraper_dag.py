@@ -11,8 +11,10 @@ from job_scrapers.utils import newton_api_request
 from job_scrapers.models import RawJobOpening
 from job_scrapers.scrapers.base import BaseJobScraper
 from job_scrapers.scrapers.weekday import WeekdayJobScraper
+from job_scrapers.scrapers.glassdoor import GlassdoorJobScraper
 from job_scrapers.transformers.base import BaseJobTransformer
 from job_scrapers.transformers.weekday import WeekdayJobTransformer
+from job_scrapers.transformers.glassdoor import GlassdoorJobTransformer
 
 # Constants
 BATCH_SIZE = 100
@@ -102,6 +104,20 @@ def create_scraper_dag(
                         cur.execute(query)
 
         @task
+        def update_tables():
+            """
+            Update necessary database tables
+            """
+            pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+            with pg_hook.get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        ALTER TABLE airflow_processed_job_openings
+                        ALTER COLUMN external_apply_link TYPE TEXT
+                    """)
+                    conn.commit()
+
+        @task
         def scrape_jobs() -> List[int]:
             """Scrape jobs using the provided scraper"""
             pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
@@ -116,10 +132,10 @@ def create_scraper_dag(
 
                     with pg_hook.get_conn() as conn:
                         with conn.cursor() as cur:
-                            values_template = ','.join(['(%s, %s, %s)'] * len(batch))
+                            values_template = ','.join(['(%s, %s, %s, %s)'] * len(batch))
                             insert_query = f"""
                                 INSERT INTO airflow_raw_job_openings 
-                                    (external_job_id, source_name, raw_data)
+                                    (external_job_id, source_name, raw_data, is_external_for_job_board)
                                 VALUES {values_template}
                                 ON CONFLICT (external_job_id) 
                                 DO NOTHING
@@ -131,7 +147,8 @@ def create_scraper_dag(
                                     for item in (
                                             job.external_job_id,
                                             job.source_name,
-                                            json.dumps(job.raw_data)
+                                            json.dumps(job.raw_data),
+                                            job.is_external_for_job_board
                                     )
                             ]
                             cur.execute(insert_query, flat_values)
@@ -205,7 +222,7 @@ def create_scraper_dag(
                                 item
                                 for job in jobs_to_process
                                 for item in (
-                                        job.external_job_id, job.title, job.company_slug,
+                                        job.external_job_id, job.title[:255], job.company_slug[:255],
                                         job.role_hash, job.description, job.min_ctc,
                                         job.max_ctc, job.city, job.state,
                                         job.employment_type, job.min_experience_years,
@@ -304,20 +321,21 @@ def create_scraper_dag(
 
         # Define the task dependencies
         create_tables_task = create_tables()
+        update_tables_task = update_tables()
         scrape_task = scrape_jobs()
         process_task = process_jobs(scrape_task)
 
-        create_tables_task >> scrape_task >> process_task
+        create_tables_task >> update_tables_task >> scrape_task >> process_task
 
     return job_scraper_dag()
 
 
 @dag(
-    dag_id="remove_expired_job_openings",
-    schedule_interval="0 0 * * *",
-    start_date=datetime(2025, 1, 9),
-    catchup=False,
-    tags=['job-scraping']
+        dag_id="remove_expired_job_openings",
+        schedule_interval="0 0 * * *",
+        start_date=datetime(2025, 1, 9),
+        catchup=False,
+        tags=['job-scraping']
 )
 def remove_expired_job_openings_dag():
     @task
@@ -325,10 +343,12 @@ def remove_expired_job_openings_dag():
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
         with pg_hook.get_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute("""
-                    ALTER TABLE airflow_processed_job_openings
-                    ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP
-                """)
+                cur.execute(
+                        """
+                                            ALTER TABLE airflow_processed_job_openings
+                                            ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP
+                                        """
+                )
                 conn.commit()
 
     @task
@@ -358,11 +378,11 @@ def remove_expired_job_openings_dag():
                 return
 
             headers = {
-                "accept": "*/*",
-                "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
-                "content-type": "application/json",
-                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                "origin": urljoin(external_apply_link, "/"),
+                    "accept": "*/*",
+                    "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
+                    "content-type": "application/json",
+                    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                    "origin": urljoin(external_apply_link, "/"),
             }
 
             try:
@@ -399,6 +419,14 @@ weekday_dag = create_scraper_dag(
         scraper_class=WeekdayJobScraper,
         transformer_class=WeekdayJobTransformer,
         tags=['weekday', 'job-scraping']
+)
+
+glassdoor_dag = create_scraper_dag(
+        dag_id="scrape_and_transform_glassdoor_job_openings",
+        scraper_class=GlassdoorJobScraper,
+        transformer_class=GlassdoorJobTransformer,
+        schedule="30 23 * * *",
+        tags=['glassdoor', 'job-scraping'],
 )
 
 expired_job_openings_dag = remove_expired_job_openings_dag()
