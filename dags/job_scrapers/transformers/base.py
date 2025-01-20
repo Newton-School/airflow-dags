@@ -61,13 +61,11 @@ class BaseJobTransformer(LoggingMixin, ABC):
             for attempt in range(self._max_retries):
                 try:
                     company = self._extract_company(raw_job)
-                    print(company)
                     company_slug = self.company_manager.get_or_create_company_slug(company)
 
                     processed_job = self._process_job(
                             raw_job, company_slug
                     )
-                    print(processed_job)
                     yield processed_job
                     break
 
