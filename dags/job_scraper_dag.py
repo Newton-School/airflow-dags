@@ -7,6 +7,8 @@ from urllib.parse import urljoin
 from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
+from job_scrapers.pruner.glassdoor import GlassdoorJobPruner
+from job_scrapers.pruner.weekday import WeekdayJobPruner
 from job_scrapers.utils import newton_api_request
 from job_scrapers.models import RawJobOpening
 from job_scrapers.scrapers.base import BaseJobScraper
@@ -338,6 +340,9 @@ def create_scraper_dag(
         tags=['job-scraping']
 )
 def remove_expired_job_openings_dag():
+    glassdoor_job_pruner = GlassdoorJobPruner()
+    weekday_job_pruner = WeekdayJobPruner()
+
     @task
     def update_table() -> None:
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
@@ -355,8 +360,10 @@ def remove_expired_job_openings_dag():
     def remove_expired_job_openings() -> None:
         def fetch_jobs(cursor, offset: int, batch_size: int) -> List[Tuple[int, str, str]]:
             query = """
-                SELECT id, external_job_id, external_apply_link
+                SELECT airflow_processed_job_openings.id, airflow_processed_job_openings.external_job_id, external_apply_link, source_name
                 FROM airflow_processed_job_openings
+                LEFT JOIN airflow_raw_job_openings
+                ON airflow_processed_job_openings.external_job_id = airflow_raw_job_openings.external_job_id
                 WHERE expires_at IS NULL
                 ORDER BY id
                 LIMIT %s OFFSET %s
@@ -372,22 +379,18 @@ def remove_expired_job_openings_dag():
             """
             cursor.execute(update_query, (job_id,))
 
-        def process_job(job: Tuple[int, str, str], cursor) -> None:
-            job_id, external_job_id, external_apply_link = job
+        def process_job(job: Tuple[int, str, str, str], cursor) -> None:
+            job_id, external_job_id, external_apply_link, source_name = job
             if not external_apply_link:
                 return
 
-            headers = {
-                    "accept": "*/*",
-                    "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
-                    "content-type": "application/json",
-                    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                    "origin": urljoin(external_apply_link, "/"),
-            }
-
             try:
-                response = requests.get(external_apply_link, timeout=10, headers=headers)
-                if response.status_code != 200:
+                should_prune = False
+                if source_name == 'glassdoor':
+                    should_prune = glassdoor_job_pruner.should_prune(external_job_id)
+                elif source_name == 'weekday':
+                    should_prune = weekday_job_pruner.should_prune(external_apply_link)
+                if should_prune:
                     request_url = '/api/v1/job_scrapers/job_opening/expire/'
                     payload = {'external_apply_link': external_apply_link}
                     newton_api_request(request_url, payload)
