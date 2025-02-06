@@ -249,7 +249,7 @@ transform_data = PostgresOperator(
                 from 
                     feedback_form_all_responses_new ffar
                 join course_user_mapping cum 
-                    on cum.user_id = ffar.user_id and cum.status in (8,9,11,12,30) and ffar.course_id = cum.course_id
+                    on cum.user_id = ffar.user_id and cum.status in (8,9,11,12,30) and ffar.course_id = cum.admin_course_id
                         and feedback_form_id = 4428
                 join courses c 
                     on c.course_id = cum.course_id and lower(c.unit_type) like 'learning' 
