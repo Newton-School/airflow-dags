@@ -588,7 +588,6 @@ transform_data = PostgresOperator(
                         row_number() over (partition by ld.prospectid order by ld.modifiedon desc) as rn
                         from leadsquareleadsdata ld left join leadsquareusers lu
                         on lu.Userid = ld.ownerid 
-                        where lu.role in ('Sales_User')  
                 ) a
                 where rn = 1
             ) as l2 
