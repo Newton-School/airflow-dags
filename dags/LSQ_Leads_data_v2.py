@@ -152,16 +152,16 @@ def extract_data_to_nested(**kwargs):
             'mx_lead_quality_grade = EXCLUDED.mx_lead_quality_grade,'
             'mx_lead_inherent_intent = EXCLUDED.mx_lead_inherent_intent,'
             'mx_test_date_n_time = EXCLUDED.mx_test_date_n_time,'
-            'mx_lead_type = EXCLUDED.mx_lead_type'
+            'mx_lead_type = EXCLUDED.mx_lead_type,'
             'mx_utm_source = EXCLUDED.mx_utm_source,'
             'mx_utm_medium = EXCLUDED.mx_utm_medium,'
             'score = EXCLUDED.score,'
             'mx_phoenix_identifer = EXCLUDED.mx_phoenix_identifer,'
-            'mx_phoenix_lead_assigned_date = EXCLUDED.mx_phoenix_lead_assigned_date'
+            'mx_phoenix_lead_assigned_date = EXCLUDED.mx_phoenix_lead_assigned_date,'
             'mx_prospect_status = EXCLUDED.mx_prospect_status,'
             'mx_reactivation_source = EXCLUDED.mx_reactivation_source,'
-            'mx_reactivation_date = EXCLUDED.mx_reactivation_date'
-            'mx_lead_status = EXCLUDED.mx_lead_status'
+            'mx_reactivation_date = EXCLUDED.mx_reactivation_date,'
+            'mx_lead_status = EXCLUDED.mx_lead_status,'
             'mx_pmm_identifier = EXCLUDED.mx_pmm_identifier,'
             'mx_city = EXCLUDED.mx_city,'
             'mx_date_of_birth = EXCLUDED.mx_date_of_birth;',
@@ -236,8 +236,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[67],
                 transform_row[68],
                 transform_row[69],
-                transform_row[70],
-                transform_row[71]
+                transform_row[70]
             )
         )
     pg_conn.commit()
@@ -535,7 +534,7 @@ transform_data = PostgresOperator(
                 l2.mx_prospect_status,
                 l2.mx_reactivation_source,
                 l2.mx_reactivation_date,
-                l2.lead_status_zip_intent,
+                l2.mx_lead_status,
                 l2.mx_pmm_identifier,
                 l2.mx_city,
                 l2.mx_date_of_birth
