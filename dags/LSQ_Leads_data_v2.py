@@ -7,18 +7,11 @@ from datetime import datetime
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'start_date': datetime(2023, 3, 16),
+    'start_date': datetime(2025, 3, 24),
 }
 
 
 def extract_data_to_nested(**kwargs):
-    def clean_input(data_type, data_value):
-        if data_type == 'string':
-            return 'null' if not data_value else f'\"{data_value}\"'
-        elif data_type == 'datetime':
-            return 'null' if not data_value else f'CAST(\'{data_value}\' As TIMESTAMP)'
-        else:
-            return data_value
 
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     pg_conn = pg_hook.get_conn()
@@ -27,7 +20,7 @@ def extract_data_to_nested(**kwargs):
     transform_data_output = ti.xcom_pull(task_ids='transform_data')
     for transform_row in transform_data_output:
         pg_cursor.execute(
-            'INSERT INTO lsq_leads_x_activities ('
+            'INSERT INTO lsq_leads_x_activities_v2 ('
               'table_unique_key,'
               'prospect_id,'
               'activity_id,'
@@ -251,10 +244,10 @@ def extract_data_to_nested(**kwargs):
 
 
 dag = DAG(
-    'LSQ_Leads_and_activities',
+    'LSQ_Leads_and_activities_v2',
     default_args=default_args,
     description='An Analytics Data Layer DAG for Leads and their activities. Data Source = Leadsquared',
-    schedule_interval='0 */2 * * *',
+    schedule_interval='37 */1 * * *',
     catchup=False
 )
 
@@ -262,7 +255,7 @@ dag = DAG(
 create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
-    sql='''CREATE TABLE IF NOT EXISTS lsq_leads_x_activities (
+    sql='''CREATE TABLE IF NOT EXISTS lsq_leads_x_activities_v2 (
             id serial,
             table_unique_key varchar(512) not null PRIMARY KEY,
             prospect_id varchar(512),
@@ -286,7 +279,7 @@ create_table = PostgresOperator(
             intended_course varchar(512),
             created_by_name varchar(512),
             event_name varchar(512),
-            notable_event_description varchar(5000),
+            notable_event_description varchar(10000),
             previous_stage varchar(512),
             current_stage varchar(512),
             call_type varchar(512),
@@ -305,8 +298,8 @@ create_table = PostgresOperator(
             mx_custom_6 varchar(512),
             mx_custom_7 varchar(512),
             mx_custom_8 varchar(512),
-            mx_custom_9 varchar(5000),
-            mx_custom_10 varchar(5000),
+            mx_custom_9 varchar(10000),
+            mx_custom_10 varchar(10000),
             mx_custom_11 varchar(512),
             mx_custom_12 varchar(512),
             mx_custom_13 varchar(512),
@@ -340,22 +333,7 @@ create_table = PostgresOperator(
     dag=dag
 )
 
-
-
-# Task 2: Alter table to increase column sizes
-alter_table = PostgresOperator(
-    task_id='alter_table',
-    postgres_conn_id='postgres_result_db',
-    sql='''
-        ALTER TABLE lsq_leads_x_activities 
-        ALTER COLUMN notable_event_description TYPE varchar(10000),
-        ALTER COLUMN mx_custom_9 TYPE varchar(10000),
-        ALTER COLUMN mx_custom_10 TYPE varchar(10000);
-    ''',
-    dag=dag
-)
-
-# Task 3: Transform data
+# Task 2: Transform data
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_lsq_leads',
@@ -571,7 +549,7 @@ transform_data = PostgresOperator(
                 FROM leadsquareactivity 
             ) sub
             WHERE 
-                TO_TIMESTAMP(sub.createdon_ist, 'YYYY-MM-DD HH24:MI:SS') >= current_date - interval '1' day
+                TO_TIMESTAMP(sub.createdon_ist, 'YYYY-MM-DD HH24:MI:SS') >= current_date - interval '4' hour
                 
             ) as l
             left join (
@@ -635,4 +613,4 @@ extract_python_data = PythonOperator(
 )
 
 # Define Task Dependencies
-create_table >> alter_table >> transform_data >> extract_python_data
+create_table >> transform_data >> extract_python_data
