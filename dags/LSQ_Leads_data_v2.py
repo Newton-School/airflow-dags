@@ -548,7 +548,7 @@ transform_data = PostgresOperator(
                 FROM leadsquareactivity 
             ) sub
             WHERE 
-                TO_TIMESTAMP(sub.createdon_ist, 'YYYY-MM-DD HH24:MI:SS') >= current_date - interval '2' month
+                TO_TIMESTAMP(sub.createdon_ist, 'YYYY-MM-DD HH24:MI:SS') >= current_date - interval '16' month
                 
             ) as l
             left join (
