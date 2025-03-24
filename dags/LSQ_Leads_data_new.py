@@ -31,18 +31,19 @@ def extract_data_to_nested(**kwargs):
               'table_unique_key,'
               'prospect_id,'
               'activity_id,'
-              'email_address,'
+              'sales_user_email,'
+              'prospect_email,'
+              'CRM_user_role,'
               'lead_created_on,'
               'event,'
               'modified_on,'
               'prospect_stage,'
               'lead_owner,'
+              'lead_owner_id,'
               'lead_sub_status,'
               'lead_last_call_status,'
               'lead_last_call_sub_status,'
               'lead_last_call_connection_status,'
-              'mid_funnel_count,'
-              'mid_funnel_buckets,'
               'reactivation_bucket,'
               'reactivation_date,'
               'source_intended_course,'
@@ -79,36 +80,43 @@ def extract_data_to_nested(**kwargs):
               'mx_custom_17,'
               'mx_priority_status,'
               'mx_rfd_date,'
-              'mx_total_fees,'
-              'mx_total_revenue,'
-              'mx_doc_approved,'
-              'mx_doc_collected,'
-              'mx_cibil_check,'
-              'mx_bucket,'
-              'mx_icp,'
               'mx_identifer,'
               'mx_organic_inbound,'
               'mx_entrance_exam_marks,'
               'mx_lead_quality_grade,'
               'mx_lead_inherent_intent,'
               'mx_test_date_n_time,'
-              'mx_lead_type'
+              'mx_lead_type,'
+              'mx_utm_source,'
+              'mx_utm_medium,'
+              'score,'
+              'mx_phoenix_identifer,'
+              'mx_phoenix_lead_assigned_date,'
+              'mx_prospect_status,'
+              'mx_reactivation_source,'
+              'mx_reactivation_date,'
+              'mx_lead_status,'
+              'mx_pmm_identifier,'
+              'mx_city,'
+              'mx_date_of_birth'
             ')'
             'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
-            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'
+            '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
             'on conflict (table_unique_key) do update set '
-            'email_address = EXCLUDED.email_address,'
+            'sales_user_email = EXCLUDED.sales_user_email,'
+            'prospect_email = EXCLUDED.prospect_email,'
+            'CRM_user_role = EXCLUDED.CRM_user_role,'
             'lead_created_on = EXCLUDED.lead_created_on,'
             'event = EXCLUDED.event,'
             'modified_on = EXCLUDED.modified_on,'
             'prospect_stage = EXCLUDED.prospect_stage,'
             'lead_owner = EXCLUDED.lead_owner,'
+            'lead_owner_id = EXCLUDED.lead_owner_id,'
             'lead_sub_status = EXCLUDED.lead_sub_status,'
             'lead_last_call_status = EXCLUDED.lead_last_call_status,'
             'lead_last_call_sub_status = EXCLUDED.lead_last_call_sub_status,'
             'lead_last_call_connection_status = EXCLUDED.lead_last_call_connection_status,'
-            'mid_funnel_count = EXCLUDED.mid_funnel_count,'
-            'mid_funnel_buckets = EXCLUDED.mid_funnel_buckets,'
             'reactivation_bucket = EXCLUDED.reactivation_bucket,'
             'reactivation_date = EXCLUDED.reactivation_date,'
             'source_intended_course = EXCLUDED.source_intended_course,'
@@ -145,21 +153,25 @@ def extract_data_to_nested(**kwargs):
             'mx_custom_17 = EXCLUDED.mx_custom_17,'
             'mx_priority_status = EXCLUDED.mx_priority_status,'
             'mx_rfd_date = EXCLUDED.mx_rfd_date,'
-            'mx_total_fees = EXCLUDED.mx_total_fees,'
-            'mx_total_revenue = EXCLUDED.mx_total_revenue,'
-            'mx_doc_approved = EXCLUDED.mx_doc_approved,'
-            'mx_doc_collected = EXCLUDED.mx_doc_collected,'
-            'mx_cibil_check = EXCLUDED.mx_cibil_check,'
-            'mx_bucket = EXCLUDED.mx_bucket,'
-            'mx_icp = EXCLUDED.mx_icp,'
             'mx_identifer = EXCLUDED.mx_identifer,'
             'mx_organic_inbound = EXCLUDED.mx_organic_inbound,'
             'mx_entrance_exam_marks = EXCLUDED.mx_entrance_exam_marks,'
             'mx_lead_quality_grade = EXCLUDED.mx_lead_quality_grade,'
             'mx_lead_inherent_intent = EXCLUDED.mx_lead_inherent_intent,'
             'mx_test_date_n_time = EXCLUDED.mx_test_date_n_time,'
-            'mx_lead_type = EXCLUDED.mx_lead_type;',
-
+            'mx_lead_type = EXCLUDED.mx_lead_type'
+            'mx_utm_source = EXCLUDED.mx_utm_source,'
+            'mx_utm_medium = EXCLUDED.mx_utm_medium,'
+            'score = EXCLUDED.score,'
+            'mx_phoenix_identifer = EXCLUDED.mx_phoenix_identifer,'
+            'mx_phoenix_lead_assigned_date = EXCLUDED.mx_phoenix_lead_assigned_date'
+            'mx_prospect_status = EXCLUDED.mx_prospect_status,'
+            'mx_reactivation_source = EXCLUDED.mx_reactivation_source,'
+            'mx_reactivation_date = EXCLUDED.mx_reactivation_date'
+            'mx_lead_status = EXCLUDED.mx_lead_status'
+            'mx_pmm_identifier = EXCLUDED.mx_pmm_identifier,'
+            'mx_city = EXCLUDED.mx_city,'
+            'mx_date_of_birth = EXCLUDED.mx_date_of_birth;',
             (
                 transform_row[0],
                 transform_row[1],
@@ -225,7 +237,14 @@ def extract_data_to_nested(**kwargs):
                 transform_row[61],
                 transform_row[62],
                 transform_row[63],
-                transform_row[64]
+                transform_row[64],
+                transform_row[65],
+                transform_row[66],
+                transform_row[67],
+                transform_row[68],
+                transform_row[69],
+                transform_row[70],
+                transform_row[71]
             )
         )
     pg_conn.commit()
@@ -239,15 +258,7 @@ dag = DAG(
     catchup=False
 )
 
-# Task 1: Delete existing records for the current date
-delete_table = PostgresOperator(
-    task_id='delete_table',
-    postgres_conn_id='postgres_result_db',
-    sql="delete from lsq_leads_x_activities where modified_on::date >= current_date - interval '1' day;",
-    dag=dag
-)
-
-# Task 2: Create table if not exists
+# Task 1: Create table if not exists
 create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
@@ -256,18 +267,19 @@ create_table = PostgresOperator(
             table_unique_key varchar(512) not null PRIMARY KEY,
             prospect_id varchar(512),
             activity_id varchar(512),
-            email_address varchar(512),
+            sales_user_email varchar(512),
+            prospect_email varchar(512),
+            CRM_user_role varchar(512),
             lead_created_on TIMESTAMP,
             event varchar(512),
             modified_on TIMESTAMP,
             prospect_stage varchar(512),
             lead_owner varchar(512),
+            lead_owner_id varchar(512),
             lead_sub_status varchar(512),
             lead_last_call_status varchar(512),
             lead_last_call_sub_status varchar(512),
             lead_last_call_connection_status varchar(512),
-            mid_funnel_count int,
-            mid_funnel_buckets varchar(512),
             reactivation_bucket varchar(512),
             reactivation_date TIMESTAMP,
             source_intended_course varchar(512),
@@ -304,20 +316,25 @@ create_table = PostgresOperator(
             mx_custom_17 varchar(512),
             mx_priority_status varchar(512),
             mx_rfd_date varchar(512),
-            mx_total_fees varchar(512),
-            mx_total_revenue varchar(512),
-            mx_doc_approved varchar(512),
-            mx_doc_collected varchar(512),
-            mx_cibil_check varchar(512),
-            mx_bucket varchar(512),
-            mx_icp varchar(512),
             mx_identifer varchar(512),
             mx_organic_inbound varchar(512),
             mx_entrance_exam_marks varchar(512),
             mx_lead_quality_grade varchar(512),
             mx_lead_inherent_intent varchar(512),
             mx_test_date_n_time TIMESTAMP,
-            mx_lead_type varchar(512)
+            mx_lead_type varchar(512),
+            mx_utm_source varchar(512),
+            mx_utm_medium varchar(512),
+            score varchar(512),
+            mx_phoenix_identifer varchar(512),
+            mx_phoenix_lead_assigned_date TIMESTAMP,
+            mx_prospect_status varchar(512),
+            mx_reactivation_source  varchar(512),
+            mx_reactivation_date TIMESTAMP,
+            mx_lead_status varchar(512),
+            mx_pmm_identifier varchar(512),
+            mx_city varchar(512),
+            mx_date_of_birth TIMESTAMP
         );
     ''',
     dag=dag
@@ -325,7 +342,7 @@ create_table = PostgresOperator(
 
 
 
-# Task 3: Alter table to increase column sizes
+# Task 2: Alter table to increase column sizes
 alter_table = PostgresOperator(
     task_id='alter_table',
     postgres_conn_id='postgres_result_db',
@@ -338,7 +355,7 @@ alter_table = PostgresOperator(
     dag=dag
 )
 
-# Task 4: Transform data
+# Task 3: Transform data
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_lsq_leads',
@@ -531,7 +548,19 @@ transform_data = PostgresOperator(
                 l2.mx_lead_quality_grade,
                 l2.mx_lead_inherent_intent,
                 l2.mx_test_date_n_time,
-                l2.mx_lead_type
+                l2.mx_lead_type,
+                l2.mx_utm_source,
+                l2.mx_utm_medium,
+                l2.score,
+                l2.mx_phoenix_identifer,
+                l2.mx_phoenix_lead_assigned_date,
+                l2.mx_prospect_status,
+                l2.mx_reactivation_source,
+                l2.mx_reactivation_date,
+                l2.lead_status_zip_intent,
+                l2.mx_pmm_identifier,
+                l2.mx_city,
+                l2.mx_date_of_birth
                     
             FROM (
                 select *
@@ -580,7 +609,7 @@ transform_data = PostgresOperator(
                         ld.mx_prospect_status,
                         ld.mx_reactivation_source,
                         ld.mx_reactivation_date,
-                        ld.mx_lead_status as lead_status_zip_intent,
+                        ld.mx_lead_status,
                         ld.mx_pmm_identifier,
                         ld.mx_city,
                         ld.mx_date_of_birth,
@@ -597,7 +626,7 @@ transform_data = PostgresOperator(
     dag=dag
 )
 
-# Task 5: Extract data to nested
+# Task 4: Extract data to nested
 extract_python_data = PythonOperator(
     task_id='extract_python_data',
     python_callable=extract_data_to_nested,
@@ -606,4 +635,4 @@ extract_python_data = PythonOperator(
 )
 
 # Define Task Dependencies
-delete_table >> create_table >> alter_table >> transform_data >> extract_python_data
+create_table >> alter_table >> transform_data >> extract_python_data
