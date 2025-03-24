@@ -535,7 +535,7 @@ transform_data = PostgresOperator(
                 l2.mx_prospect_status,
                 l2.mx_reactivation_source,
                 l2.mx_reactivation_date,
-                l2.lead_status_zip_intent,
+                l2.mx_lead_status,
                 l2.mx_pmm_identifier,
                 l2.mx_city,
                 l2.mx_date_of_birth
