@@ -614,3 +614,4 @@ extract_python_data = PythonOperator(
 
 # Define Task Dependencies
 create_table >> transform_data >> extract_python_data
+
