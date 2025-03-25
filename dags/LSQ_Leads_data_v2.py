@@ -246,7 +246,7 @@ dag = DAG(
     'LSQ_Leads_and_activities_v2',
     default_args=default_args,
     description='An Analytics Data Layer DAG for Leads and their activities. Data Source = Leadsquared',
-    schedule_interval='0 6 * * *',
+    schedule_interval='0 22 * * *',
     catchup=False
 )
 
