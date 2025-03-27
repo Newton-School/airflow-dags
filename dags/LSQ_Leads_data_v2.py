@@ -549,7 +549,7 @@ transform_data = PostgresOperator(
             ) sub
             WHERE 
                 TO_TIMESTAMP(sub.createdon_ist, 'YYYY-MM-DD HH24:MI:SS') >= '2024-10-01 00:00:00'
-                AND TO_TIMESTAMP(sub.createdon_ist, 'YYYY-MM-DD HH24:MI:SS') < '2025-03-27 00:00:00'
+                AND TO_TIMESTAMP(sub.createdon_ist, 'YYYY-MM-DD HH24:MI:SS') < '2025-03-28 00:00:00'
             ) as l
             left join (
                 select * from (
