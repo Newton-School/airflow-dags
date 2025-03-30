@@ -547,9 +547,9 @@ transform_data = PostgresOperator(
                     TO_CHAR(createdon::timestamp + INTERVAL '5 hours 30 minutes', 'YYYY-MM-DD HH24:MI:SS') AS createdon_ist
                 FROM leadsquareactivity 
             ) sub
-            WHERE 
-                TO_TIMESTAMP(sub.createdon_ist, 'YYYY-MM-DD HH24:MI:SS') >= current_date - interval '1' year
-                
+            WHERE
+                TO_TIMESTAMP(sub.createdon_ist, 'YYYY-MM-DD HH24:MI:SS') >= '2024-10-01 00:00:00'
+                AND TO_TIMESTAMP(sub.createdon_ist, 'YYYY-MM-DD HH24:MI:SS') < '2025-03-28 00:00:00'
             ) as l
             left join (
                 select * from (
