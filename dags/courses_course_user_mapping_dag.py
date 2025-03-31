@@ -11,14 +11,6 @@ default_args = {
 }
 def extract_data_to_nested(**kwargs):
 
-    def clean_input(data_type, data_value):
-        if data_type == 'string':
-            return 'null' if not data_value else f'\"{data_value}\"'
-        elif data_type == 'datetime':
-            return 'null' if not data_value else f'CAST(\'{data_value}\' As TIMESTAMP)'
-        else:
-            return data_value
-
     pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
     pg_conn = pg_hook.get_conn()
     pg_cursor = pg_conn.cursor()
@@ -73,6 +65,13 @@ dag = DAG(
     description='Course user mapping detailed version',
     schedule_interval='0 20 * * *',
     catchup=False
+)
+
+alter_sequence = PostgresOperator(
+    task_id='alter_sequence',
+    postgres_conn_id='postgres_result_db',
+    sql="ALTER SEQUENCE course_user_mapping_id_seq AS BIGINT;",
+    dag=dag
 )
 
 create_table = PostgresOperator(
@@ -225,4 +224,4 @@ extract_python_data = PythonOperator(
     provide_context=True,
     dag=dag
 )
-create_table >> transform_data >> extract_python_data
+alter_sequence >> create_table >> transform_data >> extract_python_data
