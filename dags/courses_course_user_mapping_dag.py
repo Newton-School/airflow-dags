@@ -70,7 +70,10 @@ dag = DAG(
 alter_sequence = PostgresOperator(
     task_id='alter_sequence',
     postgres_conn_id='postgres_result_db',
-    sql="ALTER SEQUENCE course_user_mapping_id_seq AS BIGINT;",
+    sql='''
+        ALTER SEQUENCE course_user_mapping_id_seq AS BIGINT,
+        ALTER COLUMN id SET DATA TYPE BIGINT;
+        ''',
     dag=dag
 )
 
