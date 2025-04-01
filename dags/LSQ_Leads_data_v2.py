@@ -549,6 +549,7 @@ transform_data = PostgresOperator(
             ) sub
             WHERE 
                 TO_TIMESTAMP(sub.createdon_ist, 'YYYY-MM-DD HH24:MI:SS') >= current_date - interval '6' Hour
+
             ) as l
             left join (
                 select * from (
