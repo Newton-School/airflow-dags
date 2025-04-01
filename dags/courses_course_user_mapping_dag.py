@@ -228,4 +228,4 @@ extract_python_data = PythonOperator(
     provide_context=True,
     dag=dag
 )
-alter_table >> create_table >> transform_data >> extract_python_data
+create_table >> alter_table >> transform_data >> extract_python_data
