@@ -67,11 +67,12 @@ dag = DAG(
     catchup=False
 )
 
-alter_sequence = PostgresOperator(
-    task_id='alter_sequence',
+alter_table = PostgresOperator(
+    task_id='alter_table',
     postgres_conn_id='postgres_result_db',
     sql='''
-        ALTER SEQUENCE course_user_mapping_id_seq AS BIGINT,
+        ALTER TABLE course_user_mapping
+        ALTER SEQUENCE course_user_mapping_id_seq AS BIGINT;
         ALTER COLUMN id SET DATA TYPE BIGINT;
         ''',
     dag=dag
@@ -227,4 +228,4 @@ extract_python_data = PythonOperator(
     provide_context=True,
     dag=dag
 )
-alter_sequence >> create_table >> transform_data >> extract_python_data
+alter_table >> create_table >> transform_data >> extract_python_data
