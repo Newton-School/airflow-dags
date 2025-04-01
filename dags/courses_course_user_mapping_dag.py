@@ -71,9 +71,34 @@ alter_table = PostgresOperator(
     task_id='alter_table',
     postgres_conn_id='postgres_result_db',
     sql='''
-        ALTER TABLE course_user_mapping
-        ALTER SEQUENCE course_user_mapping_id_seq AS BIGINT;
-        ALTER COLUMN id SET DATA TYPE BIGINT;
+        DO $$
+        BEGIN
+            -- Check if the column is already of type BIGINT
+            IF EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'course_user_mapping'
+                  AND column_name = 'id'
+                  AND data_type = 'bigint'
+            ) THEN
+                -- Column is already BIGINT, skip the ALTER statement
+                RAISE NOTICE 'Column "id" is already BIGINT. Skipping ALTER.';
+            ELSE
+                -- Step 1: Alter column type to BIGINT
+                ALTER TABLE course_user_mapping 
+                ALTER COLUMN id TYPE BIGINT;
+        
+                -- Step 2: Change the sequence associated with the column to BIGINT
+                ALTER SEQUENCE course_user_mapping_id_seq 
+                AS BIGINT;
+        
+                -- Step 3: Ensure the column uses the sequence correctly
+                ALTER TABLE course_user_mapping 
+                ALTER COLUMN id SET DEFAULT nextval('course_user_mapping_id_seq');
+                
+                RAISE NOTICE 'Column "id" successfully updated to BIGINT.';
+            END IF;
+        END $$;
         ''',
     dag=dag
 )
