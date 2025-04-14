@@ -63,6 +63,9 @@ def transfer_activities_from_leadsquare_to_zip_teams_nested(**kwargs):
                     print(f"Skipping as modified_on - {modified_on}")
                     continue
                 print("Posting for ProspectActivityId: ", activity["ProspectActivityId"])
+                if not activity["mx_Custom_4"]:
+                    print(f"Skipping as for ProspectActivityId: {activity["ProspectActivityId"]} mx_Custom_4 is empty")
+                    continue
                 body_to_post = [
                     {
                         "ProspectActivityId": activity["ProspectActivityId"],
