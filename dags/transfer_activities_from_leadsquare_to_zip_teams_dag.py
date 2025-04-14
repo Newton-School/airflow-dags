@@ -59,7 +59,7 @@ def transfer_activities_from_leadsquare_to_zip_teams_nested(**kwargs):
                 )
                 current_time_utc = datetime.utcnow()
                 time_difference = current_time_utc - modified_on_datetime
-                if not timedelta(hours=1) >= time_difference >= timedelta(0):
+                if not timedelta(hours=4) >= time_difference >= timedelta(0):
                     print(f"Skipping as modified_on - {modified_on} for ProspectActivityId: {activity['ProspectActivityId']} is not in the last 1 hour")
                     continue
                 print("Posting for ProspectActivityId: ", activity["ProspectActivityId"], activity["mx_Custom_4"])
