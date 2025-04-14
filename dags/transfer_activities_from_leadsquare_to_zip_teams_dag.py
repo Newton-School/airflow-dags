@@ -62,7 +62,7 @@ def transfer_activities_from_leadsquare_to_zip_teams_nested(**kwargs):
                 if not timedelta(hours=1) >= time_difference >= timedelta(0):
                     print(f"Skipping as modified_on - {modified_on}")
                     continue
-                print("Posting for ProspectActivityId: ", activity["ProspectActivityId", activity["mx_Custom_4"])
+                print("Posting for ProspectActivityId: ", activity["ProspectActivityId"], activity["mx_Custom_4"])
                 if not activity["mx_Custom_4"]:
                     print(f"Skipping as for ProspectActivityId: {activity["ProspectActivityId"]} mx_Custom_4 is empty")
                     continue
