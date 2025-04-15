@@ -8,7 +8,7 @@ from psycopg2.extras import execute_values
 from job_scrapers.internships.internshala import InternShalaInternshipScraper
 
 # Constants
-MAX_PAGES_PER_ROLE = 4
+MAX_PAGES_PER_ROLE = 500
 POSTGRES_CONN_ID = "postgres_job_posting"
 
 
