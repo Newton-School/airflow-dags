@@ -63,8 +63,13 @@ class InternShalaInternshipScraper:
         """
         Build the URL for fetching job listings based on the job role and page number.
         """
-        job_role_url_text = job_role.replace(" ", "-").lower()
-        job_role_url_text += "-internship"
+        # Replace all non-alphanumeric characters with hyphens
+        job_role_url_text = re.sub(r'[^A-Za-z0-9]+', '-', job_role)
+        # Strip leading/trailing hyphens
+        job_role_url_text = job_role_url_text.strip('-').lower()
+        # Append '-internship'
+        job_role_url_text += '-internship'
+
         return f"{self.base_url}/internships_ajax/{job_role_url_text}/page-{page}"
 
     @staticmethod
