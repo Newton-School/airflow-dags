@@ -51,6 +51,7 @@ create_table = PostgresOperator(
 load_data = PostgresOperator(
     task_id='load_data',
     postgres_conn_id='postgres_result_db',
+    retries=0,
     sql='''
     WITH RankedResponses AS (
         SELECT 
