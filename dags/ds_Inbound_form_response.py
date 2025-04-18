@@ -1,6 +1,9 @@
 from airflow import DAG
 from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.operators.python import PythonOperator
+from airflow.hooks.postgres_hook import PostgresHook
 from datetime import datetime
+from psycopg2.extras import execute_values
 
 default_args = {
     'owner': 'airflow',
@@ -11,11 +14,12 @@ default_args = {
 dag = DAG(
     'ds_inbound_form_response',
     default_args=default_args,
-    description='Load inbound form data with eligibility & sign-up analysis',
-    schedule_interval='7 */4 * * *',  # every 4 hours
+    description='Create, transform, and load inbound form data',
+    schedule_interval='7 */4 * * *',
     catchup=False
 )
 
+# 1. CREATE TABLE in postgres_result_db
 create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
@@ -48,11 +52,33 @@ create_table = PostgresOperator(
     dag=dag
 )
 
-load_data = PostgresOperator(
-    task_id='load_data',
+# 1.5 Ensure 'form_id' column exists
+ensure_form_id_column = PostgresOperator(
+    task_id='ensure_form_id_column',
     postgres_conn_id='postgres_result_db',
-    retries=0,
-    sql='''
+    sql="""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM information_schema.columns 
+            WHERE table_name='ds_inbound_form_filled' AND column_name='form_id'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN form_id INT;
+        END IF;
+    END;
+    $$;
+    """,
+    dag=dag
+)
+
+# 2. TRANSFORM DATA using postgres_read_replica
+def transform_and_extract(**context):
+    src_hook = PostgresHook(postgres_conn_id='postgres_read_replica')
+    src_conn = src_hook.get_conn()
+    cursor = src_conn.cursor()
+
+    cursor.execute('''
     WITH RankedResponses AS (
         SELECT 
             m.id,
@@ -174,59 +200,49 @@ load_data = PostgresOperator(
             END
         ) = 'Filled Form First'
     )
+    SELECT * FROM FinalResult;
+    ''')
 
-    INSERT INTO ds_inbound_form_filled (
-        form_id,
-        user_id,
-        full_name,
-        email,
-        phone_number,
-        response_type,
-        from_source,
-        form_created_at,
-        current_status,
-        graduation_year,
-        highest_qualification,
-        graduation_degree,
-        current_job_role,
-        course_type_interested_in,
-        is_inquiry_for_data_science_certification,
-        user_date_joined,
-        utm_source,
-        utm_medium,
-        utm_campaign,
-        inbound_key,
-        first_action,
-        eligible
-    )
-    SELECT 
-        form_id,
-        user_id,
-        full_name,
-        email,
-        phone_number,
-        response_type,
-        from_source,
-        form_created_at,
-        current_status,
-        graduation_year,
-        highest_qualification,
-        graduation_degree,
-        current_job_role,
-        course_type_interested_in,
-        is_inquiry_for_data_science_certification,
-        user_date_joined,
-        utm_source,
-        utm_medium,
-        utm_campaign,
-        inbound_key,
-        first_action,
-        eligible
-    FROM FinalResult
-    ON CONFLICT (form_id) DO NOTHING;
-    ''',
+    rows = cursor.fetchall()
+    context['ti'].xcom_push(key='transformed_rows', value=rows)
+
+transform_data = PythonOperator(
+    task_id='transform_data',
+    python_callable=transform_and_extract,
+    provide_context=True,
     dag=dag
 )
 
-create_table >> load_data
+# 3. INSERT INTO TABLE in postgres_result_db
+def insert_data(**context):
+    rows = context['ti'].xcom_pull(key='transformed_rows', task_ids='transform_data')
+    if not rows:
+        return
 
+    insert_sql = '''
+        INSERT INTO ds_inbound_form_filled (
+            form_id, user_id, full_name, email, phone_number, response_type, from_source,
+            form_created_at, current_status, graduation_year, highest_qualification,
+            graduation_degree, current_job_role, course_type_interested_in,
+            is_inquiry_for_data_science_certification, user_date_joined, utm_source,
+            utm_medium, utm_campaign, inbound_key, first_action, eligible
+        ) VALUES %s
+        ON CONFLICT (form_id) DO NOTHING;
+    '''
+
+    dest_hook = PostgresHook(postgres_conn_id='postgres_result_db')
+    dest_conn = dest_hook.get_conn()
+    dest_cursor = dest_conn.cursor()
+
+    execute_values(dest_cursor, insert_sql, rows)
+    dest_conn.commit()
+
+insert_data = PythonOperator(
+    task_id='insert_data',
+    python_callable=insert_data,
+    provide_context=True,
+    dag=dag
+)
+
+# DAG Task Dependencies
+create_table >> ensure_form_id_column >> transform_data >> insert_data
