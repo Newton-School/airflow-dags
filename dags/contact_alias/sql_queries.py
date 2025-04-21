@@ -59,7 +59,7 @@ AUTH_USER_QUERIES = {
 
         "FETCH_USER_DATA_ALL": """
         SELECT 
-            id AS user_id,
+            auth_user.id AS user_id,
             email,
             phone
         FROM auth_user 
@@ -70,7 +70,7 @@ AUTH_USER_QUERIES = {
 
         "FETCH_USER_DATA_YESTERDAY": """
         SELECT 
-            id AS user_id,
+            auth_user.id AS user_id,
             email,
             phone
         FROM auth_user 
