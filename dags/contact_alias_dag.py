@@ -12,7 +12,7 @@ from contact_alias.manager import ContactAliasManager
 # Configuration constants
 RESULT_DATABASE_CONNECTION_ID = "postgres_result_db"
 NEWTON_PROD_READ_REPLICA_CONNECTION_ID = "postgres_read_replica"
-BACK_FILL = False
+BACK_FILL = True
 logger = logging.getLogger(__name__)
 
 
