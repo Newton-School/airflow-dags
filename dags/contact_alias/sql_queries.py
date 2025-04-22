@@ -11,6 +11,7 @@ TABLE_QUERIES = {
             identity_group_id UUID NOT NULL,          -- All contacts for same person share this
             email VARCHAR(512),
             phone VARCHAR(15),
+            source VARCHAR(50) NOT NULL,              -- Source of the contact data. e.g., 'auth_user', 'generic_form_response'
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT ck_contact_presence CHECK (
                 (email IS NOT NULL) OR (phone IS NOT NULL)
@@ -45,38 +46,46 @@ TABLE_QUERIES = {
 
 # Auth user related queries
 AUTH_USER_QUERIES = {
-        "TOTAL_COUNT_ALL": """
-        SELECT COUNT(*) 
-        FROM auth_user 
-        WHERE date_joined < DATE(NOW());
+    "TOTAL_COUNT_ALL": """
+    SELECT COUNT(DISTINCT auth_user.id) 
+    FROM auth_user 
+    LEFT JOIN users_userhistory ON auth_user.id = users_userhistory.user_id AND users_userhistory.type IN (2, 3)
+    WHERE date_joined < DATE(NOW()) OR users_userhistory.id IS NOT NULL;
     """,
 
-        "TOTAL_COUNT_YESTERDAY": """
-        SELECT COUNT(*) 
-        FROM auth_user 
-        WHERE date_joined::date = (CURRENT_DATE - INTERVAL '1 day')::date;
+    "TOTAL_COUNT_YESTERDAY": """
+    SELECT COUNT(DISTINCT auth_user.id) 
+    FROM auth_user 
+    LEFT JOIN users_userhistory ON auth_user.id = users_userhistory.user_id AND users_userhistory.type IN (2, 3)
+    WHERE date_joined::date = (CURRENT_DATE - INTERVAL '1 day')::date OR 
+          (users_userhistory.id IS NOT NULL AND users_userhistory.created_at::date = (CURRENT_DATE - INTERVAL '1 day')::date);
     """,
 
-        "FETCH_USER_DATA_ALL": """
-        SELECT 
-            auth_user.id AS user_id,
-            email,
-            phone
-        FROM auth_user 
-        LEFT JOIN users_userprofile ON auth_user.id = users_userprofile.user_id
-        WHERE date_joined < DATE(NOW())
-        LIMIT %s OFFSET %s;
+    "FETCH_USER_DATA_ALL": """
+    SELECT 
+        auth_user.id AS user_id,
+        email,
+        phone
+    FROM auth_user 
+    LEFT JOIN users_userprofile ON auth_user.id = users_userprofile.user_id
+    LEFT JOIN users_userhistory ON auth_user.id = users_userhistory.user_id AND users_userhistory.type IN (2, 3)
+    WHERE date_joined < DATE(NOW()) OR users_userhistory.id IS NOT NULL
+    GROUP BY auth_user.id, email, phone
+    LIMIT %s OFFSET %s;
     """,
 
-        "FETCH_USER_DATA_YESTERDAY": """
-        SELECT 
-            auth_user.id AS user_id,
-            email,
-            phone
-        FROM auth_user 
-        LEFT JOIN users_userprofile ON auth_user.id = users_userprofile.user_id
-        WHERE date_joined::date = (CURRENT_DATE - INTERVAL '1 day')::date
-        LIMIT %s OFFSET %s;
+    "FETCH_USER_DATA_YESTERDAY": """
+    SELECT 
+        auth_user.id AS user_id,
+        email,
+        phone
+    FROM auth_user 
+    LEFT JOIN users_userprofile ON auth_user.id = users_userprofile.user_id
+    LEFT JOIN users_userhistory ON auth_user.id = users_userhistory.user_id AND users_userhistory.type IN (2, 3)
+    WHERE date_joined::date = (CURRENT_DATE - INTERVAL '1 day')::date OR 
+          (users_userhistory.id IS NOT NULL AND users_userhistory.created_at::date = (CURRENT_DATE - INTERVAL '1 day')::date)
+    GROUP BY auth_user.id, email, phone
+    LIMIT %s OFFSET %s;
     """
 }
 
@@ -207,9 +216,27 @@ CONTACT_ALIAS_QUERIES = {
     """,
 
         "INSERT_CONTACT_ALIAS": """
-        INSERT INTO contact_aliases (user_id, email, phone, identity_group_id) 
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO contact_aliases (user_id, email, phone, identity_group_id, source) 
+        VALUES (%s, %s, %s, %s, %s)
         ON CONFLICT (email, phone) DO NOTHING;
+    """,
+
+    "FETCH_BY_USER_ID_AND_SOURCE": """
+        SELECT id, email, phone, identity_group_id 
+        FROM contact_aliases 
+        WHERE user_id = %s AND source = %s;
+    """,
+
+    "UPDATE_CONTACT_INFO": """
+        UPDATE contact_aliases 
+        SET email = %s, phone = %s 
+        WHERE id = %s;
+    """,
+
+    "UPDATE_SOURCE": """
+        UPDATE contact_aliases 
+        SET source = %s 
+        WHERE id = %s;
     """
 }
 

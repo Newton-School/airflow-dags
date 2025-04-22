@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 @dag(
         dag_id="contact_alias_dag",
         schedule="27 21 * * *",  # Run at 9:27 PM UTC every day
-        start_date=pendulum.datetime(2025, 4, 21, tz="UTC"),
+        start_date=pendulum.datetime(2025, 4, 22, tz="UTC"),
         catchup=False,
         tags=["contact_alias", "data_processing"],
         default_args={
