@@ -94,11 +94,12 @@ def contact_alias_dag():
         tags=["contact_alias", "data_processing", "backfill"],
         default_args={
                 "owner": "data_team",
-                "retries": 0,
+                "retries": 2,
+                "retry_delay": pendulum.duration(minutes=5),
         },
         params={
                 "start_id": Param(0, type="integer", minimum=0),
-                "end_id": Param(100000, type="integer", minimum=1),
+                "end_id": Param(1000, type="integer", minimum=1),
                 "source_type": Param("AUTH_USER", enum=["AUTH_USER", "FORM_RESPONSE"])
         },
 )
