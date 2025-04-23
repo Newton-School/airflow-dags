@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
         tags=["contact_alias", "data_processing"],
         default_args={
                 "owner": "data_team",
-                "retries": 0
+                "retries": 3,
+                "retry_delay": pendulum.duration(minutes=5),
         },
         doc_md="""
     # Contact Alias DAG
@@ -92,8 +93,7 @@ def contact_alias_dag():
         tags=["contact_alias", "data_processing", "backfill"],
         default_args={
                 "owner": "data_team",
-                "retries": 3,
-                "retry_delay": pendulum.duration(minutes=5),
+                "retries": 0
         },
         params={
                 "start_id": {"type": "integer", "default": 0},
