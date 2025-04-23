@@ -136,11 +136,13 @@ def contact_alias_backfill_dag():
         if not table_created:
             raise ValueError("Table creation task failed")
 
-        # Get parameters
-        params = context["params"]
-        start_id = params.get("start_id", 0)
-        end_id = params.get("end_id", 10000)
-        source_type = params.get("source_type", "AUTH_USER")
+        # Get parameters from the DAG run configuration
+        dag_run = context["dag_run"]
+        conf = dag_run.conf if dag_run and dag_run.conf else {}
+
+        start_id = int(conf.get("start_id", 0))
+        end_id = int(conf.get("end_id", 100000))
+        source_type = str(conf.get("source_type", "AUTH_USER"))
 
         logger.info(f"Processing {source_type} records from ID {start_id} to {end_id}")
 
