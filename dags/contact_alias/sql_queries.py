@@ -240,6 +240,42 @@ CONTACT_ALIAS_QUERIES = {
     """
 }
 
+# ID Range queries for backfill
+RANGE_QUERIES = {
+        "AUTH_USER_ID_RANGE": """
+        SELECT 
+            auth_user.id AS user_id,
+            email,
+            phone
+        FROM auth_user 
+        LEFT JOIN users_userprofile ON auth_user.id = users_userprofile.user_id
+        WHERE auth_user.id BETWEEN %s AND %s
+    """,
+
+        "FORM_RESPONSE_ID_RANGE": """
+        SELECT
+          id,
+          response_json ->> 'email' AS email,
+          response_json ->> 'phone_number' AS phone
+        FROM
+          marketing_genericformresponse
+        WHERE
+          id BETWEEN %s AND %s
+          AND (
+            (
+              response_json ? 'email'
+              AND NULLIF(TRIM(response_json ->> 'email'), '') IS NOT NULL
+              AND LOWER(TRIM(response_json ->> 'email')) <> 'null'
+            )
+            OR (
+              response_json ? 'phone_number'
+              AND NULLIF(TRIM(response_json ->> 'phone_number'), '') IS NOT NULL
+              AND LOWER(TRIM(response_json ->> 'phone_number')) <> 'null'
+            )
+          )
+    """
+}
+
 INITIALIZE_TABLE_QUERY = TABLE_QUERIES["INITIALIZE_TABLE"]
 TOTAL_USER_COUNT_QUERY = AUTH_USER_QUERIES["TOTAL_COUNT_ALL"]
 FETCH_USER_DATA_FROM_AUTH_USER_TABLE_QUERY = AUTH_USER_QUERIES["FETCH_USER_DATA_ALL"]

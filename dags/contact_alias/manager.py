@@ -8,7 +8,7 @@ from .sql_queries import (
     TABLE_QUERIES,
     AUTH_USER_QUERIES,
     FORM_RESPONSE_QUERIES,
-    CONTACT_ALIAS_QUERIES
+    CONTACT_ALIAS_QUERIES, RANGE_QUERIES
 )
 
 logger = logging.getLogger(__name__)
@@ -407,3 +407,66 @@ class ContactAliasManager:
                 self.process_contact_data(email, phone, source='generic_form_response')
 
         logger.info(f"Completed processing form response data")
+
+    def process_data_by_id_range(self, source_type: str, start_id: int, end_id: int) -> None:
+        """Process a specific ID range from the source database.
+
+        Args:
+            source_type: Either 'AUTH_USER' or 'FORM_RESPONSE'
+            start_id: Starting ID (inclusive)
+            end_id: Ending ID (inclusive)
+        """
+        logger.info(f"Processing {source_type} records from ID {start_id} to {end_id}")
+
+        # Map source type to query
+        query_map = {
+                'AUTH_USER': RANGE_QUERIES["AUTH_USER_ID_RANGE"],
+                'FORM_RESPONSE': RANGE_QUERIES["FORM_RESPONSE_ID_RANGE"]
+        }
+
+        query = query_map.get(source_type)
+        if not query:
+            raise ValueError(f"Invalid source type '{source_type}'")
+
+        batch_size = 1000
+        processed_count = 0
+
+        with self.source_db_hook.get_conn() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query, (start_id, end_id))
+
+                batch = []
+                for row in cursor:
+                    batch.append(row)
+                    processed_count += 1
+
+                    if len(batch) >= batch_size:
+                        self._process_range_batch(batch, source_type)
+                        logger.info(f"Processed batch of {len(batch)} records from {source_type}")
+                        batch = []
+
+                # Process any remaining records
+                if batch:
+                    self._process_range_batch(batch, source_type)
+                    logger.info(f"Processed final batch of {len(batch)} records from {source_type}")
+
+        logger.info(f"Completed processing {processed_count} records from {source_type} for ID range {start_id}-{end_id}")
+
+    def _process_range_batch(self, batch, source_type: str) -> None:
+        """Process a batch of records from ID range query.
+
+        Args:
+            batch: List of database records
+            source_type: Either 'AUTH_USER' or 'FORM_RESPONSE'
+        """
+        for record in batch:
+            try:
+                if source_type == 'AUTH_USER':
+                    user_id, email, phone = record[0], record[1], record[2]
+                    self.process_contact_data(email, phone, user_id, source='auth_user')
+                else:  # FORM_RESPONSE
+                    form_id, email, phone = record[0], record[1], record[2]
+                    self.process_contact_data(email, phone, source='form_response')
+            except Exception as e:
+                logger.error(f"Error processing {source_type} record: {str(e)}")
+                # Continue with next record

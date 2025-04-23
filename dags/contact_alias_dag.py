@@ -12,7 +12,7 @@ from contact_alias.manager import ContactAliasManager
 # Configuration constants
 RESULT_DATABASE_CONNECTION_ID = "postgres_result_db"
 NEWTON_PROD_READ_REPLICA_CONNECTION_ID = "postgres_read_replica"
-BACK_FILL = True
+BACK_FILL = False
 logger = logging.getLogger(__name__)
 
 
@@ -85,5 +85,82 @@ def contact_alias_dag():
     return form_responses_processed
 
 
+@dag(
+        dag_id="contact_alias_backfill_dag",
+        schedule=None,  # Manual trigger only
+        start_date=pendulum.datetime(2025, 4, 23, tz="UTC"),
+        catchup=False,
+        tags=["contact_alias", "data_processing", "backfill"],
+        default_args={
+                "owner": "data_team",
+                "retries": 3,
+                "retry_delay": pendulum.duration(minutes=5),
+        },
+        params={
+                "start_id": {"type": "integer", "default": 0},
+                "end_id": {"type": "integer", "default": 10000},
+                "source_type": {"type": "string", "default": "AUTH_USER"}
+        },
+        doc_md="""
+    # Contact Alias Backfill DAG
+
+    This DAG processes contact aliases in specific ID ranges:
+
+    1. Creates/verifies the contact_aliases table if needed
+    2. Processes records from the specified source within the given ID range
+
+    ## Parameters:
+    - start_id: Starting ID (inclusive)
+    - end_id: Ending ID (inclusive)
+    - source_type: Either 'AUTH_USER' or 'FORM_RESPONSE'
+
+    ## Usage:
+    Run this DAG multiple times with different ID ranges to complete the backfill.
+    If a range fails, only that specific range needs to be rerun.
+    """,
+)
+def contact_alias_backfill_dag():
+    """DAG for backfilling contact aliases in ID ranges."""
+
+    @task(task_id="create_table")
+    def create_table() -> bool:
+        """Create the contact aliases table if it doesn't exist."""
+        result_db_hook = PostgresHook(postgres_conn_id=RESULT_DATABASE_CONNECTION_ID)
+        source_db_hook = PostgresHook(postgres_conn_id=NEWTON_PROD_READ_REPLICA_CONNECTION_ID)
+        manager = ContactAliasManager(result_db_hook, source_db_hook, True)
+        manager.create_contact_alias_table()
+        return True
+
+    @task(task_id="process_id_range")
+    def process_id_range(table_created: bool, **context) -> bool:
+        """Process a specific ID range from a source."""
+        if not table_created:
+            raise ValueError("Table creation task failed")
+
+        # Get parameters
+        params = context["params"]
+        start_id = params.get("start_id", 0)
+        end_id = params.get("end_id", 10000)
+        source_type = params.get("source_type", "AUTH_USER")
+
+        logger.info(f"Processing {source_type} records from ID {start_id} to {end_id}")
+
+        result_db_hook = PostgresHook(postgres_conn_id=RESULT_DATABASE_CONNECTION_ID)
+        source_db_hook = PostgresHook(postgres_conn_id=NEWTON_PROD_READ_REPLICA_CONNECTION_ID)
+        manager = ContactAliasManager(result_db_hook, source_db_hook, True)
+
+        # Process the range
+        manager.process_data_by_id_range(source_type, start_id, end_id)
+        return True
+
+    # Define the task dependencies
+    table_created = create_table()
+    id_range_processed = process_id_range(table_created)
+
+    # Return final task for potential downstream dependencies
+    return id_range_processed
+
+
 # Instantiate the DAG
 contact_alias_dag_instance = contact_alias_dag()
+contact_alias_backfill_dag_instance = contact_alias_backfill_dag()
