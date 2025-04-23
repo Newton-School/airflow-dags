@@ -24,8 +24,7 @@ logger = logging.getLogger(__name__)
         tags=["contact_alias", "data_processing"],
         default_args={
                 "owner": "data_team",
-                "retries": 3,
-                "retry_delay": pendulum.duration(minutes=5),
+                "retries": 0
         },
         doc_md="""
     # Contact Alias DAG
