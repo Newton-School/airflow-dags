@@ -5,6 +5,7 @@ import logging
 
 import pendulum
 from airflow.decorators import dag, task
+from airflow.models import Param
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 from contact_alias.manager import ContactAliasManager
@@ -88,35 +89,18 @@ def contact_alias_dag():
 @dag(
         dag_id="contact_alias_backfill_dag",
         schedule=None,  # Manual trigger only
-        start_date=pendulum.datetime(2025, 4, 23, tz="UTC"),
+        start_date=pendulum.datetime(2025, 4, 21, tz="UTC"),
         catchup=False,
         tags=["contact_alias", "data_processing", "backfill"],
         default_args={
                 "owner": "data_team",
-                "retries": 0
+                "retries": 0,
         },
         params={
-                "start_id": {"type": "integer", "default": 0},
-                "end_id": {"type": "integer", "default": 10000},
-                "source_type": {"type": "string", "default": "AUTH_USER"}
+                "start_id": Param(0, type="integer", minimum=0),
+                "end_id": Param(100000, type="integer", minimum=1),
+                "source_type": Param("AUTH_USER", enum=["AUTH_USER", "FORM_RESPONSE"])
         },
-        doc_md="""
-    # Contact Alias Backfill DAG
-
-    This DAG processes contact aliases in specific ID ranges:
-
-    1. Creates/verifies the contact_aliases table if needed
-    2. Processes records from the specified source within the given ID range
-
-    ## Parameters:
-    - start_id: Starting ID (inclusive)
-    - end_id: Ending ID (inclusive)
-    - source_type: Either 'AUTH_USER' or 'FORM_RESPONSE'
-
-    ## Usage:
-    Run this DAG multiple times with different ID ranges to complete the backfill.
-    If a range fails, only that specific range needs to be rerun.
-    """,
 )
 def contact_alias_backfill_dag():
     """DAG for backfilling contact aliases in ID ranges."""
@@ -131,18 +115,15 @@ def contact_alias_backfill_dag():
         return True
 
     @task(task_id="process_id_range")
-    def process_id_range(table_created: bool, **context) -> bool:
+    def process_id_range(table_created: bool, **context):
         """Process a specific ID range from a source."""
         if not table_created:
             raise ValueError("Table creation task failed")
 
-        # Get parameters from the DAG run configuration
-        dag_run = context["dag_run"]
-        conf = dag_run.conf if dag_run and dag_run.conf else {}
-
-        start_id = int(conf.get("start_id", 0))
-        end_id = int(conf.get("end_id", 100000))
-        source_type = str(conf.get("source_type", "AUTH_USER"))
+        params = context["params"]
+        start_id = params["start_id"]
+        end_id = params["end_id"]
+        source_type = params["source_type"]
 
         logger.info(f"Processing {source_type} records from ID {start_id} to {end_id}")
 
@@ -158,7 +139,6 @@ def contact_alias_backfill_dag():
     table_created = create_table()
     id_range_processed = process_id_range(table_created)
 
-    # Return final task for potential downstream dependencies
     return id_range_processed
 
 
