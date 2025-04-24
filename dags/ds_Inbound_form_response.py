@@ -52,6 +52,26 @@ create_table = PostgresOperator(
     dag=dag
 )
 
+# 1.5 Ensure 'form_id' column exists
+ensure_form_id_column = PostgresOperator(
+    task_id='ensure_form_id_column',
+    postgres_conn_id='postgres_result_db',
+    sql="""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM information_schema.columns 
+            WHERE table_name='ds_inbound_form_filled' AND column_name='form_id'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN form_id INT;
+        END IF;
+    END;
+    $$;
+    """,
+    dag=dag
+)
+
 # 2. TRANSFORM DATA using postgres_read_replica
 def transform_and_extract(**context):
     src_hook = PostgresHook(postgres_conn_id='postgres_read_replica')
@@ -225,4 +245,6 @@ insert_data = PythonOperator(
 )
 
 # DAG Task Dependencies
-create_table >> transform_data >> insert_data
+
+create_table >> ensure_form_id_column >> transform_data >> insert_data
+
