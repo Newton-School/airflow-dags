@@ -245,4 +245,6 @@ insert_data = PythonOperator(
 )
 
 # DAG Task Dependencies
+
 create_table >> ensure_form_id_column >> transform_data >> insert_data
+
