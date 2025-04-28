@@ -44,20 +44,18 @@ TABLE_QUERIES = {
             first_utm_medium VARCHAR(255),
             first_utm_campaign VARCHAR(255),
             first_utm_timestamp TIMESTAMP,
-            first_utm_referer VARCHAR(255),
+            utm_referer VARCHAR(255),
             first_utm_hash VARCHAR(255),
             
             latest_utm_source VARCHAR(255),
             latest_utm_medium VARCHAR(255),
             latest_utm_campaign VARCHAR(255),
             latest_utm_timestamp TIMESTAMP,
-            latest_utm_referer VARCHAR(255),
             latest_utm_hash VARCHAR(255),
             
             signup_utm_source VARCHAR(255),
             signup_utm_medium VARCHAR(255),
             signup_utm_campaign VARCHAR(255),
-            signup_utm_referer VARCHAR(255),
             signup_utm_hash VARCHAR(255),
             
             -- Education information
@@ -178,7 +176,6 @@ AUTH_USER_QUERIES = {
                 (courses_courseusermapping.utm_param_json -> 'utm_source') #>> '{}' as latest_utm_source,
                 (courses_courseusermapping.utm_param_json -> 'utm_medium') #>> '{}' as latest_utm_medium,
                 (courses_courseusermapping.utm_param_json -> 'utm_campaign') #>> '{}' as latest_utm_campaign,
-                (courses_courseusermapping.utm_param_json -> 'utm_referer') #>> '{}' as latest_utm_referer,
                 (courses_courseusermapping.utm_param_json -> 'utm_hash') #>> '{}' as latest_utm_hash,
                 courses_courseusermapping.created_at as latest_utm_timestamp,
                 A.grade as tenth_marks,
@@ -250,7 +247,6 @@ AUTH_USER_QUERIES = {
             latest_utm_source,
             latest_utm_medium,
             latest_utm_campaign,
-            latest_utm_referer,
             latest_utm_hash,
             latest_utm_timestamp,
             tenth_marks,
@@ -325,8 +321,8 @@ CONTACT_ALIAS_QUERIES = {
 USER_INFO_QUERIES = {
     "CHECK_EXISTING_RECORD": """
         SELECT id, user_id, identity_group_id, 
-               first_utm_source, first_utm_medium, first_utm_campaign, first_utm_timestamp, first_utm_referer, first_utm_hash,
-               latest_utm_source, latest_utm_medium, latest_utm_campaign, latest_utm_timestamp, latest_utm_referer, latest_utm_hash,
+               first_utm_source, first_utm_medium, first_utm_campaign, first_utm_timestamp, utm_referer, first_utm_hash,
+               latest_utm_source, latest_utm_medium, latest_utm_campaign, latest_utm_timestamp, latest_utm_hash,
                data_source
         FROM unified_user 
         WHERE user_id = %s OR identity_group_id = %s
@@ -347,7 +343,7 @@ USER_INFO_QUERIES = {
             latest_utm_medium = %s,
             latest_utm_campaign = %s,
             latest_utm_timestamp = %s,
-            latest_utm_referer = %s,
+            utm_referer = %s,
             latest_utm_hash = %s,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = %s
@@ -360,7 +356,7 @@ USER_INFO_QUERIES = {
             first_utm_medium = %s,
             first_utm_campaign = %s,
             first_utm_timestamp = %s,
-            first_utm_referer = %s,
+            utm_referer = %s,
             first_utm_hash = %s,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = %s
@@ -441,7 +437,7 @@ class UserInfoManager:
                          email, phone, current_location_city, current_location_state,
                          gender, date_of_birth, utm_source, utm_medium, utm_campaign,
                          utm_referer, utm_hash, latest_utm_source, latest_utm_medium,
-                         latest_utm_campaign, latest_utm_referer, latest_utm_hash,
+                         latest_utm_campaign, latest_utm_hash,
                          latest_utm_timestamp, tenth_marks, twelfth_marks,
                          bachelors_marks, bachelors_grad_year, bachelors_degree,
                          bachelors_field_of_study, masters_marks, masters_grad_year,
@@ -467,12 +463,12 @@ class UserInfoManager:
                             current_location_state=current_location_state,
                             gender=gender,
                             date_of_birth=date_of_birth,
+                            utm_referer=utm_referer,
 
                             # UTM information
                             signup_utm_source=utm_source,
                             signup_utm_medium=utm_medium,
                             signup_utm_campaign=utm_campaign,
-                            signup_utm_referer=utm_referer,
                             signup_utm_hash=utm_hash,
 
                             # Set first UTM to signup UTM if this is a new record
@@ -480,7 +476,6 @@ class UserInfoManager:
                             first_utm_medium=utm_medium,
                             first_utm_campaign=utm_campaign,
                             first_utm_timestamp=date_joined,
-                            first_utm_referer=utm_referer,
                             first_utm_hash=utm_hash,
 
                             # Latest UTM info
@@ -488,7 +483,6 @@ class UserInfoManager:
                             latest_utm_medium=latest_utm_medium,
                             latest_utm_campaign=latest_utm_campaign,
                             latest_utm_timestamp=latest_utm_timestamp,
-                            latest_utm_referer=latest_utm_referer,
                             latest_utm_hash=latest_utm_hash,
 
                             # Education information
@@ -633,20 +627,19 @@ class UserInfoManager:
             email=first_response['email'],
             phone=first_response['phone'],
             first_name=best_values.get('first_name'),
+            utm_referer=first_response['utm_referer'],
 
             # UTM info from first and latest responses
             first_utm_source=first_response['utm_source'],
             first_utm_medium=first_response['utm_medium'],
             first_utm_campaign=first_response['utm_campaign'],
             first_utm_timestamp=first_response['created_at'],
-            first_utm_referer=first_response['utm_referer'],
             first_utm_hash=first_response['utm_hash'],
 
             latest_utm_source=last_response['utm_source'],
             latest_utm_medium=last_response['utm_medium'],
             latest_utm_campaign=last_response['utm_campaign'],
             latest_utm_timestamp=last_response['created_at'],
-            latest_utm_referer=last_response['utm_referer'],
             latest_utm_hash=last_response['utm_hash'],
 
             # Additional MGFR fields
@@ -731,8 +724,7 @@ class UserInfoManager:
                             'medium': existing_record[10],
                             'campaign': existing_record[11],
                             'timestamp': existing_record[12],
-                            'referer': existing_record[13],
-                            'hash': existing_record[14]
+                            'hash': existing_record[13]
                         }
 
                         # Prepare update fields
@@ -762,8 +754,6 @@ class UserInfoManager:
                                 values.append(kwargs.get('signup_utm_medium'))
                                 fields.append("signup_utm_campaign = %s")
                                 values.append(kwargs.get('signup_utm_campaign'))
-                                fields.append("signup_utm_referer = %s")
-                                values.append(kwargs.get('signup_utm_referer'))
                                 fields.append("signup_utm_hash = %s")
                                 values.append(kwargs.get('signup_utm_hash'))
                         else:
@@ -805,7 +795,7 @@ class UserInfoManager:
                                     kwargs.get('first_utm_medium'),
                                     kwargs.get('first_utm_campaign'),
                                     new_first_utm_timestamp,
-                                    kwargs.get('first_utm_referer'),
+                                    kwargs.get('utm_referer'),
                                     kwargs.get('first_utm_hash'),
                                     record_id
                                 )
@@ -826,7 +816,7 @@ class UserInfoManager:
                                     kwargs.get('latest_utm_medium'),
                                     kwargs.get('latest_utm_campaign'),
                                     new_latest_utm_timestamp,
-                                    kwargs.get('latest_utm_referer'),
+                                    kwargs.get('utm_referer'),
                                     kwargs.get('latest_utm_hash'),
                                     record_id
                                 )
@@ -920,7 +910,7 @@ class UserInfoManager:
                                     kwargs.get('first_utm_medium'),
                                     kwargs.get('first_utm_campaign'),
                                     first_utm_timestamp,
-                                    kwargs.get('first_utm_referer'),
+                                    kwargs.get('utm_referer'),
                                     kwargs.get('first_utm_hash'),
                                     record_id
                                 )
@@ -938,7 +928,7 @@ class UserInfoManager:
                                     kwargs.get('latest_utm_medium'),
                                     kwargs.get('latest_utm_campaign'),
                                     latest_utm_timestamp,
-                                    kwargs.get('latest_utm_referer'),
+                                    kwargs.get('utm_referer'),
                                     kwargs.get('latest_utm_hash'),
                                     record_id
                                 )
@@ -1062,3 +1052,4 @@ def unified_user_dag():
 
 # Instantiate the DAG
 unified_user_dag_instance = unified_user_dag()
+
