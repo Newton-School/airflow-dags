@@ -16,7 +16,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 # Configuration constants
 RESULT_DATABASE_CONNECTION_ID = "postgres_result_db"
 SOURCE_DATABASE_CONNECTION_ID = "postgres_read_replica"
-BATCH_SIZE = 1000  # Process data in batches to avoid memory issues
+BATCH_SIZE = 2000  # Process data in batches to avoid memory issues
 logger = logging.getLogger(__name__)
 
 # SQL Queries
