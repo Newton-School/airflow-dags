@@ -16,7 +16,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 # Configuration constants
 RESULT_DATABASE_CONNECTION_ID = "postgres_result_db"
 SOURCE_DATABASE_CONNECTION_ID = "postgres_read_replica"
-BATCH_SIZE = 2000  # Process data in batches to avoid memory issues
+BATCH_SIZE = 1000  # Process data in batches to avoid memory issues
 logger = logging.getLogger(__name__)
 
 # SQL Queries
@@ -465,12 +465,12 @@ class UserInfoManager:
                             current_location_state=current_location_state,
                             gender=gender,
                             date_of_birth=date_of_birth,
+                            utm_referer=utm_referer,
 
                             # UTM information
                             signup_utm_source=utm_source,
                             signup_utm_medium=utm_medium,
                             signup_utm_campaign=utm_campaign,
-                            signup_utm_referer=utm_referer,
                             signup_utm_hash=utm_hash,
 
                             # Set first UTM to signup UTM if this is a new record
@@ -478,7 +478,6 @@ class UserInfoManager:
                             first_utm_medium=utm_medium,
                             first_utm_campaign=utm_campaign,
                             first_utm_timestamp=date_joined,
-                            first_utm_referer=utm_referer,
                             first_utm_hash=utm_hash,
 
                             # Latest UTM info
@@ -630,13 +629,13 @@ class UserInfoManager:
             email=first_response['email'],
             phone=first_response['phone'],
             first_name=best_values.get('first_name'),
+            utm_referer=first_response['utm_referer'],
 
             # UTM info from first and latest responses
             first_utm_source=first_response['utm_source'],
             first_utm_medium=first_response['utm_medium'],
             first_utm_campaign=first_response['utm_campaign'],
             first_utm_timestamp=first_response['created_at'],
-            first_utm_referer=first_response['utm_referer'],
             first_utm_hash=first_response['utm_hash'],
 
             latest_utm_source=last_response['utm_source'],
@@ -1055,3 +1054,4 @@ def unified_user_dag():
 
 # Instantiate the DAG
 unified_user_dag_instance = unified_user_dag()
+
