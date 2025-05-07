@@ -72,8 +72,8 @@ TABLE_QUERIES = {
             graduation_year INTEGER,
             
             -- Form response data
-            current_role VARCHAR(255),
-            current_status VARCHAR(255),
+            "current_role" VARCHAR(255),
+            "current_status" VARCHAR(255),
             years_of_experience VARCHAR(50),
             course_type_interested_in VARCHAR(255),
             highest_qualification VARCHAR(255),
