@@ -27,8 +27,8 @@ create_table = PostgresOperator(
     CREATE TABLE IF NOT EXISTS ds_inbound_form_filled (
         form_id INT PRIMARY KEY,
         user_id INT,
-        full_name VARCHAR(512),
-        email VARCHAR(512),
+        full_name VARCHAR(1024),
+        email VARCHAR(1024),
         phone_number VARCHAR(20),
         response_type VARCHAR(256),
         from_source VARCHAR(256),
