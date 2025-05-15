@@ -397,3 +397,4 @@ insert_data = PythonOperator(
 
 create_table >> ensure_all_columns >> transform_data >> insert_data
 
+
