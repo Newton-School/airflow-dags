@@ -153,7 +153,9 @@ transform_data = PostgresOperator(
                     from
                         assessments a 
                     join courses c 
+
                         on c.course_id = a.course_id and c.course_id in (800,818,819,820,821,822,823,824,825,826,1040,1041,1042,1043,1044,1045,1632,1633,1634)
+
                     left join course_user_mapping as cum on cum.course_id = c.course_id
                     left join assessment_question_user_mapping aqum 
                         on aqum.assessment_id = a.assessment_id 
@@ -229,6 +231,7 @@ raw as(
             left join course_user_mapping on course_user_mapping.user_id = course_user_timeline_flow_mapping.user_id and course_user_timeline_flow_mapping.course_id = course_user_mapping.course_id
             left join courses on courses.course_id = course_user_timeline_flow_mapping.course_id and courses.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041,1042,1043,1044,1045,1632,1633,1634)
             where courses.course_id in (786,759,800,818,819,820,821,822,823,824,825,826,1040,1041,1042,1043,1044,1045,1632,1633,1634)
+
             order by 1
             ),
             b as(

@@ -52,6 +52,7 @@ create_table = PostgresOperator(
     dag=dag
 )
 
+
 ensure_all_columns = PostgresOperator(
     task_id='ensure_all_columns',
     postgres_conn_id='postgres_result_db',
@@ -213,13 +214,11 @@ ensure_all_columns = PostgresOperator(
         ) THEN
             ALTER TABLE ds_inbound_form_filled ADD COLUMN eligible BOOLEAN;
         END IF;
-
     END;
     $$;
     """,
     dag=dag
 )
-
 
 # 2. TRANSFORM DATA using postgres_read_replica
 def transform_and_extract(**context):
@@ -368,6 +367,7 @@ def insert_data(**context):
     if not rows:
         return
     rows = [row for row in rows if row[0] is not None]
+
     insert_sql = '''
         INSERT INTO ds_inbound_form_filled (
             form_id, user_id, full_name, email, phone_number, response_type, from_source,
@@ -394,6 +394,6 @@ insert_data = PythonOperator(
 )
 
 # DAG Task Dependencies
-
 create_table >> ensure_all_columns >> transform_data >> insert_data
+
 
