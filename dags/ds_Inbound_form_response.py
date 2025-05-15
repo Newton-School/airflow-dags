@@ -90,7 +90,7 @@ ensure_all_columns = PostgresOperator(
             IF NOT EXISTS (
                 SELECT 1
                 FROM information_schema.columns
-                WHERE table_name = ds_inbound_form_filled
+                WHERE table_name = 'ds_inbound_form_filled'
                 AND column_name = col_def[1]
             ) THEN
                 EXECUTE format('ALTER TABLE %I ADD COLUMN %I %s', 
