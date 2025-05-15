@@ -8,7 +8,7 @@ from psycopg2.extras import execute_values
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'start_date': datetime(2025, 4, 16),
+    'start_date': datetime(2025, 5, 15),
 }
 
 dag = DAG(
@@ -52,19 +52,165 @@ create_table = PostgresOperator(
     dag=dag
 )
 
-# 1.5 Ensure 'form_id' column exists
-ensure_form_id_column = PostgresOperator(
-    task_id='ensure_form_id_column',
+ensure_all_columns = PostgresOperator(
+    task_id='ensure_all_columns',
+
     postgres_conn_id='postgres_result_db',
     sql="""
     DO $$
     BEGIN
         IF NOT EXISTS (
-            SELECT 1
-            FROM information_schema.columns 
+            SELECT 1 FROM information_schema.columns
             WHERE table_name='ds_inbound_form_filled' AND column_name='form_id'
         ) THEN
             ALTER TABLE ds_inbound_form_filled ADD COLUMN form_id INT;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='user_id'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN user_id INT;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='full_name'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN full_name VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='email'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN email VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='phone_number'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN phone_number VARCHAR(20);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='response_type'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN response_type VARCHAR(256);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='from_source'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN from_source VARCHAR(256);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='form_created_at'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN form_created_at TIMESTAMP;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='current_status'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN current_status VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='graduation_year'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN graduation_year VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='highest_qualification'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN highest_qualification VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='graduation_degree'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN graduation_degree VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='current_job_role'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN current_job_role VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='course_type_interested_in'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN course_type_interested_in VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='is_inquiry_for_data_science_certification'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN is_inquiry_for_data_science_certification VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='user_date_joined'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN user_date_joined TIMESTAMP;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='utm_source'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN utm_source VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='utm_medium'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN utm_medium VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='utm_campaign'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN utm_campaign VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='inbound_key'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN inbound_key VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='first_action'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN first_action VARCHAR(1024);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='ds_inbound_form_filled' AND column_name='eligible'
+        ) THEN
+            ALTER TABLE ds_inbound_form_filled ADD COLUMN eligible BOOLEAN;
         END IF;
     END;
     $$;
@@ -218,7 +364,6 @@ def insert_data(**context):
     rows = context['ti'].xcom_pull(key='transformed_rows', task_ids='transform_data')
     if not rows:
         return
-
     insert_sql = '''
         INSERT INTO ds_inbound_form_filled (
             form_id, user_id, full_name, email, phone_number, response_type, from_source,
@@ -244,7 +389,8 @@ insert_data = PythonOperator(
     dag=dag
 )
 
-# DAG Task Dependencies
 
-create_table >> ensure_form_id_column >> transform_data >> insert_data
+create_table >> ensure_all_columns >> transform_data >> insert_data
+
+
 
