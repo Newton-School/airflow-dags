@@ -66,7 +66,7 @@ ensure_all_columns = PostgresOperator(
                     ARRAY['full_name', 'VARCHAR(1024)'],
                     ARRAY['email', 'VARCHAR(1024)'],
                     ARRAY['phone_number', 'VARCHAR(20)'],
-                    ARRAY['response_type', 'VARCHAR(256)'],
+                    ARRAY['response_type', 'VARCHAR(1024)'],
                     ARRAY['from_source', 'VARCHAR(256)'],
                     ARRAY['form_created_at', 'TIMESTAMP'],
                     ARRAY['current_status', 'VARCHAR(1024)'],
