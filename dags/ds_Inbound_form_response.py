@@ -54,6 +54,7 @@ create_table = PostgresOperator(
 
 ensure_all_columns = PostgresOperator(
     task_id='ensure_all_columns',
+
     postgres_conn_id='postgres_result_db',
     sql="""
     DO $$
@@ -113,8 +114,6 @@ ensure_all_columns = PostgresOperator(
         ) THEN
             ALTER TABLE ds_inbound_form_filled ADD COLUMN form_created_at TIMESTAMP;
         END IF;
-
-        -- Repeat this pattern for all other columns:
 
         IF NOT EXISTS (
             SELECT 1 FROM information_schema.columns
@@ -213,13 +212,11 @@ ensure_all_columns = PostgresOperator(
         ) THEN
             ALTER TABLE ds_inbound_form_filled ADD COLUMN eligible BOOLEAN;
         END IF;
-
     END;
     $$;
     """,
     dag=dag
 )
-
 
 # 2. TRANSFORM DATA using postgres_read_replica
 def transform_and_extract(**context):
@@ -367,7 +364,6 @@ def insert_data(**context):
     rows = context['ti'].xcom_pull(key='transformed_rows', task_ids='transform_data')
     if not rows:
         return
-    rows = [row for row in rows if row[0] is not None]
     insert_sql = '''
         INSERT INTO ds_inbound_form_filled (
             form_id, user_id, full_name, email, phone_number, response_type, from_source,
@@ -393,8 +389,8 @@ insert_data = PythonOperator(
     dag=dag
 )
 
-# DAG Task Dependencies
 
 create_table >> ensure_all_columns >> transform_data >> insert_data
+
 
 

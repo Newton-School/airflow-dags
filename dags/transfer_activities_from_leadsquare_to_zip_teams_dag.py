@@ -34,7 +34,7 @@ def transfer_activities_from_leadsquare_to_zip_teams_nested(**kwargs):
             ACTIVITY_EVENT_NAME = "Inbound Phone Call Activity"
         else:
             break
-        url = f"{LEAD_SQUARED_URL}/v2/ProspectActivity.svc/Activity/Retrieve/BySearchParameter?accessKey={LEAD_SQUARED_ACCESS_KEY}&secretKey={LEAD_SQUARED_SECRET_KEY}"
+        activity_list_url = f"{LEAD_SQUARED_URL}/v2/ProspectActivity.svc/Activity/Retrieve/BySearchParameter?accessKey={LEAD_SQUARED_ACCESS_KEY}&secretKey={LEAD_SQUARED_SECRET_KEY}"
         advance_search = "{\"GrpConOp\":\"And\",\"Conditions\":[{\"Type\":\"Activity\",\"ConOp\":\"and\",\"RowCondition\":[{\"SubConOp\":\"And\",\"LSO\":\"ActivityEvent\",\"LSO_Type\":\"PAEvent\",\"Operator\":\"eq\",\"RSO\":\""+str(ACTIVITY_EVENT)+"\"},{\"SubConOp\":\"And\",\"LSO_Type\":\"DateTime\",\"LSO\":\"mx_Custom_2\",\"Operator\":\"between\",\"RSO\":\""+f"{today_utc} TO {today_utc}"+"\",\"RSO_IsMailMerged\":false},{\"SubConOp\":\"And\",\"LSO_Type\":\"DateTime\",\"LSO\":\"ActivityTime\",\"Operator\":\"eq\",\"RSO\":\"\"}]},{\"Type\":\"Activity\",\"ConOp\":\"and\",\"RowCondition\":[{\"SubConOp\":\"And\",\"LSO\":\"ActivityEvent\",\"LSO_Type\":\"PAEvent\",\"Operator\":\"eq\",\"RSO\":\""+str(ACTIVITY_EVENT)+"\"},{\"SubConOp\":\"And\",\"LSO_Type\":\"Dropdown\",\"LSO\":\"Status\",\"Operator\":\"eq\",\"RSO\":\"Answered\",\"RSO_IsMailMerged\":false},{\"SubConOp\":\"And\",\"LSO_Type\":\"DateTime\",\"LSO\":\"ActivityTime\",\"Operator\":\"eq\",\"RSO\":\"\"}]}],\"QueryTimeZone\":\"India Standard Time\"}"
         for index in range(6):
             payload = json.dumps(
@@ -49,7 +49,7 @@ def transfer_activities_from_leadsquare_to_zip_teams_nested(**kwargs):
                 }
             )
             headers = {"Content-Type": "application/json"}
-            response = requests.request("POST", url, headers=headers, data=payload)
+            response = requests.request("POST", activity_list_url, headers=headers, data=payload)
             if not len(response.json()["List"]):
                 break
             for activity in response.json()["List"]:
@@ -59,10 +59,20 @@ def transfer_activities_from_leadsquare_to_zip_teams_nested(**kwargs):
                 )
                 current_time_utc = datetime.utcnow()
                 time_difference = current_time_utc - modified_on_datetime
-                if not timedelta(hours=1) >= time_difference >= timedelta(0):
-                    print(f"Skipping as modified_on - {modified_on}")
+                if not timedelta(hours=4) >= time_difference >= timedelta(0):
+                    print(f"Skipping as modified_on - {modified_on} for ProspectActivityId: {activity['ProspectActivityId']} is not in the last 1 hour")
                     continue
-                print("Posting for ProspectActivityId: ", activity["ProspectActivityId"])
+                print("Posting for ProspectActivityId: ", activity["ProspectActivityId"], activity["mx_Custom_4"])
+                if not activity["mx_Custom_4"]:
+                    print(f"Skipping as for ProspectActivityId: {activity["ProspectActivityId"]} mx_Custom_4 is empty")
+                    continue
+                # getting prospect stage from leadsquared
+                prospect_stage = ''
+                lead_detail_url = f"{LEAD_SQUARED_URL}/v2/LeadManagement.svc/Leads.GetById?accessKey={LEAD_SQUARED_ACCESS_KEY}&secretKey={LEAD_SQUARED_SECRET_KEY}&id={activity["RelatedProspectId"]}"
+                response = requests.request("GET", lead_detail_url, headers=headers)
+                if len(response.json()):
+                    prospect_stage = response.json()[0]["ProspectStage"]
+                    print(f"Retriving for ProspectActivityId: {activity["ProspectActivityId"]} RelatedProspectId: {activity["RelatedProspectId"]} - prospect_stage: {prospect_stage}")
                 body_to_post = [
                     {
                         "ProspectActivityId": activity["ProspectActivityId"],
@@ -87,6 +97,7 @@ def transfer_activities_from_leadsquare_to_zip_teams_nested(**kwargs):
                             "Note": activity["Note"],
                             "mx_Custom_3": activity["mx_Custom_3"],
                             "mx_Custom_1": activity["mx_Custom_1"],
+                            "ProspectStage": prospect_stage,
                         },
                     }
                 ]
