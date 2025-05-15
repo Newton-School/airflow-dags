@@ -52,57 +52,58 @@ create_table = PostgresOperator(
     dag=dag
 )
 
-# 1.5 Ensure 'form_id' column exists
+# Ensure all columns exist in the table
 ensure_all_columns = PostgresOperator(
-    task_id='ensure_all_columns',
-    postgres_conn_id='postgres_result_db',
-    sql="""
+        task_id='ensure_all_columns',
+        postgres_conn_id='postgres_result_db',
+        sql="""
             DO $$
-    DECLARE
-        column_definitions text[][] := ARRAY[
-            ARRAY['form_id', 'INT'],
-            ARRAY['user_id', 'INT'],
-            ARRAY['full_name', 'VARCHAR(1024)'],
-            ARRAY['email', 'VARCHAR(1024)'],
-            ARRAY['phone_number', 'VARCHAR(20)'],
-            ARRAY['response_type', 'VARCHAR(256)'],
-            ARRAY['from_source', 'VARCHAR(256)'],
-            ARRAY['form_created_at', 'TIMESTAMP'],
-            ARRAY['current_status', 'VARCHAR(1024)'],
-            ARRAY['graduation_year', 'VARCHAR(1024)'],
-            ARRAY['highest_qualification', 'VARCHAR(1024)'],
-            ARRAY['graduation_degree', 'VARCHAR(1024)'],
-            ARRAY['current_job_role', 'VARCHAR(1024)'],
-            ARRAY['course_type_interested_in', 'VARCHAR(1024)'],
-            ARRAY['is_inquiry_for_data_science_certification', 'VARCHAR(1024)'],
-            ARRAY['user_date_joined', 'TIMESTAMP'],
-            ARRAY['utm_source', 'VARCHAR(1024)'],
-            ARRAY['utm_medium', 'VARCHAR(1024)'],
-            ARRAY['utm_campaign', 'VARCHAR(1024)'],
-            ARRAY['inbound_key', 'VARCHAR(1024)'],
-            ARRAY['first_action', 'VARCHAR(1024)'],
-            ARRAY['eligible', 'BOOLEAN']
-        ];
-        col_def text[];
-    BEGIN
-        FOREACH col_def SLICE 1 IN ARRAY column_definitions
-        LOOP
-            IF NOT EXISTS (
-                SELECT 1
-                FROM information_schema.columns
-                WHERE table_name = 'ds_inbound_form_filled'
-                AND column_name = col_def[1]
-            ) THEN
-                EXECUTE format('ALTER TABLE %I ADD COLUMN %I %s', 
-                              ds_inbound_form_filled, 
-                              col_def[1], 
-                              col_def[2]);
-            END IF;
-        END LOOP;
-    END;
-    $$;
+            DECLARE
+                target_table text := 'ds_inbound_form_filled';
+                column_definitions text[][] := ARRAY[
+                    ARRAY['form_id', 'INT'],
+                    ARRAY['user_id', 'INT'],
+                    ARRAY['full_name', 'VARCHAR(1024)'],
+                    ARRAY['email', 'VARCHAR(1024)'],
+                    ARRAY['phone_number', 'VARCHAR(20)'],
+                    ARRAY['response_type', 'VARCHAR(256)'],
+                    ARRAY['from_source', 'VARCHAR(256)'],
+                    ARRAY['form_created_at', 'TIMESTAMP'],
+                    ARRAY['current_status', 'VARCHAR(1024)'],
+                    ARRAY['graduation_year', 'VARCHAR(1024)'],
+                    ARRAY['highest_qualification', 'VARCHAR(1024)'],
+                    ARRAY['graduation_degree', 'VARCHAR(1024)'],
+                    ARRAY['current_job_role', 'VARCHAR(1024)'],
+                    ARRAY['course_type_interested_in', 'VARCHAR(1024)'],
+                    ARRAY['is_inquiry_for_data_science_certification', 'VARCHAR(1024)'],
+                    ARRAY['user_date_joined', 'TIMESTAMP'],
+                    ARRAY['utm_source', 'VARCHAR(1024)'],
+                    ARRAY['utm_medium', 'VARCHAR(1024)'],
+                    ARRAY['utm_campaign', 'VARCHAR(1024)'],
+                    ARRAY['inbound_key', 'VARCHAR(1024)'],
+                    ARRAY['first_action', 'VARCHAR(1024)'],
+                    ARRAY['eligible', 'BOOLEAN']
+                ];
+                col_def text[];
+            BEGIN
+                FOREACH col_def SLICE 1 IN ARRAY column_definitions
+                LOOP
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_name = target_table
+                        AND column_name = col_def[1]
+                    ) THEN
+                        EXECUTE format('ALTER TABLE %I ADD COLUMN %I %s', 
+                                      target_table, 
+                                      col_def[1], 
+                                      col_def[2]);
+                    END IF;
+                END LOOP;
+            END;
+            $$;
     """,
-    dag=dag
+        dag=dag
 )
 
 # 2. TRANSFORM DATA using postgres_read_replica
