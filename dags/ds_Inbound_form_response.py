@@ -59,7 +59,6 @@ ensure_all_columns = PostgresOperator(
     sql="""
             DO $$
     DECLARE
-        table_name text := 'ds_inbound_form_filled';
         column_definitions text[][] := ARRAY[
             ARRAY['form_id', 'INT'],
             ARRAY['user_id', 'INT'],
@@ -91,11 +90,11 @@ ensure_all_columns = PostgresOperator(
             IF NOT EXISTS (
                 SELECT 1
                 FROM information_schema.columns
-                WHERE table_name = table_name
+                WHERE table_name = ds_inbound_form_filled
                 AND column_name = col_def[1]
             ) THEN
                 EXECUTE format('ALTER TABLE %I ADD COLUMN %I %s', 
-                              table_name, 
+                              ds_inbound_form_filled, 
                               col_def[1], 
                               col_def[2]);
             END IF;
