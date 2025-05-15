@@ -53,19 +53,53 @@ create_table = PostgresOperator(
 )
 
 # 1.5 Ensure 'form_id' column exists
-ensure_form_id_column = PostgresOperator(
-    task_id='ensure_form_id_column',
+ensure_all_columns = PostgresOperator(
+    task_id='ensure_all_columns',
     postgres_conn_id='postgres_result_db',
     sql="""
-    DO $$
+        DO $$
+    DECLARE
+        columns_to_add RECORD;
+        column_specs RECORD[] := ARRAY[
+            ROW(‘form_id’, ‘INT’, NULL)::RECORD,
+            ROW(‘user_id’, ‘INT’, NULL)::RECORD,
+            ROW(‘full_name’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘email’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘phone_number’, ‘VARCHAR(20)’, NULL)::RECORD,
+            ROW(‘response_type’, ‘VARCHAR(256)’, NULL)::RECORD,
+            ROW(‘from_source’, ‘VARCHAR(256)’, NULL)::RECORD,
+            ROW(‘form_created_at’, ‘TIMESTAMP’, NULL)::RECORD,
+            ROW(‘current_status’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘graduation_year’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘highest_qualification’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘graduation_degree’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘current_job_role’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘course_type_interested_in’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘is_inquiry_for_data_science_certification’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘user_date_joined’, ‘TIMESTAMP’, NULL)::RECORD,
+            ROW(‘utm_source’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘utm_medium’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘utm_campaign’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘inbound_key’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘first_action’, ‘VARCHAR(1024)’, NULL)::RECORD,
+            ROW(‘eligible’, ‘BOOLEAN’, NULL)::RECORD
+        ];
     BEGIN
-        IF NOT EXISTS (
-            SELECT 1
-            FROM information_schema.columns 
-            WHERE table_name='ds_inbound_form_filled' AND column_name='form_id'
-        ) THEN
-            ALTER TABLE ds_inbound_form_filled ADD COLUMN form_id INT;
-        END IF;
+        FOR columns_to_add IN
+            SELECT (column_specs[i]).* AS column_info
+            FROM generate_series(1, array_length(column_specs, 1)) AS i
+        LOOP
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = ‘ds_inbound_form_filled’
+                AND column_name = columns_to_add.column_info.f1
+            ) THEN
+                EXECUTE format(‘ALTER TABLE ds_inbound_form_filled ADD COLUMN %I %s’,
+                              columns_to_add.column_info.f1,
+                              columns_to_add.column_info.f2);
+            END IF;
+        END LOOP;
     END;
     $$;
     """,
@@ -246,5 +280,5 @@ insert_data = PythonOperator(
 
 # DAG Task Dependencies
 
-create_table >> ensure_form_id_column >> transform_data >> insert_data
+create_table >> ensure_all_columns >> transform_data >> insert_data
 
