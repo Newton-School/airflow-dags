@@ -1,4 +1,6 @@
 import json
+import re
+
 import pendulum
 from dataclasses import dataclass, asdict
 from typing import List, Union
@@ -69,14 +71,14 @@ def archive_user_upload_mappings(archive_from: datetime, archive_till: datetime,
         user_upload_mapping_created_at = user_upload_mapping.user_upload_created_at
         object_id = user_upload_mapping.object_id
         content_type = user_upload_mapping.content_type
-        archive_file_prefix = (f'{user_upload_mapping_created_at.year}/{user_upload_mapping_created_at.month}/'
-                               f'{user_upload_mapping_created_at.day}')
+        archive_file_prefix = (f'year={user_upload_mapping_created_at.year}/month={user_upload_mapping_created_at.month}/'
+                               f'day={user_upload_mapping_created_at.day}')
         json_data = json.dumps(
                 {'user_upload_mappings': [asdict(user_upload_mapping) for user_upload_mapping in user_upload_mappings]}, indent=4,
                 default=str
         )
         s3_bucket.put_object(
-                Key=f'{archive_file_prefix}/{content_type}/{object_id}.json',
+                Key=f'{archive_file_prefix}/content_type={content_type}/{object_id}.json',
                 Body=json_data,
                 ContentType='application/json'
         )
@@ -131,4 +133,37 @@ def archive_past_user_upload_mapping_dag():
     archive_user_upload_mappings_task()
 
 
+@dag(
+    dag_id='migrate_user_upload_mapping_path_dag',
+    schedule=None,
+    start_date=pendulum.datetime(2025, 5, 19, tz='UTC'),
+    catchup=False,
+)
+def migrate_user_upload_mapping_path_dag():
+    @task()
+    def migrate_paths():
+        bucket = get_s3_bucket()
+        pattern = re.compile(
+            r'(?P<year>\d{4})/(?P<month>\d{1,2})/(?P<day>\d{1,2})/(?P<content_type>\d+)/(?P<filename>.+\.json)$'
+        )
+        for obj in bucket.objects.all():
+            key = obj.key.lstrip('/')
+            m = pattern.match(key)
+            if not m:
+                continue
+            parts = m.groupdict()
+            new_key = (
+                f"year={parts['year']}/month={int(parts['month']):02}/"
+                f"day={int(parts['day']):02}/content_type={parts['content_type']}/"
+                f"{parts['filename']}"
+            )
+            # Copy and delete original
+            bucket.Object(new_key).copy_from(CopySource={'Bucket': bucket.name, 'Key': key})
+            # bucket.Object(key).delete()
+
+    migrate_paths()
+
+
+
 archive_past_user_upload_mapping_dag = archive_past_user_upload_mapping_dag()
+migrate_user_upload_mapping_path_dag = migrate_user_upload_mapping_path_dag()
