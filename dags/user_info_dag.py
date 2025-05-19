@@ -12,6 +12,7 @@ from typing import List, Optional, Tuple, Dict, Any
 
 import pendulum
 from airflow.decorators import dag, task
+from airflow.models import Param
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 # Configuration constants
@@ -266,6 +267,172 @@ AUTH_USER_QUERIES = {
         where 
             rank = 1 
             and user_id is not null
+    """,
+    "FETCH_USER_DATA_BACKFILL": """
+        with lead_type_table as(
+            select distinct 
+                user_id,
+                case when other_status is null then 'Fresh' else 'Deferred' end as lead_type
+            from(
+                with raw_data as (
+                    select
+                        courses_course.id as course_id,
+                        courses_course.title as batch_name,
+                        courses_course.start_timestamp,
+                        courses_course.end_timestamp,
+                        user_id,
+                        courses_courseusermapping.status,
+                        email
+                    from courses_courseusermapping
+                    join courses_course
+                        on courses_course.id = courses_courseusermapping.course_id 
+                        and courses_courseusermapping.status not in (13,14,18,27) 
+                        and courses_course.course_type in (1,6)
+                    join auth_user
+                        on auth_user.id = courses_courseusermapping.user_id
+                    where 
+                        date(courses_course.start_timestamp) < date(current_date)
+                        and courses_course.course_structure_id in (1,6,8,11,12,13,14,18,19,20,21,22,23,26,50,51,52,53,54,55,56,57,58,59,60,72,127,118,119,122,121)
+                        and unit_type like 'LEARNING'
+                ),
+                
+                non_studying as (
+                    select * 
+                    from raw_data
+                    where status in (11,30)
+                ),
+                    
+                studying as (
+                    select *
+                    from raw_data
+                    where status in (5,8,9)
+                )
+                    
+                select
+                    studying.*,
+                    non_studying.status as other_status,
+                    non_studying.course_id as other_course_id,
+                    non_studying.start_timestamp as other_st,
+                    non_studying.end_timestamp as other_et
+                from studying
+                left join non_studying 
+                    on non_studying.user_id = studying.user_id
+                group by 1,2,3,4,5,6,7,8,9,10,11
+            ) raw
+        ),
+        
+        t1 as(
+            select 
+                distinct auth_user.id as user_id,
+                auth_user.first_name,
+                auth_user.last_name,
+                auth_user.date_joined as date_joined,
+                auth_user.last_login as last_login,
+                auth_user.username,
+                auth_user.email,
+                users_userprofile.phone,
+                internationalization_city.name as current_location_city,
+                internationalization_state.name as current_location_state,
+                case when users_userprofile.gender = 1 then 'Male' 
+                     when users_userprofile.gender = 2 then 'Female' 
+                     when users_userprofile.gender = 3 then 'Other' end as gender,
+                users_userprofile.date_of_birth as date_of_birth,
+                (users_userprofile.utm_param_json -> 'utm_source') #>> '{}' AS utm_source, 
+                (users_userprofile.utm_param_json -> 'utm_medium') #>> '{}' AS utm_medium, 
+                (users_userprofile.utm_param_json -> 'utm_campaign') #>> '{}' AS utm_campaign,
+                (users_userprofile.utm_param_json -> 'utm_referer') #>> '{}' AS utm_referer,
+                (users_userprofile.utm_param_json -> 'utm_hash') #>> '{}' AS utm_hash,
+                (courses_courseusermapping.utm_param_json -> 'utm_source') #>> '{}' as latest_utm_source,
+                (courses_courseusermapping.utm_param_json -> 'utm_medium') #>> '{}' as latest_utm_medium,
+                (courses_courseusermapping.utm_param_json -> 'utm_campaign') #>> '{}' as latest_utm_campaign,
+                (courses_courseusermapping.utm_param_json -> 'utm_hash') #>> '{}' as latest_utm_hash,
+                courses_courseusermapping.created_at as latest_utm_timestamp,
+                A.grade as tenth_marks,
+                B.grade as twelfth_marks,
+                C.grade as bachelors_marks,
+                EXTRACT(YEAR FROM C.end_date) as bachelors_grad_year,
+                E.name as bachelors_degree,
+                F.name as bachelors_field_of_study,
+                D.grade as masters_marks,
+                EXTRACT(YEAR FROM D.end_date) as masters_grad_year,
+                M.name as masters_degree,
+                MF.name as masters_field_of_study,
+                lead_type_table.lead_type,
+                users_extendeduserprofile.graduation_year as graduation_year,
+                row_number() over(partition by auth_user.id order by date_joined) as rank
+            from auth_user 
+            left join (
+                select 
+                    user_id,
+                    utm_param_json,
+                    created_at
+                from (
+                    select 
+                        user_id,
+                        utm_param_json,
+                        created_at,
+                        row_number() over(partition by user_id order by created_at desc) as rn
+                    from courses_courseusermapping 
+                ) a
+                where rn = 1
+            ) courses_courseusermapping ON (courses_courseusermapping.user_id = auth_user.id) 
+            left join users_userprofile on users_userprofile.user_id = auth_user.id 
+            left join users_extendeduserprofile on users_extendeduserprofile.user_id = auth_user.id
+            left join internationalization_city on users_userprofile.city_id = internationalization_city.id 
+            left join internationalization_state on internationalization_state.id = internationalization_city.state_id
+            full JOIN users_education A ON (A.user_id = auth_user.id AND A.education_type = 1) 
+            full JOIN users_education B ON (B.user_id = auth_user.id AND B.education_type = 2 ) 
+            full JOIN users_education C ON (C.user_id = auth_user.id AND C.education_type = 3) 
+            full JOIN users_education D ON (D.user_id = auth_user.id AND D.education_type = 4) 
+            left join education_degree E on C.degree_id = E.id  
+            left join education_fieldofstudy F on C.field_of_study_id = F.id 
+            left join education_degree M on D.degree_id = M.id  
+            left join education_fieldofstudy MF on D.field_of_study_id = MF.id
+            left join lead_type_table on lead_type_table.user_id = auth_user.id
+            where 
+                -- Only process users updated in the last day
+                auth_user.id BETWEEN %s AND %s
+        )
+        
+        select 
+            user_id,
+            first_name,
+            last_name,
+            date_joined,
+            last_login,
+            username,
+            email,
+            phone,
+            current_location_city,
+            current_location_state,
+            gender,
+            date_of_birth,
+            utm_source,
+            utm_medium,
+            utm_campaign,
+            utm_referer,
+            utm_hash,
+            latest_utm_source,
+            latest_utm_medium,
+            latest_utm_campaign,
+            latest_utm_hash,
+            latest_utm_timestamp,
+            tenth_marks,
+            twelfth_marks,
+            bachelors_marks,
+            bachelors_grad_year,
+            bachelors_degree,
+            bachelors_field_of_study,
+            masters_marks,
+            masters_grad_year,
+            masters_degree,
+            masters_field_of_study,
+            lead_type,
+            graduation_year
+        from t1
+        where 
+            rank = 1 
+            and user_id is not null
     """
 }
 
@@ -295,6 +462,40 @@ FORM_RESPONSE_QUERIES = {
             marketing_genericformresponse
         WHERE
             created_at::date = (CURRENT_DATE - INTERVAL '1 day')::date
+            AND (
+                (response_json ? 'email' AND NULLIF(TRIM(response_json ->> 'email'), '') IS NOT NULL)
+                OR
+                ((response_json ? 'phone' AND NULLIF(TRIM(response_json ->> 'phone'), '') IS NOT NULL)
+                 OR
+                 (response_json ? 'phone_number' AND NULLIF(TRIM(response_json ->> 'phone_number'), '') IS NOT NULL))
+            )
+        ORDER BY 
+            created_at ASC
+    """,
+    "FETCH_FORM_RESPONSES_BACKFILL": """
+        SELECT
+            id,
+            created_at,
+            response_json ->> 'email' AS email,
+            COALESCE(response_json ->> 'phone', response_json ->> 'phone_number') AS phone,
+            response_json ->> 'first_name' AS first_name,
+            response_json ->> 'utm_source' AS utm_source,
+            response_json ->> 'utm_medium' AS utm_medium,
+            response_json ->> 'utm_campaign' AS utm_campaign,
+            response_json ->> 'utm_referer' AS utm_referer,
+            response_json ->> 'utm_hash' AS utm_hash,
+            response_json ->> 'graduation_year' AS graduation_year,
+            response_json ->> 'current_role' AS current_role,
+            response_json ->> 'current_status' AS current_status,
+            response_json ->> 'years_of_experience' AS years_of_experience,
+            response_json ->> 'course_type_interested_in' AS course_type_interested_in,
+            response_json ->> 'highest_qualification' AS highest_qualification,
+            response_json ->> '_degree' AS degree,
+            response_json ->> 'activity_event' AS activity_event
+        FROM
+            marketing_genericformresponse
+        WHERE
+            id BETWEEN %s AND %s
             AND (
                 (response_json ? 'email' AND NULLIF(TRIM(response_json ->> 'email'), '') IS NOT NULL)
                 OR
@@ -390,6 +591,11 @@ class UserInfoManager:
         """
         self.result_db_hook = result_db_hook
         self.source_db_hook = source_db_hook
+
+        # Backfill related fields
+        self.start_id = None
+        self.end_id = None
+
         logger.info("Initializing UserInfoManager")
 
     def create_tables(self) -> None:
@@ -426,11 +632,14 @@ class UserInfoManager:
             return result[0], result[1]
         return None, None
 
-    def process_auth_user_data(self) -> None:
+    def process_auth_user_data(self, backfill: bool = False) -> None:
         """Process user data from auth_user and related tables."""
         with self.source_db_hook.get_conn() as conn:
             with conn.cursor() as cursor:
-                cursor.execute(AUTH_USER_QUERIES["FETCH_RECENT_USER_DATA"])
+                if not backfill:
+                    cursor.execute(AUTH_USER_QUERIES["FETCH_RECENT_USER_DATA"])
+                else:
+                    cursor.execute(AUTH_USER_QUERIES["FETCH_USER_DATA_BACKFILL"], (self.start_id, self.end_id))
 
                 # Process in batches
                 batch = cursor.fetchmany(BATCH_SIZE)
@@ -518,11 +727,14 @@ class UserInfoManager:
 
         logger.info(f"Completed processing auth user data - {total_records} users in {batch_count} batches")
 
-    def process_form_response_data(self) -> None:
+    def process_form_response_data(self, backfill: bool = False) -> None:
         """Process data from marketing_genericformresponse."""
         with self.source_db_hook.get_conn() as conn:
             with conn.cursor() as cursor:
-                cursor.execute(FORM_RESPONSE_QUERIES["FETCH_RECENT_FORM_RESPONSES"])
+                if not backfill:
+                    cursor.execute(FORM_RESPONSE_QUERIES["FETCH_RECENT_FORM_RESPONSES"])
+                else:
+                    cursor.execute(FORM_RESPONSE_QUERIES["FETCH_FORM_RESPONSES_BACKFILL"], (self.start_id, self.end_id))
 
                 # Process in batches
                 form_responses = []
@@ -1068,6 +1280,92 @@ def unified_user_dag():
     return form_responses_processed
 
 
+@dag(
+    dag_id="unified_user_backfill_dag",
+    schedule=None,  # Backfill only
+    start_date=pendulum.datetime(2025, 5, 19, tz="UTC"),
+        catchup=False,
+    tags=["unified_user", "data_processing", "backfill"],
+    default_args={
+        "owner": "data_team",
+        "retries":1,
+        "retry_delay": pendulum.duration(minutes=5),
+    },
+        params={
+                "start_id": Param(0, type="integer", minimum=0),
+                "end_id": Param(1000, type="integer", minimum=0),
+                "source_type": Param("AUTH_USER", enum=["AUTH_USER", "FORM_RESPONSE"])
+        }
+)
+def unified_user_backfill_dag():
+    """DAG for backfilling user information."""
+
+    @task(task_id="create_tables")
+    def create_tables() -> bool:
+        """Create necessary tables if they don't exist."""
+        result_db_hook = PostgresHook(postgres_conn_id=RESULT_DATABASE_CONNECTION_ID)
+        source_db_hook = PostgresHook(postgres_conn_id=SOURCE_DATABASE_CONNECTION_ID)
+        manager = UserInfoManager(result_db_hook, source_db_hook)
+        manager.create_tables()
+        return True
+
+    @task(task_id="process_auth_user_data")
+    def process_auth_user_data(tables_created: bool, **context) -> bool:
+        """Process data from auth_user and related tables."""
+        if not tables_created:
+            raise ValueError("Table creation task failed")
+
+        params = context["params"]
+        start_id = params["start_id"]
+        end_id = params["end_id"]
+        source_type = params["source_type"]
+
+        if source_type != "AUTH_USER":
+            logger.info("Skipping auth_user processing as source_type is not AUTH_USER")
+            return True
+
+        result_db_hook = PostgresHook(postgres_conn_id=RESULT_DATABASE_CONNECTION_ID)
+        source_db_hook = PostgresHook(postgres_conn_id=SOURCE_DATABASE_CONNECTION_ID)
+        manager = UserInfoManager(result_db_hook, source_db_hook)
+        manager.start_id = start_id
+        manager.end_id = end_id
+        manager.process_auth_user_data(backfill=True)
+
+        return True
+
+    @task(task_id="process_form_responses")
+    def process_form_responses(auth_user_processed: bool, **context) -> bool:
+        """Process data from marketing_genericformresponse."""
+        if not auth_user_processed:
+            raise ValueError("Auth user processing task failed")
+
+        params = context["params"]
+        start_id = params["start_id"]
+        end_id = params["end_id"]
+        source_type = params["source_type"]
+
+        if source_type != "FORM_RESPONSE":
+            logger.info("Skipping form response processing as source_type is not FORM_RESPONSE")
+            return True
+
+        result_db_hook = PostgresHook(postgres_conn_id=RESULT_DATABASE_CONNECTION_ID)
+        source_db_hook = PostgresHook(postgres_conn_id=SOURCE_DATABASE_CONNECTION_ID)
+        manager = UserInfoManager(result_db_hook, source_db_hook)
+        manager.start_id = start_id
+        manager.end_id = end_id
+        manager.process_form_response_data(backfill=True)
+
+        return True
+
+    # Define the task dependencies
+    tables_created = create_tables()
+    auth_user_processed = process_auth_user_data(tables_created)
+    form_responses_processed = process_form_responses(auth_user_processed)
+
+    # Return final task for potential downstream dependencies
+    return form_responses_processed
+
+
 # Instantiate the DAG
 unified_user_dag_instance = unified_user_dag()
-
+unified_user_backfill_dag_instance = unified_user_backfill_dag()
