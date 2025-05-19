@@ -797,7 +797,7 @@ class UserInfoManager:
                         if (new_first_utm_timestamp is not None and
                             new_first_utm_timestamp is not None and
                             (existing_first_utm['timestamp'] is None or
-                             new_first_utm_timestamp < existing_first_utm['timestamp'])):
+                             new_first_utm_timestamp < normalize_timestamp(existing_first_utm['timestamp']))):
 
                             # Update first UTM with new earlier values
                             cursor.execute(
@@ -820,7 +820,7 @@ class UserInfoManager:
                             new_latest_utm_timestamp = normalize_timestamp(new_latest_utm_timestamp)
                         if (new_latest_utm_timestamp is not None and
                             (existing_latest_utm['timestamp'] is None or
-                             new_latest_utm_timestamp > existing_latest_utm['timestamp'])):
+                             new_latest_utm_timestamp > normalize_timestamp(existing_latest_utm['timestamp']))):
 
                             # Update latest UTM with new later values
                             cursor.execute(
