@@ -75,7 +75,8 @@ def archive_user_upload_mappings(archive_from: datetime, archive_till: datetime,
         archive_file_prefix = (f'data/year={user_upload_mapping_created_at.year}/month={user_upload_mapping_created_at.month}/'
                                f'day={user_upload_mapping_created_at.day}')
         json_data = json.dumps(
-                {'user_upload_mappings': [asdict(user_upload_mapping) for user_upload_mapping in user_upload_mappings]}, indent=4,
+                {'user_upload_mappings': [asdict(user_upload_mapping) for user_upload_mapping in user_upload_mappings]},
+                separators=(',', ':'),
                 default=str
         )
         s3_bucket.put_object(
