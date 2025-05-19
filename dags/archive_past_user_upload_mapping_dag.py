@@ -71,7 +71,7 @@ def archive_user_upload_mappings(archive_from: datetime, archive_till: datetime,
         user_upload_mapping_created_at = user_upload_mapping.user_upload_created_at
         object_id = user_upload_mapping.object_id
         content_type = user_upload_mapping.content_type
-        archive_file_prefix = (f'year={user_upload_mapping_created_at.year}/month={user_upload_mapping_created_at.month}/'
+        archive_file_prefix = (f'data/year={user_upload_mapping_created_at.year}/month={user_upload_mapping_created_at.month}/'
                                f'day={user_upload_mapping_created_at.day}')
         json_data = json.dumps(
                 {'user_upload_mappings': [asdict(user_upload_mapping) for user_upload_mapping in user_upload_mappings]}, indent=4,
@@ -144,7 +144,7 @@ def migrate_user_upload_mapping_path_dag():
     def migrate_paths():
         bucket = get_s3_bucket()
         pattern = re.compile(
-            r'(?P<year>\d{4})/(?P<month>\d{1,2})/(?P<day>\d{1,2})/(?P<content_type>\d+)/(?P<filename>.+\.json)$'
+            r'data/(?P<year>\d{4})/(?P<month>\d{1,2})/(?P<day>\d{1,2})/(?P<content_type>\d+)/(?P<filename>.+\.json)$'
         )
         for obj in bucket.objects.all():
             key = obj.key.lstrip('/')
@@ -153,7 +153,7 @@ def migrate_user_upload_mapping_path_dag():
                 continue
             parts = m.groupdict()
             new_key = (
-                f"year={parts['year']}/month={int(parts['month']):02}/"
+                f"data/year={parts['year']}/month={int(parts['month']):02}/"
                 f"day={int(parts['day']):02}/content_type={parts['content_type']}/"
                 f"{parts['filename']}"
             )
