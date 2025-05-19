@@ -9,6 +9,7 @@ import boto3
 from airflow.decorators import dag, task
 from airflow.models import Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from botocore.exceptions import ClientError
 from pendulum import datetime
 
 POSTGRES_CONNECTION_ID = 'postgres_read_replica'
@@ -164,6 +165,50 @@ def migrate_user_upload_mapping_path_dag():
     migrate_paths()
 
 
+@dag(
+    dag_id='reformat_user_upload_mapping_json_dag',
+    schedule=None,
+    start_date=pendulum.datetime(2025, 5, 19, tz='UTC'),
+    catchup=False,
+)
+def reformat_user_upload_mapping_json_dag():
+    @task()
+    def reformat_files():
+        bucket = get_s3_bucket()
+        pattern = re.compile(
+            r'data/year=\d{4}/month=\d{2}/day=\d{2}/content_type=\d+/\d+\.json$'
+        )
+
+        for obj in bucket.objects.filter(Prefix='data/'):
+            key = obj.key
+
+            if not pattern.match(key):
+                continue
+
+            try:
+                s3_obj = bucket.Object(key)
+                body = s3_obj.get()['Body'].read().decode('utf-8')
+
+                try:
+                    parsed = json.loads(body)
+                except json.JSONDecodeError as e:
+                    print(f"❌ Skipping malformed JSON in {key}: {e}")
+                    continue
+
+                compact_json = json.dumps(parsed, separators=(',', ':'), default=str)
+
+                s3_obj.put(
+                    Body=compact_json.encode('utf-8'),
+                    ContentType='application/json'
+                )
+                print(f"✅ Rewritten: {key}")
+
+            except ClientError as e:
+                print(f"❌ Failed to process {key}: {e}")
+
+    reformat_files()
+
 
 archive_past_user_upload_mapping_dag = archive_past_user_upload_mapping_dag()
 migrate_user_upload_mapping_path_dag = migrate_user_upload_mapping_path_dag()
+reformat_user_upload_mapping_json_dag = reformat_user_upload_mapping_json_dag()
