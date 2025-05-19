@@ -7,6 +7,7 @@ with UTM tracking, profile data, and form response data.
 """
 import logging
 import uuid
+from datetime import timezone
 from typing import List, Optional, Tuple, Dict, Any
 
 import pendulum
@@ -362,6 +363,15 @@ USER_INFO_QUERIES = {
         WHERE id = %s
     """
 }
+
+
+def normalize_timestamp(ts):
+    if ts is None:
+        return None
+    # If timestamp is naive (no timezone info), make it timezone-aware
+    if ts.tzinfo is None:
+        return ts.replace(tzinfo=timezone.utc)
+    return ts
 
 
 class UserInfoManager:
@@ -874,8 +884,8 @@ class UserInfoManager:
         """
         user_id = kwargs.get('user_id')
         identity_group_id = kwargs.get('identity_group_id')
-        first_utm_timestamp = kwargs.get('first_utm_timestamp')
-        latest_utm_timestamp = kwargs.get('latest_utm_timestamp')
+        first_utm_timestamp = normalize_timestamp(kwargs.get('first_utm_timestamp'))
+        latest_utm_timestamp = normalize_timestamp(kwargs.get('latest_utm_timestamp'))
 
         if not identity_group_id:
             return
@@ -896,7 +906,11 @@ class UserInfoManager:
                         # Only update UTMs if timestamps are appropriate
                         record_id = existing_record[0]
                         existing_latest_utm_timestamp = existing_record[1]
+                        if existing_latest_utm_timestamp:
+                            existing_latest_utm_timestamp = normalize_timestamp(existing_latest_utm_timestamp)
                         existing_first_utm_timestamp = existing_record[2]
+                        if existing_first_utm_timestamp:
+                            existing_first_utm_timestamp = normalize_timestamp(existing_first_utm_timestamp)
 
                         # Update first UTM if it's earlier than existing or no existing timestamp
                         if first_utm_timestamp is not None and (
