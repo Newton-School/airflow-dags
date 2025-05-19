@@ -108,7 +108,7 @@ def archive_user_upload_mappings(archive_from: datetime, archive_till: datetime,
         for entity_key in list(entity_user_upload_mapping.keys())[:-1]:
             user_upload_mappings = entity_user_upload_mapping.pop(entity_key)
             _archive_grouped_user_upload_mappings(user_upload_mappings)
-            rows = cursor.fetchmany(BATCH_SIZE)
+        rows = cursor.fetchmany(BATCH_SIZE)
 
     for entity_key in entity_user_upload_mapping:
         user_upload_mappings = entity_user_upload_mapping[entity_key]
