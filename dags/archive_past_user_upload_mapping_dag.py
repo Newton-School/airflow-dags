@@ -84,6 +84,7 @@ def archive_user_upload_mappings(archive_from: datetime, archive_till: datetime,
                 Body=json_data,
                 ContentType='application/json'
         )
+        print(f"Archived {len(user_upload_mappings)} user upload mappings to S3")
 
     retrieve_query = (f"SELECT uum.id AS id, uum.hash AS hash, uum.type AS type, uum.content_type_id AS content_type, "
                       f"uum.object_id AS object_id, uum.device_type AS device_type, uum.created_at AS created_at, "
@@ -98,22 +99,38 @@ def archive_user_upload_mappings(archive_from: datetime, archive_till: datetime,
     connection = postgres_hook.get_conn()
     cursor = connection.cursor()
     cursor.execute(retrieve_query)
-    rows = cursor.fetchmany(BATCH_SIZE)
 
+    total_processed = 0
+    max_entity_count = 1000  # Adjust based on your memory constraints
+
+    rows = cursor.fetchmany(BATCH_SIZE)
     while rows:
         for row in rows:
             user_upload_mapping = process_user_upload_mapping(row)
             key = _get_entity_key(user_upload_mapping)
             entity_user_upload_mapping.setdefault(key, []).append(user_upload_mapping)
-        for entity_key in list(entity_user_upload_mapping.keys())[:-1]:
-            user_upload_mappings = entity_user_upload_mapping.pop(entity_key)
-            _archive_grouped_user_upload_mappings(user_upload_mappings)
+            total_processed += 1
+
+        # Check if we need to clear some entities to prevent OOM
+        if len(entity_user_upload_mapping) > max_entity_count:
+            # Get the list of completed entities (all except potentially the last one)
+            last_processed_key = _get_entity_key(process_user_upload_mapping(rows[-1]))
+
+            # Archive all entities except the last one we processed
+            keys_to_process = [k for k in entity_user_upload_mapping.keys() if k != last_processed_key]
+            for entity_key in keys_to_process:
+                user_upload_mappings = entity_user_upload_mapping.pop(entity_key)
+                _archive_grouped_user_upload_mappings(user_upload_mappings)
+
+        # Fetch next batch - OUTSIDE the row processing loop
         rows = cursor.fetchmany(BATCH_SIZE)
 
+    # Process any remaining entities
     for entity_key in entity_user_upload_mapping:
         user_upload_mappings = entity_user_upload_mapping[entity_key]
         _archive_grouped_user_upload_mappings(user_upload_mappings)
 
+    print(f"Total records processed: {total_processed}")
     cursor.close()
     connection.close()
 
