@@ -101,8 +101,9 @@ def archive_user_upload_mappings(archive_from: datetime, archive_till: datetime,
     cursor.execute(retrieve_query)
 
     total_processed = 0
-    max_entity_count = 1000  # Adjust based on your memory constraints
+    max_entity_count = 10000  # Adjust based on your memory constraints
 
+    print(f"Processing user upload mappings from {archive_from} to {archive_till}")
     rows = cursor.fetchmany(BATCH_SIZE)
     while rows:
         for row in rows:
