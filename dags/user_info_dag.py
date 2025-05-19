@@ -792,6 +792,8 @@ class UserInfoManager:
                         # Handle first UTM update - only update if the new timestamp is earlier than existing
                         # or if existing is null
                         new_first_utm_timestamp = kwargs.get('first_utm_timestamp')
+                        if new_first_utm_timestamp is not None:
+                            new_first_utm_timestamp = normalize_timestamp(new_first_utm_timestamp)
                         if (new_first_utm_timestamp is not None and
                             new_first_utm_timestamp is not None and
                             (existing_first_utm['timestamp'] is None or
@@ -814,6 +816,8 @@ class UserInfoManager:
                         # Handle latest UTM update - only update if the new timestamp is later than existing
                         # or if existing is null
                         new_latest_utm_timestamp = kwargs.get('latest_utm_timestamp')
+                        if new_latest_utm_timestamp is not None:
+                            new_latest_utm_timestamp = normalize_timestamp(new_latest_utm_timestamp)
                         if (new_latest_utm_timestamp is not None and
                             (existing_latest_utm['timestamp'] is None or
                              new_latest_utm_timestamp > existing_latest_utm['timestamp'])):
