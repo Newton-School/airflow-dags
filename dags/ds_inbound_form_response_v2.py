@@ -158,7 +158,15 @@ WITH RankedResponses AS (
             m.id,
             m.response_type,
             m.created_at,
-            m.response_json->>'email' AS email,
+            m.response_json->>'email' AS raw_email,
+            m.response_json->'email'->>'value' AS nested_email,
+            CASE
+            WHEN m.response_json->>'email' LIKE '%value%' AND m.response_json->'email'->>'value' IS NOT NULL AND m.response_json->'email'->>'value' <> ''
+            THEN LEFT(m.response_json->'email'->>'value', 254)
+            WHEN m.response_json->>'email' IS NOT NULL
+            THEN LEFT(m.response_json->>'email', 254)
+            ELSE NULL
+            END AS email,
             m.response_json->>'full_name' AS full_name,
             m.response_json->>'phone_number' AS phone_number,
             m.response_json->>'current_status' AS current_status,
