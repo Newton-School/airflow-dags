@@ -81,7 +81,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[0],  # form_id (primary key)
                 transform_row[1],  # user_id
                 transform_row[2],  # full_name
-                transform_row[3],  # email
+                (transform_row[3] or '')[:254],  # email
                 transform_row[4],  # phone_number
                 transform_row[5],  # response_type
                 transform_row[6],  # from_source
@@ -158,7 +158,15 @@ WITH RankedResponses AS (
             m.id,
             m.response_type,
             m.created_at,
-            m.response_json->>'email' AS email,
+            m.response_json->>'email' AS raw_email,
+            m.response_json->'email'->>'value' AS nested_email,
+            CASE
+            WHEN m.response_json->>'email' LIKE '%value%' AND m.response_json->'email'->>'value' IS NOT NULL AND m.response_json->'email'->>'value' <> ''
+            THEN m.response_json->'email'->>'value'
+            WHEN m.response_json->>'email' IS NOT NULL
+            THEN m.response_json->>'email'
+            ELSE NULL
+            END AS email,
             m.response_json->>'full_name' AS full_name,
             m.response_json->>'phone_number' AS phone_number,
             m.response_json->>'current_status' AS current_status,
