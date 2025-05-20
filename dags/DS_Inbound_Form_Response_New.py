@@ -152,8 +152,9 @@ create_table = PostgresOperator(
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
-    sql='''WITH RankedResponses AS (
-            SELECT
+    sql='''
+        WITH RankedResponses AS (
+        SELECT 
             m.id,
             m.response_type,
             m.created_at,
@@ -171,7 +172,7 @@ transform_data = PostgresOperator(
             m.response_json->>'utm_medium' AS utm_medium,
             m.response_json->>'utm_campaign' AS utm_campaign,
             m.response_json->>'from' AS from_source,
-            CASE
+            CASE 
                 WHEN m.response_type = 'PUBLIC_WEBSITE_HOME_REQUEST_CALLBACK_FORM' AND m.response_json->>'course_type_interested_in' = 'ds' THEN 'RCB_HP'
                 WHEN m.response_type = 'PUBLIC_WEBSITE_DS_HOME_REQUEST_CALLBACK_FORM' AND m.response_json->>'from' = 'request_callback' THEN 'RCB_DS'
                 WHEN m.response_type = 'PUBLIC_WEBSITE_DS_HOME_REQUEST_CALLBACK_FORM' AND m.response_json->>'from' = 'ad_landing_page' THEN 'RCB_ALP'
@@ -213,10 +214,10 @@ transform_data = PostgresOperator(
             'ERP_PREVIOUS_YEAR_EXAM_FORM',
             'HEADSTART_COURSE_SELECTOR',
             'PUBLIC_WEBSITE_CHATBOT'
-        )
+        ) AND m.created_at >= CURRENT_DATE - INTERVAL '1 year'
     ),
     UserSignIn AS (
-        SELECT
+        SELECT 
             au.email,
             uup.phone,
             au.id,
@@ -252,22 +253,22 @@ transform_data = PostgresOperator(
             r.utm_medium,
             r.utm_campaign,
             r.inbound_key,
-            CASE
+            CASE 
                 WHEN u.date_joined < r.created_at THEN 'Signed In First'
                 ELSE 'Filled Form First'
             END AS first_action,
-            CASE
-                WHEN r.graduation_year ~ '^\d+$'
+            CASE 
+                WHEN r.graduation_year ~ '^\d+$' 
                     AND (CAST(r.graduation_year AS INT) BETWEEN 2017 AND 2024)
-                    AND r.highest_qualification NOT IN ('12th','diploma')
-                    AND r.highest_qualification IS NOT NULL
-                THEN TRUE
-                ELSE FALSE
+                    AND r.highest_qualification NOT IN ('12th','diploma') 
+                    AND r.highest_qualification IS NOT NULL 
+                THEN TRUE 
+                ELSE FALSE 
             END AS eligible
         FROM RankedResponses r
         LEFT JOIN UserSignIn u ON r.email = u.email
         WHERE (
-            CASE
+            CASE 
                 WHEN u.date_joined < r.created_at THEN 'Signed In First'
                 ELSE 'Filled Form First'
             END
