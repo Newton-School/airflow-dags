@@ -27,7 +27,7 @@ def extract_data_to_nested(**kwargs):
         # Insert with form_id as primary key (no id column)
         pg_cursor.execute(
             '''
-            INSERT INTO DS_Inbound_form_response_New (
+            INSERT INTO ds_inbound_form_response_v2 (
                 form_id,
                 user_id,
                 full_name,
@@ -108,7 +108,7 @@ def extract_data_to_nested(**kwargs):
 
 
 dag = DAG(
-    'DS_Inbound_form_response_New',
+    'ds_inbound_form_response_v2',
     default_args=default_args,
     description='Create, transform, and load inbound form data',
     schedule_interval='7 */4 * * *',
@@ -120,28 +120,28 @@ create_table = PostgresOperator(
     task_id='create_table',
     postgres_conn_id='postgres_result_db',
     sql='''
-        CREATE TABLE IF NOT EXISTS DS_Inbound_form_response_New (
+        CREATE TABLE IF NOT EXISTS ds_inbound_form_response_v2 (
             form_id bigint PRIMARY KEY,
             user_id bigint,
-            full_name VARCHAR(100),
-            email VARCHAR(254),
+            full_name VARCHAR(255),
+            email VARCHAR(255),
             phone_number VARCHAR(20),
-            response_type VARCHAR(100),
-            from_source VARCHAR(100),
+            response_type VARCHAR(255),
+            from_source VARCHAR(255),
             form_created_at TIMESTAMP,
-            current_status VARCHAR(50),
-            graduation_year VARCHAR(100),
-            highest_qualification VARCHAR(100),
-            graduation_degree VARCHAR(100),
-            current_job_role VARCHAR(100),
-            course_type_interested_in VARCHAR(100),
-            is_inquiry_for_data_science_certification VARCHAR(10),
+            current_status VARCHAR(255),
+            graduation_year VARCHAR(255),
+            highest_qualification VARCHAR(255),
+            graduation_degree VARCHAR(255),
+            current_job_role VARCHAR(255),
+            course_type_interested_in VARCHAR(255),
+            is_inquiry_for_data_science_certification VARCHAR(255),
             user_date_joined TIMESTAMP,
-            utm_source VARCHAR(100),
-            utm_medium VARCHAR(100),
-            utm_campaign VARCHAR(100),
-            inbound_key VARCHAR(50),
-            first_action VARCHAR(1024),
+            utm_source VARCHAR(255),
+            utm_medium VARCHAR(255),
+            utm_campaign VARCHAR(255),
+            inbound_key VARCHAR(255),
+            first_action VARCHAR(255),
             eligible BOOLEAN
         );
     ''',
