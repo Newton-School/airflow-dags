@@ -220,7 +220,7 @@ WITH RankedResponses AS (
             'ERP_PREVIOUS_YEAR_EXAM_FORM',
             'HEADSTART_COURSE_SELECTOR',
             'PUBLIC_WEBSITE_CHATBOT'
-        ) AND m.created_at >= CURRENT_DATE - INTERVAL '1 year'
+        ) AND m.created_at >= CURRENT_DATE - INTERVAL '1 day'
     ),
     UserSignIn AS (
         SELECT 
