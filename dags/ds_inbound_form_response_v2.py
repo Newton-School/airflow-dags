@@ -220,7 +220,7 @@ WITH RankedResponses AS (
             'ERP_PREVIOUS_YEAR_EXAM_FORM',
             'HEADSTART_COURSE_SELECTOR',
             'PUBLIC_WEBSITE_CHATBOT'
-        ) AND m.created_at >= CURRENT_DATE - INTERVAL '1 day'
+        ) AND m.created_at >= CURRENT_DATE - INTERVAL '1 year'
     ),
     UserSignIn AS (
         SELECT 
@@ -273,12 +273,6 @@ WITH RankedResponses AS (
             END AS eligible
         FROM RankedResponses r
         LEFT JOIN UserSignIn u ON r.email = u.email
-        WHERE (
-            CASE 
-                WHEN u.date_joined < r.created_at THEN 'Signed In First'
-                ELSE 'Filled Form First'
-            END
-        ) = 'Filled Form First'
     )
     SELECT * FROM FinalResult;
     ''',
