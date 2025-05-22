@@ -82,7 +82,7 @@ def extract_data_to_nested(**kwargs):
                 transform_row[1],  # user_id
                 transform_row[2],  # full_name
                 (transform_row[3] or '')[:254],
-                transform_row[4],  # phone_number
+                (transform_row[4] or '')[:19],  # phone_number
                 transform_row[5],  # response_type
                 transform_row[6],  # from_source
                 transform_row[7],  # form_created_at
