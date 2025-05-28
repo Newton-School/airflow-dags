@@ -26,8 +26,8 @@ CREATE_COURSE_STRUCTURE_X_USER_INFO_TABLE_QUERY = """
             unified_user_id INTEGER REFERENCES unified_user(id) ON DELETE CASCADE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            counter INTEGER DEFAULT 1,
-            latest_counter_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            counter INTEGER DEFAULT 0,
+            latest_counter_updated_at TIMESTAMP,
             
             -- Apply form and generic form responses
             current_work TEXT,
