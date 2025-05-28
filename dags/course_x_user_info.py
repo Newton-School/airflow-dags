@@ -163,7 +163,6 @@ SELECT
     courseusertimelineflowmapping.apply_form_question_set as courseusertimelineflow_mapping_apply_form_question_set,
     courseusertimelineflowmapping.apply_form_version as course_user_timeline_flow_mapping_apply_form_version,
     authuser.email as user_email,
-    userprofile.id as user_profile_id,
     userprofile.phone as user_profile_phone,
     -- Extract form responses from JSON
     fr.responses->>'53' as current_work,
