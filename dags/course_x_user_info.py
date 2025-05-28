@@ -397,7 +397,7 @@ def course_x_user_info():
         # Build final mapping for each record
         result_map = {}
         for i, record in enumerate(batch_data):
-            user_id, email, phone = record[3], record[12], record[14]
+            user_id, email, phone = record[3], record[12], record[13]
             key = f"{i}_{user_id}_{email}_{phone}"
 
             # Check in priority order
