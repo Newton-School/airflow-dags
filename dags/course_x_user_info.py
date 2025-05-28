@@ -123,8 +123,8 @@ CREATE_INDEXES_QUERY = """
         ON course_x_user_info(course_user_mapping_id);
         
         -- Indexes for unified_user lookups (if not already created)
-        CREATE INDEX IF NOT EXISTS idx_unified_user_original_user_id 
-        ON unified_user(original_user_id) WHERE original_user_id IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS idx_unified_user_user_id 
+        ON unified_user(user_id) WHERE user_id IS NOT NULL;
         
         CREATE INDEX IF NOT EXISTS idx_unified_user_phone 
         ON unified_user(phone) WHERE phone IS NOT NULL;
@@ -238,7 +238,7 @@ WHERE courseuserapplyformmapping.created_at >= CAST((NOW() + INTERVAL '-7 day') 
     default_args={
         "owner": "data_team",
         "retries": 1,
-        "retry_delay": pendulum.duration(minutes=5),
+        "retry_delay": pendulum.duration(minutes=1),
     }
 )
 def course_x_user_info():
@@ -342,9 +342,9 @@ def course_x_user_info():
             user_ids_list = list(user_ids)
             placeholders = ','.join(['%s'] * len(user_ids_list))
             query = f"""
-                SELECT original_user_id, id 
+                SELECT user_id, id 
                 FROM unified_user 
-                WHERE original_user_id IN ({placeholders})
+                WHERE user_id IN ({placeholders})
             """
             results = hook.get_records(query, parameters=user_ids_list)
             for user_id, unified_id in results:
@@ -360,9 +360,9 @@ def course_x_user_info():
                 WHERE phone IN ({placeholders})
                   AND phone NOT IN (
                     SELECT phone FROM unified_user 
-                    WHERE original_user_id IN (
-                        SELECT original_user_id FROM unified_user 
-                        WHERE original_user_id IS NOT NULL
+                    WHERE user_id IN (
+                        SELECT user_id FROM unified_user 
+                        WHERE user_id IS NOT NULL
                     )
                   )
             """
@@ -380,9 +380,9 @@ def course_x_user_info():
                 WHERE email IN ({placeholders})
                   AND email NOT IN (
                     SELECT email FROM unified_user 
-                    WHERE original_user_id IN (
-                        SELECT original_user_id FROM unified_user 
-                        WHERE original_user_id IS NOT NULL
+                    WHERE user_id IN (
+                        SELECT user_id FROM unified_user 
+                        WHERE user_id IS NOT NULL
                     )
                     OR phone IN (
                         SELECT phone FROM unified_user 
