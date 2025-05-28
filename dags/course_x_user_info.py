@@ -5,7 +5,7 @@ and stores it in the 'results' database with improved performance and resource m
 
 import logging
 import pendulum
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.exceptions import AirflowException
@@ -62,8 +62,8 @@ CREATE_COURSE_X_USER_INFO_TABLE_QUERY = """
             coursestructure_slug VARCHAR(255),
             coursestructure_id BIGINT NOT NULL,
             course_user_timeline_flowmapping_id BIGINT,
-            course_user_timeline_flow_mapping_course_timeline_flow INTEGER NOT NULL,
-            courseusertimelineflow_mapping_apply_form_question_set INTEGER NOT NULL,
+            course_user_timeline_flow_mapping_course_timeline_flow INTEGER,
+            courseusertimelineflow_mapping_apply_form_question_set INTEGER,
             course_user_timeline_flow_mapping_apply_form_version INTEGER,
             email VARCHAR(255),
             phone VARCHAR(20),
@@ -467,12 +467,11 @@ def course_x_user_info():
             batch_insert_course_user_data(hook, insert_records)
             stats['inserted'] = len(insert_records)
 
-            # Update counters for new records
-            update_course_structure_counters(hook, insert_records)
-
         if update_records:
             batch_update_course_user_data(hook, update_records)
             stats['updated'] = len(update_records)
+
+        update_course_structure_counters(hook, insert_records, update_records)
 
         return stats
 
@@ -700,38 +699,99 @@ def course_x_user_info():
 
             hook.run(update_query, parameters=batch_ids)
 
-    def update_course_structure_counters(hook, new_records: List):
-        """Update counters for course_structure_x_user_info for new records."""
-        if not new_records:
-            return
+    def update_course_structure_counters(
+            hook,
+            created_records: List[List[Any]],
+            updated_records: List[List[Any]]
+    ):
+        """Update course_structure_x_user_info for new and updated mappings.
 
-        # Group by course_structure_x_user_info_id
-        counter_updates = {}
-        for record in new_records:
-            structure_info_id = record[32]  # course_structure_x_user_info_id
-            if structure_info_id:
-                counter_updates[structure_info_id] = counter_updates.get(structure_info_id, 0) + 1
-
-        if not counter_updates:
-            return
-
-        # Build batch update query
-        case_parts = []
-        ids = []
-        for structure_id, increment in counter_updates.items():
-            case_parts.append(f"WHEN id = {structure_id} THEN counter + {increment}")
-            ids.append(structure_id)
-
-        placeholders = ','.join(['%s'] * len(ids))
-        update_query = f"""
-            UPDATE course_structure_x_user_info
-            SET counter = CASE {' '.join(case_parts)} END,
-                latest_counter_updated_at = CURRENT_TIMESTAMP,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id IN ({placeholders})
+        - `created_records`: records newly inserted; increment counters and possibly update response fields.
+        - `updated_records`: existing mapping changes; update response fields and timestamp without changing counter.
         """
 
-        hook.run(update_query, parameters=ids)
+        # Helper to aggregate by structure_id
+        def aggregate(records, inc_flag: bool):
+            aggregates = {}
+            for rec in records:
+                created_at = rec[1]
+                struct_id = rec[32]
+                resp = {
+                        'current_work': rec[15], 'yearly_salary': rec[16],
+                        'bachelor_qualification': rec[17], 'date_of_birth': rec[18],
+                        'twelfth_passing_marks': rec[19], 'graduation_year': rec[20],
+                        'data_science_joining_reason': rec[21], 'current_city': rec[22],
+                        'surety_on_learning_ds': rec[23], 'how_soon_you_can_join': rec[24],
+                        'where_you_get_to_know_about_ns': rec[25], 'work_experience': rec[26],
+                        'given_any_of_following_exam': rec[27], 'department_worked_on': rec[28],
+                }
+                entry = aggregates.setdefault(
+                    struct_id, {
+                                'inc': 0,
+                                'latest': created_at,
+                                'responses': resp
+                        }
+                    )
+                if inc_flag:
+                    entry['inc'] += 1
+                # Always refresh if this record is newer
+                if created_at > entry['latest']:
+                    entry['latest'] = created_at
+                    entry['responses'] = resp
+            return aggregates
+
+        # Build aggregates
+        new_aggs = aggregate(created_records, inc_flag=True)
+        upd_aggs = aggregate(updated_records, inc_flag=False)
+
+        # Merge updated-only into new if same id
+        for sid, u in upd_aggs.items():
+            if sid in new_aggs:
+                # merge: keep inc from new, but possibly refresh latency and responses
+                if u['latest'] > new_aggs[sid]['latest']:
+                    new_aggs[sid]['latest'] = u['latest']
+                    new_aggs[sid]['responses'] = u['responses']
+            else:
+                new_aggs[sid] = u
+
+        if not new_aggs:
+            return
+
+        # Prepare batch VALUES
+        values, params = [], []
+        fields = [
+                'current_work', 'yearly_salary', 'bachelor_qualification', 'date_of_birth',
+                'twelfth_passing_marks', 'graduation_year', 'data_science_joining_reason',
+                'current_city', 'surety_on_learning_ds', 'how_soon_you_can_join',
+                'where_you_get_to_know_about_ns', 'work_experience',
+                'given_any_of_following_exam', 'department_worked_on'
+        ]
+        for sid, agg in new_aggs.items():
+            row = [sid, agg['inc'], agg['latest']]
+            for f in fields:
+                row.append(agg['responses'][f])
+            values.append("(" + ",".join(["%s"] * len(row)) + ")")
+            params.extend(row)
+
+        values_clause = ",".join(values)
+        sql = f"""
+        WITH updates (id, inc, new_ts, {', '.join(fields)}) AS (
+            VALUES {values_clause}
+        )
+        UPDATE course_structure_x_user_info cs
+        SET
+            counter = cs.counter + updates.inc,
+            latest_counter_updated_at = GREATEST(cs.latest_counter_updated_at, updates.new_ts),
+            updated_at = CURRENT_TIMESTAMP,
+            {', '.join(
+                [
+                        f"{f} = CASE WHEN updates.new_ts > cs.latest_counter_updated_at THEN updates.{f} ELSE cs.{f} END" for f in fields
+                ]
+        )}
+        FROM updates
+        WHERE cs.id = updates.id;
+        """
+        hook.run(sql, parameters=params)
 
     # Define task dependencies
     create_tables_task = create_tables_if_not_exists()
