@@ -331,8 +331,8 @@ def course_x_user_info():
                 user_ids.add(record[3])
             if record[12]:  # email
                 emails.add(record[12])
-            if record[14]:  # phone
-                phones.add(record[14])
+            if record[13]:  # phone
+                phones.add(record[13])
 
         # Build the query with three separate lookups
         lookup_map = {}
@@ -434,7 +434,7 @@ def course_x_user_info():
         for i, record in enumerate(batch_data):
             user_id = record[3]
             email = record[12]
-            phone = record[14]
+            phone = record[13]
             course_user_mapping_id = record[2]
             coursestructure_id = record[7]
 
@@ -504,7 +504,7 @@ def course_x_user_info():
         for i, record in enumerate(batch_data):
             user_id = record[3]
             email = record[12]
-            phone = record[14]
+            phone = record[13]
             coursestructure_id = record[7]
 
             lookup_key = f"{i}_{user_id}_{email}_{phone}"
@@ -642,24 +642,24 @@ def course_x_user_info():
             (11, 'course_user_timeline_flow_mapping_apply_form_version'),
             (12, 'email'),
             (13, 'phone'),
-            (15, 'current_work'),
-            (16, 'yearly_salary'),
-            (17, 'bachelor_qualification'),
-            (18, 'date_of_birth'),
-            (19, 'twelfth_passing_marks'),
-            (20, 'graduation_year'),
-            (21, 'data_science_joining_reason'),
-            (22, 'current_city'),
-            (23, 'surety_on_learning_ds'),
-            (24, 'how_soon_you_can_join'),
-            (25, 'where_you_get_to_know_about_ns'),
-            (26, 'work_experience'),
-            (27, 'given_any_of_following_exam'),
-            (28, 'department_worked_on'),
-            (29, 'max_all_test_cases_passed'),
-            (30, 'max_assessment_marks'),
-            (31, 'unified_user_id'),
-            (32, 'course_structure_x_user_info_id')
+            (14, 'current_work'),
+            (15, 'yearly_salary'),
+            (16, 'bachelor_qualification'),
+            (17, 'date_of_birth'),
+            (18, 'twelfth_passing_marks'),
+            (19, 'graduation_year'),
+            (20, 'data_science_joining_reason'),
+            (21, 'current_city'),
+            (22, 'surety_on_learning_ds'),
+            (23, 'how_soon_you_can_join'),
+            (24, 'where_you_get_to_know_about_ns'),
+            (25, 'work_experience'),
+            (26, 'given_any_of_following_exam'),
+            (27, 'department_worked_on'),
+            (28, 'max_all_test_cases_passed'),
+            (29, 'max_assessment_marks'),
+            (30, 'unified_user_id'),
+            (31, 'course_structure_x_user_info_id')
         ]
 
         # Execute updates in batches
@@ -715,15 +715,15 @@ def course_x_user_info():
             aggregates = {}
             for rec in records:
                 created_at = rec[1]
-                struct_id = rec[32]
+                struct_id = rec[31]
                 resp = {
-                        'current_work': rec[15], 'yearly_salary': rec[16],
-                        'bachelor_qualification': rec[17], 'date_of_birth': rec[18],
-                        'twelfth_passing_marks': rec[19], 'graduation_year': rec[20],
-                        'data_science_joining_reason': rec[21], 'current_city': rec[22],
-                        'surety_on_learning_ds': rec[23], 'how_soon_you_can_join': rec[24],
-                        'where_you_get_to_know_about_ns': rec[25], 'work_experience': rec[26],
-                        'given_any_of_following_exam': rec[27], 'department_worked_on': rec[28],
+                        'current_work': rec[14], 'yearly_salary': rec[15],
+                        'bachelor_qualification': rec[16], 'date_of_birth': rec[17],
+                        'twelfth_passing_marks': rec[18], 'graduation_year': rec[19],
+                        'data_science_joining_reason': rec[20], 'current_city': rec[21],
+                        'surety_on_learning_ds': rec[22], 'how_soon_you_can_join': rec[23],
+                        'where_you_get_to_know_about_ns': rec[24], 'work_experience': rec[25],
+                        'given_any_of_following_exam': rec[26], 'department_worked_on': rec[27],
                 }
                 entry = aggregates.setdefault(
                     struct_id, {
