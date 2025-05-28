@@ -9,6 +9,7 @@ from typing import List, Dict, Optional
 from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.exceptions import AirflowException
+from psycopg2._json import Json
 
 # Configuration constants
 RESULT_DATABASE_CONNECTION_ID = "postgres_result_db"
@@ -610,7 +611,13 @@ def course_x_user_info():
 
             for record in batch:
                 values_list.append(values_template)
-                params.extend(record)
+                processed_record = []
+                for _, value in enumerate(record):
+                    if isinstance(value, dict):
+                        processed_record.append(Json(value))
+                    else:
+                        processed_record.append(value)
+                params.extend(processed_record)
 
             final_query = insert_query.replace(values_template, ','.join(values_list))
             hook.run(final_query, parameters=params)
