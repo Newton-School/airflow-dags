@@ -785,7 +785,7 @@ def course_x_user_info():
             updated_at = CURRENT_TIMESTAMP,
             {', '.join(
                 [
-                        f"{f} = CASE WHEN updates.new_ts > cs.latest_counter_updated_at THEN updates.{f} ELSE cs.{f} END" for f in fields
+                        f"{f} = CASE WHEN cs.latest_counter_updated_at IS NULL OR updates.new_ts > cs.latest_counter_updated_at THEN updates.{f} ELSE cs.{f} END" for f in fields
                 ]
         )}
         FROM updates
