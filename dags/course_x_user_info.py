@@ -9,7 +9,7 @@ from typing import List, Dict, Optional
 from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.exceptions import AirflowException
-from psycopg2._json import Json
+from psycopg2.extras import Json, execute_values
 
 # Configuration constants
 RESULT_DATABASE_CONNECTION_ID = "postgres_result_db"
@@ -557,70 +557,68 @@ def course_x_user_info():
 
         return result
 
-    def batch_insert_course_user_data(hook, records: List):
+    def batch_insert_course_user_data(hook, records):
         """Efficiently insert multiple records."""
         if not records:
             return
 
-        # Build VALUES clause
-        values_template = "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, " \
-                         "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        # Process records to handle JSON fields
+        processed_records = []
+        for record in records:
+            processed_record = []
+            for i, value in enumerate(record):
+                # Index 4 is course_user_mapping_utm_param_json (JSONB field)
+                if i == 4 and isinstance(value, dict):
+                    processed_record.append(Json(value))
+                else:
+                    processed_record.append(value)
+            processed_records.append(tuple(processed_record))
 
-        insert_query = f"""
-            INSERT INTO course_x_user_info (
-                course_user_apply_form_mapping_id,
-                course_user_apply_form_mapping_created_at,
-                course_user_mapping_id,
-                user_id,
-                course_user_mapping_utm_param_json,
-                course_id,
-                coursestructure_slug,
-                coursestructure_id,
-                course_user_timeline_flowmapping_id,
-                course_user_timeline_flow_mapping_course_timeline_flow,
-                courseusertimelineflow_mapping_apply_form_question_set,
-                course_user_timeline_flow_mapping_apply_form_version,
-                email,
-                phone,
-                current_work,
-                yearly_salary,
-                bachelor_qualification,
-                date_of_birth,
-                twelfth_passing_marks,
-                graduation_year,
-                data_science_joining_reason,
-                current_city,
-                surety_on_learning_ds,
-                how_soon_you_can_join,
-                where_you_get_to_know_about_ns,
-                work_experience,
-                given_any_of_following_exam,
-                department_worked_on,
-                max_all_test_cases_passed,
-                max_assessment_marks,
-                unified_user_id,
-                course_structure_x_user_info_id
-            ) VALUES {values_template}
+        insert_query = """
+           INSERT INTO course_x_user_info (
+               course_user_apply_form_mapping_id,
+               course_user_apply_form_mapping_created_at,
+               course_user_mapping_id,
+               user_id,
+               course_user_mapping_utm_param_json,
+               course_id,
+               coursestructure_slug,
+               coursestructure_id,
+               course_user_timeline_flowmapping_id,
+               course_user_timeline_flow_mapping_course_timeline_flow,
+               courseusertimelineflow_mapping_apply_form_question_set,
+               course_user_timeline_flow_mapping_apply_form_version,
+               email,
+               phone,
+               current_work,
+               yearly_salary,
+               bachelor_qualification,
+               date_of_birth,
+               twelfth_passing_marks,
+               graduation_year,
+               data_science_joining_reason,
+               current_city,
+               surety_on_learning_ds,
+               how_soon_you_can_join,
+               where_you_get_to_know_about_ns,
+               work_experience,
+               given_any_of_following_exam,
+               department_worked_on,
+               max_all_test_cases_passed,
+               max_assessment_marks,
+               unified_user_id,
+               course_structure_x_user_info_id
+           )
+           VALUES %s
         """
 
-        # Execute in smaller batches to avoid query size limits
-        for i in range(0, len(records), 100):
-            batch = records[i:i+100]
-            values_list = []
-            params = []
-
-            for record in batch:
-                values_list.append(values_template)
-                processed_record = []
-                for _, value in enumerate(record):
-                    if isinstance(value, dict):
-                        processed_record.append(Json(value))
-                    else:
-                        processed_record.append(value)
-                params.extend(processed_record)
-
-            final_query = insert_query.replace(values_template, ','.join(values_list))
-            hook.run(final_query, parameters=params)
+        # Execute in smaller batches
+        for i in range(0, len(processed_records), 100):
+            batch = processed_records[i:i + 100]
+            with hook.get_conn() as conn:
+                with conn.cursor() as cursor:
+                    execute_values(cursor, insert_query, batch)
+                    conn.commit()
 
     def batch_update_course_user_data(hook, records: List):
         """Efficiently update multiple records using CASE statements."""
