@@ -962,7 +962,7 @@ class UserInfoManager:
                                 'tenth_marks', 'twelfth_marks', 'bachelors_marks', 'bachelors_grad_year',
                                 'bachelors_degree', 'bachelors_field_of_study', 'masters_marks',
                                 'masters_grad_year', 'masters_degree', 'masters_field_of_study',
-                                'lead_type'
+                                'lead_type', 'user_id'
                             ]:
                                 if kwargs.get(key) is not None:
                                     fields.append(f"{key} = %s")
