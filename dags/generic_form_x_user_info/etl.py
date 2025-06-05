@@ -118,9 +118,9 @@ def load_data(fetch_batch: int = 2000, insert_batch: int = 1000):
         prepared: List[Tuple] = []
         for row in rows:
             uid = (
-                    uid_map.get(("user_id", r["user_id"]))
-                    or uid_map.get(("phone", r["phone"]))
-                    or uid_map.get(("email", r["email"]))
+                    uid_map.get(("user_id", row["user_id"]))
+                    or uid_map.get(("phone", row["phone"]))
+                    or uid_map.get(("email", row["email"]))
             )
             if not uid:
                 log.warning(f"Skipping row with no unified user ID: {row}")
