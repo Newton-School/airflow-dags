@@ -28,74 +28,103 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 FETCH_SQL = """
-/* STEP 0 – get primary keys only, so all other joins see at most %(limit)s rows */
-WITH ids AS (
+WITH
+/* ---------------------------------------------------------------------------
+ * STEP 0  – limit every downstream join to at most %(limit)s rows
+ * ------------------------------------------------------------------------ */
+ids AS (
     SELECT id, course_user_mapping_id, created_at
-    FROM apply_forms_courseuserapplyformmapping
-    WHERE created_at >= (CURRENT_DATE - INTERVAL '7 day')
-      AND created_at <  CURRENT_DATE
-    ORDER BY id
-    LIMIT %(limit)s OFFSET %(offset)s
+    FROM   apply_forms_courseuserapplyformmapping
+    WHERE  created_at >= (CURRENT_DATE - INTERVAL '7 day')
+       AND created_at <  CURRENT_DATE
+    ORDER  BY id
+    LIMIT  %(limit)s OFFSET %(offset)s
+),
+
+/* ---------------------------------------------------------------------------
+ * STEP 1  – tiny in-memory table that maps question-IDs → descriptive keys
+ * ------------------------------------------------------------------------ */
+qmap(id, key) AS (
+    VALUES
+      (53 , 'current_work'),
+      (100, 'yearly_salary'),
+      (102, 'bachelor_qualification'),
+      (62 , 'date_of_birth'),
+      (110, '12th_passing_marks'),
+      (3  , 'graduation_year'),
+      (107, 'Data_science_joining_reason'),
+      (17 , 'current_city'),
+      (101, 'surety_on_learning_ds'),
+      (95 , 'how_soon_you_can_join'),
+      (104, 'where_you_get_to_know_about_NS'),
+      (97 , 'work_experience'),
+      (109, 'given_any_of_following_exam'),
+      (103, 'department_worked_on')
 )
 
+/* ---------------------------------------------------------------------------
+ * STEP 2  – full row payload
+ * ------------------------------------------------------------------------ */
 SELECT
-    cafm.id   AS course_user_apply_form_mapping_id,
+    cafm.id        AS course_user_apply_form_mapping_id,
     cafm.created_at,
-    cum.id    AS course_user_mapping_id,
+    cum.id         AS course_user_mapping_id,
     cum.user_id,
     au.email,
     up.phone,
     cum.course_id,
-    cs.slug   AS coursestructure_slug,
+    cs.slug        AS coursestructure_slug,
 
     mas.max_all_test_cases_passed,
-    asm.max_marks                     AS max_assessment_marks,
+    asm.max_marks  AS max_assessment_marks,
 
-    /* per-row JSON aggregation – fast because it uses PK equality */
-    fr.responses                      AS form_responses
+    /* per-row JSON aggregation – string keys, one row at a time */
+    fr.responses   AS form_responses
 
-FROM ids
-JOIN apply_forms_courseuserapplyformmapping cafm USING (id)
+FROM  ids
+JOIN  apply_forms_courseuserapplyformmapping cafm USING (id)
 
-LEFT JOIN courses_courseusermapping cum   ON cum.id = cafm.course_user_mapping_id
-LEFT JOIN auth_user              au       ON au.id  = cum.user_id
-LEFT JOIN users_userprofile      up       ON up.user_id = au.id
-LEFT JOIN courses_course         c        ON c.id   = cum.course_id
-LEFT JOIN courses_coursestructure cs      ON cs.id  = c.course_structure_id
+LEFT JOIN courses_courseusermapping  cum ON cum.id      = cafm.course_user_mapping_id
+LEFT JOIN auth_user                  au  ON au.id       = cum.user_id
+LEFT JOIN users_userprofile          up  ON up.user_id  = au.id
+LEFT JOIN courses_course             c   ON c.id        = cum.course_id
+LEFT JOIN courses_coursestructure    cs  ON cs.id       = c.course_structure_id
 
-/* assignment MAX */
+/* assignment MAX, type 2 */
 LEFT JOIN (
     SELECT course_user_mapping_id,
            MAX(all_test_cases_passed_question_total_count)
-                 AS max_all_test_cases_passed
-    FROM assignments_assignmentcourseusermapping a
-    JOIN assignments_assignment b
-      ON b.id = a.assignment_id AND b.assignment_type = 2
-    GROUP BY course_user_mapping_id
+               AS max_all_test_cases_passed
+    FROM   assignments_assignmentcourseusermapping a
+    JOIN   assignments_assignment b
+           ON b.id = a.assignment_id
+          AND b.assignment_type = 2
+    GROUP  BY course_user_mapping_id
 ) mas ON mas.course_user_mapping_id = cum.id
 
-/* assessment MAX */
+/* assessment MAX, type 2 */
 LEFT JOIN (
     SELECT course_user_mapping_id,
            MAX(marks) AS max_marks
-    FROM assessments_courseuserassessmentmapping a
-    JOIN assessments_assessment b
-      ON b.id = a.assessment_id AND b.assessment_type = 2
-    GROUP BY course_user_mapping_id
+    FROM   assessments_courseuserassessmentmapping a
+    JOIN   assessments_assessment b
+           ON b.id = a.assessment_id
+          AND b.assessment_type = 2
+    GROUP  BY course_user_mapping_id
 ) asm ON asm.course_user_mapping_id = cum.id
 
-/* on-the-fly JSON aggregation for *this* row */
+/* on-the-fly JSON aggregation for THIS row only */
 LEFT JOIN LATERAL (
     SELECT jsonb_object_agg(
-               afqm.apply_form_question_id::text,
+               qmap.key,               -- ← human-readable key
                cuafqm.response
            ) AS responses
-    FROM apply_forms_courseuserapplyformquestionmapping cuafqm
-    JOIN apply_forms_applyformquestionmapping afqm
-      ON cuafqm.apply_form_question_mapping_id = afqm.id
-    WHERE cuafqm.course_user_apply_form_mapping_id = cafm.id
-      AND afqm.apply_form_question_id IN
-          (53,100,102,62,110,3,107,17,101,95,104,97,109,103)
+    FROM   apply_forms_courseuserapplyformquestionmapping cuafqm
+    JOIN   apply_forms_applyformquestionmapping afqm
+           ON cuafqm.apply_form_question_mapping_id = afqm.id
+    JOIN   qmap                                   -- filters & maps in one step
+           ON qmap.id = afqm.apply_form_question_id
+    WHERE  cuafqm.course_user_apply_form_mapping_id = cafm.id
 ) fr ON TRUE
 
 ORDER BY cafm.id;
