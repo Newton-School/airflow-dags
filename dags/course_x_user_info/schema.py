@@ -1,6 +1,4 @@
-/* -------------------------------------------------------------------------- */
-/*  CORE TABLES                                                               */
-/* -------------------------------------------------------------------------- */
+COURSE_X_USER_INFO_SCHEMA = """
 
 CREATE TABLE IF NOT EXISTS course_structure_business_line (
     coursestructure_slug TEXT PRIMARY KEY,
@@ -87,3 +85,4 @@ DROP TRIGGER IF EXISTS trig_bl_upsert ON course_x_user_info;
 CREATE TRIGGER trig_bl_upsert
 AFTER INSERT OR UPDATE ON course_x_user_info
 FOR EACH ROW EXECUTE FUNCTION bl_upsert_trg();
+"""

@@ -6,6 +6,7 @@ from airflow.models import Variable
 from psycopg2.extras import execute_values
 
 from course_x_user_info.etl import load_last_7_days
+from course_x_user_info.schema import COURSE_X_USER_INFO_SCHEMA
 
 
 @dag(
@@ -27,7 +28,7 @@ def course_x_user_info():
     prepare_schema = PostgresOperator(
         task_id="prepare_schema",
         postgres_conn_id="postgres_result_db",
-        sql="sql/prepare_schema.sql",
+        sql=COURSE_X_USER_INFO_SCHEMA,
     )
 
     # ------------------------------------------------------------------ #
