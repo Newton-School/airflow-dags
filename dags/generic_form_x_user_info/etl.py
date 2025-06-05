@@ -113,7 +113,7 @@ def load_data(fetch_batch: int = 2000, insert_batch: int = 1000):
         )
         rows = [dict(zip(TARGET_COLS, row)) for row in raw]
 
-        uid_map = _resolve_unified_ids(rows, src)
+        uid_map = _resolve_unified_ids(rows, dst)
 
         prepared: List[Tuple] = []
         for row in rows:
