@@ -97,8 +97,8 @@ TARGET_COLS = (
 )
 
 def load_data(fetch_batch: int = 2000, insert_batch: int = 1000):
-    src = PostgresHook(postgres_conn_id='generic_form_response')
-    dst = PostgresHook(postgres_conn_id='business_line_x_user_info')
+    src = PostgresHook(postgres_conn_id='postgres_read_replica')
+    dst = PostgresHook(postgres_conn_id='postgres_result_db')
 
     total = src.get_first(COUNT_SQL)[0]
     if total == 0:
