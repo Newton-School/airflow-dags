@@ -1,7 +1,7 @@
 GENERIC_FORM_X_USER_INFO_SCHEMA = """
 CREATE TABLE IF NOT EXISTS generic_form_response_x_user_info (
     id                              BIGSERIAL PRIMARY KEY,
-    form_id                         BIGINT NOT NULL,
+    form_id                         BIGINT NOT NULL UNIQUE,
     form_created_at                 TIMESTAMP NOT NULL,
     unified_user_id                 BIGINT NOT NULL,
     business_line                   TEXT,
