@@ -109,6 +109,8 @@ transform_data = PostgresOperator(
         when courses_course.course_structure_id in (127,118,119,122,121) then 'Advanced Software Development'
         when courses_course.course_structure_id in (94,95) then 'DS Xcelerate'
         when courses_course.course_structure_id in (131,132) then 'ASD Xcelerate' 
+        when courses_course.course_structure_id in (68,82,83,130) then 'MasterClass'
+        when courses_course.course_structure_id in (134,135,168,169,170,171) then 'TrynBuy'
         else 'Other'
     end as course_structure_class,
     courses_course.start_timestamp as course_start_timestamp,
