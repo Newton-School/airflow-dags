@@ -2,7 +2,7 @@ import pendulum
 from airflow.decorators import dag, task
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 
-from dags.generic_form_x_user_info.schema import GENERIC_FORM_X_USER_INFO_SCHEMA
+from generic_form_x_user_info.schema import GENERIC_FORM_X_USER_INFO_SCHEMA
 from generic_form_x_user_info.etl import load_data
 
 
