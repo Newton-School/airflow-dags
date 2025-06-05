@@ -66,7 +66,7 @@ def course_x_user_info():
     # ------------------------------------------------------------------ #
     @task
     def load():
-        load_last_7_days(fetch_batch=5_000, insert_batch=1_000)
+        load_last_7_days(fetch_batch=1_000, insert_batch=1_000)
 
     # ------------------------------------------------------------------ #
     # Task dependencies                                                  #

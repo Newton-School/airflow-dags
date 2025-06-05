@@ -83,6 +83,6 @@ $$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trig_bl_upsert ON course_x_user_info;
 CREATE TRIGGER trig_bl_upsert
-AFTER INSERT OR UPDATE ON course_x_user_info
+BEFORE INSERT OR UPDATE ON course_x_user_info
 FOR EACH ROW EXECUTE FUNCTION bl_upsert_trg();
 """
