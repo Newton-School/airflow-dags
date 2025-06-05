@@ -8,73 +8,77 @@ from psycopg2.extras import execute_values
 log = logging.getLogger(__name__)
 
 FETCH_SQL = """
-SELECT
-  id AS form_id,
-  user_id,
-  created_at,
-  response_type,
-  response_json,
-  COALESCE(
-    response_json #>> '{email,value}',
-    response_json #>> '{email}'
-  ) AS email,
-  COALESCE(
-    response_json #>> '{phone,value}',
-    response_json #>> '{phone}'
-  ) AS phone,
-  response_json ->> 'course_type_interested_in' AS course_type_interested_in,
-  -- Calculate business_line
-  COALESCE(
-    -- First check response_type mapping
-    CASE response_type
-      WHEN 'DS_TIMELINE_REQUEST_CALLBACK_FORM' THEN 'DS'
-      WHEN 'MASTER_CLASS_REQUEST_CALLBACK_FORM' THEN 'DS'
-      WHEN 'PUBLIC_FULLSTACK_WEBSITE_HOME_REQUEST_CALLBACK_FORM' THEN 'FSD'
-      WHEN 'PUBLIC_WEBSITE_DS_HOME_REQUEST_CALLBACK_FORM' THEN 'DS'
-      WHEN 'SAT_REQUEST_CALLBACK_FORM' THEN 'DS'
-      ELSE NULL
-    END,
-    -- If null, check course_type_interested_in mapping
-    CASE response_json ->> 'course_type_interested_in'
-      WHEN 'btech_in_cs_ai_from_nst' THEN 'NST'
-      WHEN 'certification_full_stack_development' THEN 'FSD'
-      WHEN 'professional_certification_in_ds_ai' THEN 'DS'
-      ELSE NULL
-    END
-  ) AS business_line,
-  jsonb_strip_nulls(
-    jsonb_build_object(
-      'current_status',
-      COALESCE(
-        response_json #>> '{current_status,value}',
-        response_json #>> '{current_status}'
-      ),
-      'graduation_year',
-      COALESCE(
-        response_json #>> '{graduation_year,value}',
-        response_json #>> '{graduation_year}'
-      ),
-      'highest_qualification',
-      COALESCE(
-        response_json #>> '{highest_qualification,value}',
-        response_json #>> '{highest_qualification}'
-      ),
-      'degree',
-      COALESCE(
-        response_json #>> '{degree,value}',
-        response_json #>> '{degree}'
-      ),
-      'current_role',
-      COALESCE(
-        response_json #>> '{current_role,value}',
-        response_json #>> '{current_role}'
+WITH form_responses AS (
+  SELECT
+    id AS form_id,
+    user_id,
+    created_at,
+    response_type,
+    response_json,
+    COALESCE(
+      response_json #>> '{email,value}',
+      response_json #>> '{email}'
+    ) AS email,
+    COALESCE(
+      response_json #>> '{phone,value}',
+      response_json #>> '{phone}'
+    ) AS phone,
+    response_json ->> 'course_type_interested_in' AS course_type_interested_in,
+    -- Calculate business_line
+    COALESCE(
+      -- First check response_type mapping
+      CASE response_type
+        WHEN 'DS_TIMELINE_REQUEST_CALLBACK_FORM' THEN 'DS'
+        WHEN 'MASTER_CLASS_REQUEST_CALLBACK_FORM' THEN 'DS'
+        WHEN 'PUBLIC_FULLSTACK_WEBSITE_HOME_REQUEST_CALLBACK_FORM' THEN 'FSD'
+        WHEN 'PUBLIC_WEBSITE_DS_HOME_REQUEST_CALLBACK_FORM' THEN 'DS'
+        WHEN 'SAT_REQUEST_CALLBACK_FORM' THEN 'DS'
+        ELSE NULL
+      END,
+      -- If null, check course_type_interested_in mapping
+      CASE response_json ->> 'course_type_interested_in'
+        WHEN 'btech_in_cs_ai_from_nst' THEN 'NST'
+        WHEN 'certification_full_stack_development' THEN 'FSD'
+        WHEN 'professional_certification_in_ds_ai' THEN 'DS'
+        ELSE NULL
+      END
+    ) AS business_line,
+    jsonb_strip_nulls(
+      jsonb_build_object(
+        'current_status',
+        COALESCE(
+          response_json #>> '{current_status,value}',
+          response_json #>> '{current_status}'
+        ),
+        'graduation_year',
+        COALESCE(
+          response_json #>> '{graduation_year,value}',
+          response_json #>> '{graduation_year}'
+        ),
+        'highest_qualification',
+        COALESCE(
+          response_json #>> '{highest_qualification,value}',
+          response_json #>> '{highest_qualification}'
+        ),
+        'degree',
+        COALESCE(
+          response_json #>> '{degree,value}',
+          response_json #>> '{degree}'
+        ),
+        'current_role',
+        COALESCE(
+          response_json #>> '{current_role,value}',
+          response_json #>> '{current_role}'
+        )
       )
-    )
-  ) AS processed_response_json
-FROM
-  marketing_genericformresponse
-WHERE
-  created_at >= NOW() - INTERVAL '1 day'
+    ) AS processed_response_json
+  FROM
+    marketing_genericformresponse
+  WHERE
+    created_at >= NOW() - INTERVAL '1 day'
+)
+SELECT * FROM form_responses
+WHERE business_line IS NOT NULL
 LIMIT %(limit)s OFFSET %(offset)s;
 """
 
