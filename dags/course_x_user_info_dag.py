@@ -45,7 +45,7 @@ def course_x_user_info():
             return
 
         hook = PostgresHook("postgres_result_db")
-        rows = [(slug, bl) for slug, bl in mapping.items()]
+        rows = [(slug, bl) for slug, bl in mapping.items() if bl]
 
         with hook.get_conn() as conn, conn.cursor() as cur:
             execute_values(
