@@ -293,7 +293,7 @@ AUTH_USER_QUERIES = {
                     where 
                         date(courses_course.start_timestamp) < date(current_date)
                         and courses_course.course_structure_id in (1,6,8,11,12,13,14,18,19,20,21,22,23,26,50,51,52,53,54,55,56,57,58,59,60,72,127,118,119,122,121,82,83,130,134,135,168,169,170,171)
-                        
+                        and unit_type not like 'LEARNING'
                 ),
                 
                 non_studying as (
