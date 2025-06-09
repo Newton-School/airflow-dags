@@ -170,8 +170,14 @@ def archive_past_user_upload_mapping_dag():
     @task()
     def archive_user_upload_mappings_task():
         s3_bucket = get_s3_bucket()
-        archive_date_to = pendulum.today().subtract(days=int(Variable.get('USER_UPLOAD_MAPPING_ARCHIVE_DAYS_THRESHOLD')))
-        archive_date_from = archive_date_to.subtract(days=int(Variable.get('USER_UPLOAD_MAPPING_ARCHIVE_DAYS_RANGE')))
+        # Get date strings directly from Airflow variables
+        from_date_str = Variable.get('USER_UPLOAD_MAPPING_ARCHIVE_DATE_FROM')
+        to_date_str = Variable.get('USER_UPLOAD_MAPPING_ARCHIVE_DATE_TO')
+
+        # Parse strings to pendulum datetime objects
+        archive_date_from = pendulum.parse(from_date_str)
+        archive_date_to = pendulum.parse(to_date_str)
+
         archive_user_upload_mappings(archive_date_from, archive_date_to, s3_bucket)
 
     archive_user_upload_mappings_task()
