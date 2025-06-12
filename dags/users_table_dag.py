@@ -181,7 +181,7 @@ transform_data = PostgresOperator(
             left join lead_type_table on lead_type_table.user_id = auth_user.id
             left join users_userentrylog on users_userentrylog.user_id = auth_user.id
             where 
-                auth_user.last_login >= CURRENT_DATE - INTERVAL '7' DAY
+                auth_user.last_login >= CURRENT_DATE - INTERVAL '28' DAY
         )
         
         select distinct 
