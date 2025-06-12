@@ -387,8 +387,8 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
                 and cum.status in (1,8,9,11,12,30) 
             join lectures l
                 on l.course_id = c.course_id 
-                and (l.lecture_id in (select lecture_id from recorded_lectures_course_user_reports where lecture_watch_date BETWEEN '2025-01-31' AND '2025-02-28')
-                     or l.start_timestamp  BETWEEN '2025-01-31' AND '2025-02-28')
+                and (l.lecture_id in (select lecture_id from recorded_lectures_course_user_reports where lecture_watch_date BETWEEN '2025-02-28' AND '2025-03-31')
+                     or l.start_timestamp  BETWEEN '2025-02-28' AND '2025-03-31')
             left join user_overlapping_time let
                 on let.lecture_id = l.lecture_id and let.course_user_mapping_id = cum.course_user_mapping_id
             left join recorded_lectures_course_user_reports rlcur
@@ -617,8 +617,8 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
                 and cum.status in (1,8,9,11,12,30) 
             join lectures l
                 on l.course_id = c.course_id 
-                and (l.lecture_id in (select lecture_id from recorded_lectures_course_user_reports where lecture_watch_date BETWEEN '2025-01-31' AND '2025-02-28')
-                     or l.start_timestamp  BETWEEN '2025-01-31' AND '2025-02-28')
+                and (l.lecture_id in (select lecture_id from recorded_lectures_course_user_reports where lecture_watch_date BETWEEN '2025-02-28' AND '2025-03-31')
+                     or l.start_timestamp  BETWEEN '2025-02-28' AND '2025-03-31')
             left join user_overlapping_time let
                 on let.lecture_id = l.lecture_id and let.course_user_mapping_id = cum.course_user_mapping_id
             left join recorded_lectures_course_user_reports rlcur
