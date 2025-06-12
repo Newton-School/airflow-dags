@@ -226,7 +226,7 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
                 where lower(user_type) like 'user'
                 group by 1,2,3,4,5,6,7,8
             ),
-            
+
             inst_raw_data as (
                 select 
                     lecture_id,
@@ -242,7 +242,7 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
                 where lower(user_type) like 'instructor'
                 group by 1,2,3,4,5,6
             ),
-            
+
             inst_data as (
                 select 
                     lecture_id,
@@ -255,7 +255,7 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
                     inst_raw_data
                 group by 1,2,3
             ),
-                            
+
             user_overlapping_time as (
                 select 
                     lecture_id,
@@ -269,7 +269,7 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
                     user_raw_data
                 group by 1,2
             ),
-            
+
             lecture_rating as (
                 select
                     user_id,
@@ -288,7 +288,7 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
                     and ffar.feedback_question_id = 348
                 group by 1,2,3,4
             ),
-            
+
             lecture_understanding as (
                 select
                     user_id,
@@ -305,7 +305,7 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
                     and ffar.feedback_question_id = 331
                 group by 1,2,3,4
             ),
-            
+
             -- NEW: Aggregate topics per lecture to eliminate duplicates
             lecture_topics_aggregated as (
                 select 
@@ -320,7 +320,7 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
                 -- Removed the completed = true filter as you commented it out
                 group by ltm.lecture_id
             )
-            
+
             select
                 concat(cum.user_id, l.lecture_id, coalesce(array_to_string(lta.topic_template_ids, ','), '')) as table_unique_key,
                 cum.user_id,
@@ -346,24 +346,24 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
                 l.lecture_type,
                 l.mandatory,
                 l.start_timestamp as lecture_start_timestamp,
-                
+
                 -- Topic information now aggregated (no more duplicates!)
                 lta.topic_template_ids,
                 lta.template_names,
                 coalesce(lta.topic_count, 0) as topic_count,
-                
+
                 inst_data.inst_min_join_time,
                 inst_data.inst_max_leave_time,
                 cast(inst_data.inst_total_time_in_mins as int) as inst_total_time_in_mins,
                 inst_data.inst_user_id,
                 concat(ui2.first_name,' ' ,ui2.last_name) as instructor_name,
                 date(l.start_timestamp) as lecture_date,
-                
+
                 -- Simplified attendance logic (no more COUNT with GROUP BY issues)
                 case when let.lecture_id is not null then 1 else 0 end as live_attendance,
                 case when rlcur.lecture_id is not null then 1 else 0 end as recorded_attendance,
                 case when (let.lecture_id is not null or rlcur.lecture_id is not null) then 1 else 0 end as overall_attendance,
-                
+
                 cast(let.total_overlapping_time_minutes as int) as total_overlapping_time_in_mins,
                 cast(let.total_user_time as int) as total_user_time,
                 let.min_join_time as user_min_join_time,
@@ -387,8 +387,9 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
                 and cum.status in (1,8,9,11,12,30) 
             join lectures l
                 on l.course_id = c.course_id 
-                and (l.lecture_id in (select lecture_id from recorded_lectures_course_user_reports where lecture_watch_date BETWEEN '2025-02-28' AND '2025-03-31')
-                     or l.start_timestamp  BETWEEN '2025-02-28' AND '2025-03-31')
+                and l.lecture_id BETWEEN %s AND %s
+                and (l.lecture_id in (select lecture_id from recorded_lectures_course_user_reports where lecture_watch_date BETWEEN '2025-01-01' AND '2025-01-31')
+                     or l.start_timestamp  BETWEEN '2025-01-01' AND '2025-01-31')
             left join user_overlapping_time let
                 on let.lecture_id = l.lecture_id and let.course_user_mapping_id = cum.course_user_mapping_id
             left join recorded_lectures_course_user_reports rlcur
@@ -412,9 +413,10 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
                 on uasm.user_id = cum.user_id  
             left join users_info ui2 
                 on ui2.user_id = inst_data.inst_user_id
-            GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,1,3,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41) count_query;
+            GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41) count_query;
         ''' % (start_lecture_id, end_lecture_id),
     )
+
 
 # Python Limit Offset generator
 def limit_offset_generator_func(**kwargs):
@@ -456,7 +458,7 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
                 where lower(user_type) like 'user'
                 group by 1,2,3,4,5,6,7,8
             ),
-            
+
             inst_raw_data as (
                 select 
                     lecture_id,
@@ -472,7 +474,7 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
                 where lower(user_type) like 'instructor'
                 group by 1,2,3,4,5,6
             ),
-            
+
             inst_data as (
                 select 
                     lecture_id,
@@ -485,7 +487,7 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
                     inst_raw_data
                 group by 1,2,3
             ),
-                            
+
             user_overlapping_time as (
                 select 
                     lecture_id,
@@ -499,7 +501,7 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
                     user_raw_data
                 group by 1,2
             ),
-            
+
             lecture_rating as (
                 select
                     user_id,
@@ -518,7 +520,7 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
                     and ffar.feedback_question_id = 348
                 group by 1,2,3,4
             ),
-            
+
             lecture_understanding as (
                 select
                     user_id,
@@ -535,7 +537,7 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
                     and ffar.feedback_question_id = 331
                 group by 1,2,3,4
             ),
-            
+
             -- NEW: Aggregate topics per lecture to eliminate duplicates
             lecture_topics_aggregated as (
                 select 
@@ -550,7 +552,7 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
                 -- Removed the completed = true filter as you commented it out
                 group by ltm.lecture_id
             )
-            
+
             select
                 concat(cum.user_id, l.lecture_id, coalesce(array_to_string(lta.topic_template_ids, ','), '')) as table_unique_key,
                 cum.user_id,
@@ -576,24 +578,24 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
                 l.lecture_type,
                 l.mandatory,
                 l.start_timestamp as lecture_start_timestamp,
-                
+
                 -- Topic information now aggregated (no more duplicates!)
                 lta.topic_template_ids,
                 lta.template_names,
                 coalesce(lta.topic_count, 0) as topic_count,
-                
+
                 inst_data.inst_min_join_time,
                 inst_data.inst_max_leave_time,
                 cast(inst_data.inst_total_time_in_mins as int) as inst_total_time_in_mins,
                 inst_data.inst_user_id,
                 concat(ui2.first_name,' ' ,ui2.last_name) as instructor_name,
                 date(l.start_timestamp) as lecture_date,
-                
+
                 -- Simplified attendance logic (no more COUNT with GROUP BY issues)
                 case when let.lecture_id is not null then 1 else 0 end as live_attendance,
                 case when rlcur.lecture_id is not null then 1 else 0 end as recorded_attendance,
                 case when (let.lecture_id is not null or rlcur.lecture_id is not null) then 1 else 0 end as overall_attendance,
-                
+
                 cast(let.total_overlapping_time_minutes as int) as total_overlapping_time_in_mins,
                 cast(let.total_user_time as int) as total_user_time,
                 let.min_join_time as user_min_join_time,
@@ -617,8 +619,9 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
                 and cum.status in (1,8,9,11,12,30) 
             join lectures l
                 on l.course_id = c.course_id 
-                and (l.lecture_id in (select lecture_id from recorded_lectures_course_user_reports where lecture_watch_date BETWEEN '2025-02-28' AND '2025-03-31')
-                     or l.start_timestamp  BETWEEN '2025-02-28' AND '2025-03-31')
+                and l.lecture_id BETWEEN %s AND %s
+                and (l.lecture_id in (select lecture_id from recorded_lectures_course_user_reports where lecture_watch_date BETWEEN '2025-01-01' AND '2025-01-31')
+                     or l.start_timestamp  BETWEEN '2025-01-01' AND '2025-01-31')
             left join user_overlapping_time let
                 on let.lecture_id = l.lecture_id and let.course_user_mapping_id = cum.course_user_mapping_id
             left join recorded_lectures_course_user_reports rlcur
@@ -642,9 +645,10 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
                 on uasm.user_id = cum.user_id  
             left join users_info ui2 
                 on ui2.user_id = inst_data.inst_user_id
-            GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,1,3,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41;
+            GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41;
             ''' % (start_lecture_id, end_lecture_id),
     )
+
 
 for lecture_sub_dag_id in range(int(total_number_of_sub_dags)):
     with TaskGroup(group_id=f"transforming_data_{lecture_sub_dag_id}", dag=dag) as lecture_sub_dag_task_group:
