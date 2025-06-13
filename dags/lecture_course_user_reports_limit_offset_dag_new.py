@@ -87,122 +87,150 @@ create_table = PostgresOperator(
 
 # Leaf Level Abstraction
 def extract_data_to_nested(**kwargs):
-    pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
-    pg_conn = pg_hook.get_conn()
-    ti = kwargs['ti']
-    current_lecture_sub_dag_id = kwargs['current_lecture_sub_dag_id']
-    current_cps_sub_dag_id = kwargs['current_cps_sub_dag_id']
-    transform_data_output = ti.xcom_pull(
-        task_ids=f'transforming_data_{current_lecture_sub_dag_id}.extract_and_transform_individual_lecture_sub_dag_{current_lecture_sub_dag_id}_cps_sub_dag_{current_cps_sub_dag_id}.transform_data')
-    for transform_row in transform_data_output:
-        pg_cursor = pg_conn.cursor()
-        pg_cursor.execute('INSERT INTO lecture_course_user_reports_bigserial (table_unique_key, user_id, student_name,'
-                          'lead_type, student_category, course_user_mapping_id, label_mapping_status,'
-                          'course_id, course_name, course_structure_class, lecture_id, lecture_title,'
-                          'lecture_type, '
-                          'mandatory, '
-                          'lecture_start_timestamp,'
-                          'topic_template_id, template_name, inst_min_join_time, '
-                          'inst_max_leave_time,'
-                          'inst_total_time_in_mins, inst_user_id, instructor_name,'
-                          'lecture_date, live_attendance, recorded_attendance,'
-                          'overall_attendance, total_overlapping_time_in_mins, total_user_time, user_min_join_time,'
-                          'user_max_leave_time,'
-                          'answer_rating,'
-                          'rating_feedback_answer,'
-                          'lecture_understood_rating,'
-                          'lecture_understanding_feedback_answer,'
-                          'activity_status_7_days,'
-                          'activity_status_14_days,'
-                          'activity_status_30_days,'
-                          'user_placement_status,'
-                          'admin_course_id,'
-                          'admin_unit_name,'
-                          'child_video_session)'
-                          'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                          'on conflict (table_unique_key) do update set student_name = EXCLUDED.student_name,'
-                          'lead_type = EXCLUDED.lead_type,'
-                          'student_category = EXCLUDED.student_category,'
-                          'label_mapping_status = EXCLUDED.label_mapping_status,'
-                          'course_name = EXCLUDED.course_name,'
-                          'course_structure_class = EXCLUDED.course_structure_class,'
-                          'lecture_title = EXCLUDED.lecture_title,'
-                          'lecture_type = EXCLUDED.lecture_type,'
-                          'mandatory = EXCLUDED.mandatory,'
-                          'lecture_start_timestamp = EXCLUDED.lecture_start_timestamp,'
-                          'topic_template_id = EXCLUDED.topic_template_id,'
-                          'template_name = EXCLUDED.template_name,'
-                          'inst_min_join_time = EXCLUDED.inst_min_join_time,'
-                          'inst_max_leave_time = EXCLUDED.inst_max_leave_time,'
-                          'inst_total_time_in_mins = EXCLUDED.inst_total_time_in_mins,'
-                          'inst_user_id = EXCLUDED.inst_user_id,'
-                          'instructor_name = EXCLUDED.instructor_name,'
-                          'lecture_date = EXCLUDED.lecture_date,'
-                          'live_attendance = EXCLUDED.live_attendance,'
-                          'recorded_attendance = EXCLUDED.recorded_attendance,'
-                          'overall_attendance = EXCLUDED.overall_attendance,'
-                          'total_overlapping_time_in_mins = EXCLUDED.total_overlapping_time_in_mins,'
-                          'total_user_time = EXCLUDED.total_user_time,'
-                          'user_min_join_time = EXCLUDED.user_min_join_time,'
-                          'user_max_leave_time = EXCLUDED.user_max_leave_time,'
-                          'answer_rating = EXCLUDED.answer_rating,'
-                          'rating_feedback_answer = EXCLUDED.rating_feedback_answer,'
-                          'lecture_understood_rating = EXCLUDED.lecture_understood_rating,'
-                          'lecture_understanding_feedback_answer = EXCLUDED.lecture_understanding_feedback_answer,'
-                          'activity_status_7_days = EXCLUDED.activity_status_7_days,'
-                          'activity_status_14_days = EXCLUDED.activity_status_14_days,'
-                          'activity_status_30_days = EXCLUDED.activity_status_30_days,'
-                          'user_placement_status = EXCLUDED.user_placement_status,'
-                          'admin_course_id = EXCLUDED.admin_course_id,'
-                          'admin_unit_name = EXCLUDED.admin_unit_name,'
-                          'child_video_session = EXCLUDED.child_video_session;',
-                          (
-                              transform_row[0],
-                              transform_row[1],
-                              transform_row[2],
-                              transform_row[3],
-                              transform_row[4],
-                              transform_row[5],
-                              transform_row[6],
-                              transform_row[7],
-                              transform_row[8],
-                              transform_row[9],
-                              transform_row[10],
-                              transform_row[11],
-                              transform_row[12],
-                              transform_row[13],
-                              transform_row[14],
-                              transform_row[15],
-                              transform_row[16],
-                              transform_row[17],
-                              transform_row[18],
-                              transform_row[19],
-                              transform_row[20],
-                              transform_row[21],
-                              transform_row[22],
-                              transform_row[23],
-                              transform_row[24],
-                              transform_row[25],
-                              transform_row[26],
-                              transform_row[27],
-                              transform_row[28],
-                              transform_row[29],
-                              transform_row[30],
-                              transform_row[31],
-                              transform_row[32],
-                              transform_row[33],
-                              transform_row[34],
-                              transform_row[35],
-                              transform_row[36],
-                              transform_row[37],
-                              transform_row[38],
-                              transform_row[39],
-                              transform_row[40],
-                          )
-                          )
+    import logging
+    import traceback
+
+    logger = logging.getLogger(__name__)
+    logger.info("Starting extract_data_to_nested function")
+
+    pg_hook = None
+    pg_conn = None
+
+    try:
+        # Get task instance and parameters
+        ti = kwargs['ti']
+        current_lecture_sub_dag_id = kwargs['current_lecture_sub_dag_id']
+        current_cps_sub_dag_id = kwargs['current_cps_sub_dag_id']
+
+        logger.info(
+            f"Processing lecture_sub_dag_id: {current_lecture_sub_dag_id}, cps_sub_dag_id: {current_cps_sub_dag_id}")
+
+        # Pull data from XCom
+        task_id = f'transforming_data_{current_lecture_sub_dag_id}.extract_and_transform_individual_lecture_sub_dag_{current_lecture_sub_dag_id}_cps_sub_dag_{current_cps_sub_dag_id}.transform_data'
+        logger.info(f"Pulling XCom data from task_id: {task_id}")
+
+        transform_data_output = ti.xcom_pull(task_ids=task_id)
+
+        # Validate XCom data
+        if transform_data_output is None:
+            logger.warning("No data received from XCom - transform_data_output is None")
+            return "No data to process"
+
+        logger.info(
+            f"Received {len(transform_data_output) if hasattr(transform_data_output, '__len__') else 'unknown'} rows from transform task")
+
+        # Initialize database connection
+        logger.info("Establishing database connection")
+        pg_hook = PostgresHook(postgres_conn_id='postgres_result_db')
+        pg_conn = pg_hook.get_conn()
+
+        # Process data in batches for better performance
+        batch_size = 1000
+        processed_rows = 0
+
+        for i, transform_row in enumerate(transform_data_output):
+            try:
+                # Validate row data
+                if transform_row is None:
+                    logger.warning(f"Skipping row {i}: row is None")
+                    continue
+
+                if len(transform_row) != 41:
+                    logger.warning(f"Skipping row {i}: expected 41 columns, got {len(transform_row)}")
+                    continue
+
+                pg_cursor = pg_conn.cursor()
+
+                # Execute INSERT with error handling
+                pg_cursor.execute('''
+                    INSERT INTO lecture_course_user_reports_bigserial (
+                        table_unique_key, user_id, student_name, lead_type, student_category, 
+                        course_user_mapping_id, label_mapping_status, course_id, course_name, 
+                        course_structure_class, lecture_id, lecture_title, lecture_type, mandatory, 
+                        lecture_start_timestamp, topic_template_id, template_name, inst_min_join_time, 
+                        inst_max_leave_time, inst_total_time_in_mins, inst_user_id, instructor_name,
+                        lecture_date, live_attendance, recorded_attendance, overall_attendance, 
+                        total_overlapping_time_in_mins, total_user_time, user_min_join_time,
+                        user_max_leave_time, answer_rating, rating_feedback_answer,
+                        lecture_understood_rating, lecture_understanding_feedback_answer,
+                        activity_status_7_days, activity_status_14_days, activity_status_30_days,
+                        user_placement_status, admin_course_id, admin_unit_name, child_video_session
+                    )
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT (table_unique_key) DO UPDATE SET 
+                        student_name = EXCLUDED.student_name,
+                        lead_type = EXCLUDED.lead_type,
+                        student_category = EXCLUDED.student_category,
+                        label_mapping_status = EXCLUDED.label_mapping_status,
+                        course_name = EXCLUDED.course_name,
+                        course_structure_class = EXCLUDED.course_structure_class,
+                        lecture_title = EXCLUDED.lecture_title,
+                        lecture_type = EXCLUDED.lecture_type,
+                        mandatory = EXCLUDED.mandatory,
+                        lecture_start_timestamp = EXCLUDED.lecture_start_timestamp,
+                        topic_template_id = EXCLUDED.topic_template_id,
+                        template_name = EXCLUDED.template_name,
+                        inst_min_join_time = EXCLUDED.inst_min_join_time,
+                        inst_max_leave_time = EXCLUDED.inst_max_leave_time,
+                        inst_total_time_in_mins = EXCLUDED.inst_total_time_in_mins,
+                        inst_user_id = EXCLUDED.inst_user_id,
+                        instructor_name = EXCLUDED.instructor_name,
+                        lecture_date = EXCLUDED.lecture_date,
+                        live_attendance = EXCLUDED.live_attendance,
+                        recorded_attendance = EXCLUDED.recorded_attendance,
+                        overall_attendance = EXCLUDED.overall_attendance,
+                        total_overlapping_time_in_mins = EXCLUDED.total_overlapping_time_in_mins,
+                        total_user_time = EXCLUDED.total_user_time,
+                        user_min_join_time = EXCLUDED.user_min_join_time,
+                        user_max_leave_time = EXCLUDED.user_max_leave_time,
+                        answer_rating = EXCLUDED.answer_rating,
+                        rating_feedback_answer = EXCLUDED.rating_feedback_answer,
+                        lecture_understood_rating = EXCLUDED.lecture_understood_rating,
+                        lecture_understanding_feedback_answer = EXCLUDED.lecture_understanding_feedback_answer,
+                        activity_status_7_days = EXCLUDED.activity_status_7_days,
+                        activity_status_14_days = EXCLUDED.activity_status_14_days,
+                        activity_status_30_days = EXCLUDED.activity_status_30_days,
+                        user_placement_status = EXCLUDED.user_placement_status,
+                        admin_course_id = EXCLUDED.admin_course_id,
+                        admin_unit_name = EXCLUDED.admin_unit_name,
+                        child_video_session = EXCLUDED.child_video_session
+                ''', tuple(transform_row))
+
+                processed_rows += 1
+
+                # Commit in batches
+                if processed_rows % batch_size == 0:
+                    pg_conn.commit()
+                    logger.info(f"Committed batch: {processed_rows} rows processed")
+
+                pg_cursor.close()
+
+            except Exception as row_error:
+                logger.error(f"Error processing row {i}: {str(row_error)}")
+                logger.error(f"Row data: {transform_row}")
+                if 'pg_cursor' in locals():
+                    pg_cursor.close()
+                # Continue processing other rows
+                continue
+
+        # Final commit
         pg_conn.commit()
-        pg_cursor.close()
-    pg_conn.close()
+        logger.info(f"Successfully processed {processed_rows} rows")
+
+        return f"Successfully processed {processed_rows} rows"
+
+    except Exception as e:
+        logger.error(f"Error in extract_data_to_nested: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        if pg_conn:
+            pg_conn.rollback()
+        raise e
+
+    finally:
+        # Clean up connections
+        if pg_conn:
+            pg_conn.close()
+            logger.info("Database connection closed")
 
 
 def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
@@ -384,8 +412,8 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
         join lectures l
             on l.course_id = c.course_id 
             and l.lecture_id BETWEEN %s AND %s
-            and (l.lecture_id in (select lecture_id from recorded_lectures_course_user_reports where lecture_watch_date BETWEEN '2025-01-01' AND '2025-03-31')
-                 or l.start_timestamp  BETWEEN '2025-01-01' AND '2025-03-31')
+            and (l.lecture_id in (select lecture_id from recorded_lectures_course_user_reports where lecture_watch_date BETWEEN '2025-01-01' AND '2025-01-31')
+                 or l.start_timestamp  BETWEEN '2025-01-01' AND '2025-01-31')
         left join user_overlapping_time let
             on let.lecture_id = l.lecture_id and let.course_user_mapping_id = cum.course_user_mapping_id
         left join recorded_lectures_course_user_reports rlcur
@@ -611,8 +639,8 @@ def transform_data_per_query(start_lecture_id, end_lecture_id, cps_sub_dag_id, c
             join lectures l
                 on l.course_id = c.course_id 
                 and l.lecture_id BETWEEN %s AND %s
-                and (l.lecture_id in (select lecture_id from recorded_lectures_course_user_reports where lecture_watch_date BETWEEN '2025-01-01' AND '2025-03-31')
-                     or l.start_timestamp  BETWEEN '2025-01-01' AND '2025-03-31')
+                and (l.lecture_id in (select lecture_id from recorded_lectures_course_user_reports where lecture_watch_date BETWEEN '2025-01-01' AND '2025-01-31')
+                     or l.start_timestamp  BETWEEN '2025-01-01' AND '2025-01-31')
             left join user_overlapping_time let
                 on let.lecture_id = l.lecture_id and let.course_user_mapping_id = cum.course_user_mapping_id
             left join recorded_lectures_course_user_reports rlcur
