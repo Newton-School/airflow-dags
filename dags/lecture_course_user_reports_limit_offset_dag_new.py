@@ -283,8 +283,8 @@ def transform_data_per_query(**kwargs):
             JOIN lectures l
                 ON l.course_id = c.course_id 
                 AND l.lecture_id BETWEEN {start_lecture_id} AND {end_lecture_id}
-                AND (l.lecture_id IN (SELECT lecture_id FROM recorded_lectures_course_user_reports WHERE lecture_watch_date BETWEEN '2025-01-31' AND '2025-03-1')
-                     OR l.start_timestamp BETWEEN '2025-01-31' AND '2025-03-1')
+                AND (l.lecture_id IN (SELECT lecture_id FROM recorded_lectures_course_user_reports WHERE lecture_watch_date >= current_date - INTERVAL '7' day)
+                     OR l.start_timestamp >= current_date - INTERVAL '7' day)
             LEFT JOIN user_overlapping_time let
                 ON let.lecture_id = l.lecture_id AND let.course_user_mapping_id = cum.course_user_mapping_id
             LEFT JOIN recorded_lectures_course_user_reports rlcur
@@ -649,8 +649,8 @@ def number_of_rows_per_lecture_sub_dag_func(start_lecture_id, end_lecture_id):
         JOIN lectures l
             ON l.course_id = c.course_id 
             AND l.lecture_id BETWEEN %s AND %s
-            AND (l.lecture_id IN (SELECT lecture_id FROM recorded_lectures_course_user_reports WHERE lecture_watch_date BETWEEN '2025-01-31' AND '2025-03-1')
-                 OR l.start_timestamp BETWEEN '2025-01-31' AND '2025-03-1')
+            AND (l.lecture_id IN (SELECT lecture_id FROM recorded_lectures_course_user_reports WHERE lecture_watch_date >= current_date - INTERVAL '7' day)
+                 OR l.start_timestamp >= current_date - INTERVAL '7' day)
         LEFT JOIN user_overlapping_time let
             ON let.lecture_id = l.lecture_id AND let.course_user_mapping_id = cum.course_user_mapping_id
         LEFT JOIN recorded_lectures_course_user_reports rlcur
