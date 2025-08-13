@@ -10,7 +10,7 @@ from generic_form_x_user_info.etl import load_data
 @dag(
     dag_id="generic_form_x_user_info",
     start_date=pendulum.datetime(2025, 6, 5, tz="UTC"),
-    schedule="25 */1 * * *",
+    schedule="45 */1 * * *",
     catchup=False,
     default_args={
         "owner": "data_team",
