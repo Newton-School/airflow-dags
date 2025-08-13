@@ -1213,7 +1213,7 @@ class UserInfoManager:
 
 @dag(
     dag_id="unified_user_dag",
-    schedule="0 1 * * *",  # Run at 1:00 AM UTC every day
+    schedule="0 */2 * * *",  # Run every 2 hours at :00
     start_date=pendulum.datetime(2025, 4, 23, tz="UTC"),
     catchup=False,
     tags=["unified_user", "data_processing"],
