@@ -100,11 +100,29 @@ TARGET_COLS = (
     'processed_response_json'
 )
 
-def load_data(fetch_batch: int = 2000, insert_batch: int = 1000):
+def load_data(fetch_batch: int = 2000, insert_batch: int = 1000, start_datetime: str = None, end_datetime: str = None):
     src = PostgresHook(postgres_conn_id='postgres_read_replica')
     dst = PostgresHook(postgres_conn_id='postgres_result_db')
 
-    total = src.get_first(COUNT_SQL)[0]
+    # Use custom date range if provided, otherwise default to last 1 day
+    if start_datetime and end_datetime:
+        date_filter = f"created_at >= '{start_datetime}' AND created_at < '{end_datetime}'"
+        log.info(f"Using custom date range: {start_datetime} to {end_datetime}")
+    else:
+        date_filter = "created_at >= NOW() - INTERVAL '1 day'"
+        log.info("Using default date range: last 1 day")
+
+    # Build dynamic SQL with date filter
+    fetch_sql = FETCH_SQL.replace(
+        "created_at >= NOW() - INTERVAL '1 day'", 
+        date_filter
+    )
+    count_sql = COUNT_SQL.replace(
+        "created_at >= NOW() - INTERVAL '1 day'",
+        date_filter
+    )
+
+    total = src.get_first(count_sql)[0]
     if total == 0:
         log.info("No new data to process.")
         return
@@ -113,7 +131,7 @@ def load_data(fetch_batch: int = 2000, insert_batch: int = 1000):
     offset = 0
     while offset < total:
         raw = src.get_records(
-                FETCH_SQL, parameters={'limit': fetch_batch, 'offset': offset}
+                fetch_sql, parameters={'limit': fetch_batch, 'offset': offset}
         )
         rows = [dict(zip(TARGET_COLS, row)) for row in raw]
 

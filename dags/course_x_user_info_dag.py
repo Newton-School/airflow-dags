@@ -12,7 +12,7 @@ from course_x_user_info.schema import COURSE_X_USER_INFO_SCHEMA
 @dag(
     dag_id="course_x_user_info",
     start_date=pendulum.datetime(2025, 5, 27, tz="UTC"),
-    schedule="15 16 * * *",
+    schedule="45 */1 * * *",
     catchup=False,
     default_args={
         "owner": "data_team",
