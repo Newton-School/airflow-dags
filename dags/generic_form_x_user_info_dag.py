@@ -1,5 +1,6 @@
 import pendulum
 from airflow.decorators import dag, task
+from airflow.models import Param
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 
 from generic_form_x_user_info.schema import GENERIC_FORM_X_USER_INFO_SCHEMA
