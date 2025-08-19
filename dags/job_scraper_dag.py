@@ -201,7 +201,6 @@ def create_scraper_dag(
             transformer = transformer_class.from_airflow_variables(**(transformer_args or {}))
             failed_jobs = []
 
-            job_type = scraper_args.get("job_type", EmploymentType.FULL_TIME.value)
 
             for batch in get_jobs_by_ids(pg_hook, raw_job_opening_ids, BATCH_SIZE):
                 transformed_jobs = list(transformer.transform_jobs(iter(batch)))
@@ -231,7 +230,7 @@ def create_scraper_dag(
                                         job.external_job_id, job.title[:255], job.company_slug[:255],
                                         job.role_hash, job.description, job.min_ctc,
                                         job.max_ctc, job.city, job.state,
-                                        job_type, job.min_experience_years,
+                                        job.employment_type, job.min_experience_years,
                                         job.max_experience_years, job.skills,
                                         job.external_apply_link
                                 )
@@ -253,7 +252,7 @@ def create_scraper_dag(
                             "description": job.description,
                             "min_ctc": job.min_ctc,
                             "max_ctc": job.max_ctc,
-                            "employment_type": job_type,
+                            "employment_type": job.employment_type,
                             "external_apply_link": job.external_apply_link,
                             "location": {
                                     "city": job.city,

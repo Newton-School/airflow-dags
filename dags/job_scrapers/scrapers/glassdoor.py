@@ -242,10 +242,12 @@ class GlassdoorJobScraper(BaseJobScraper):
                         try:
                             external_id = self._get_external_job_id(raw_job)
                             is_external_for_job_board = self._get_is_external_for_job_board(raw_job)
+                            raw_data = raw_job.get("jobview", {})
+                            raw_data['job_type'] = job_type
                             job = RawJobOpening(
                                     external_job_id=external_id,
                                     source_name=self.source_name,
-                                    raw_data=raw_job.get("jobview", {}),
+                                    raw_data=raw_data,
                                     is_external_for_job_board=is_external_for_job_board,
                             )
                             job_openings.append(job)
