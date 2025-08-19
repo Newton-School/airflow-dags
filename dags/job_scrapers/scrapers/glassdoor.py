@@ -226,7 +226,7 @@ class GlassdoorJobScraper(BaseJobScraper):
             self.setup()
 
         if not job_type:
-            job_type = EmploymentType.FULL_TIME
+            job_type = EmploymentType.FULL_TIME.value
         for job_role, paths in self.config.relevant_job_role_paths.items():
             for url_path in paths:
                 search_params = JobSearchParameters.from_url_path(url_path)
