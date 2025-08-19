@@ -69,7 +69,6 @@ class GlassdoorScraperConfig:
                   "__typename\n      }\n      jobSerpFaq {\n        questions {\n          answer\n          question\n          "
                   "__typename\n        }\n        __typename\n      }\n      jobSerpJobOutlook {\n        occupation\n        paragraph\n "
                   "       heading\n        __typename\n      }\n      showMachineReadableJobs\n      __typename\n    }\n    "
-                  "       heading\n        __typename\n      }\n      showMachineReadableJobs\n      __typename\n    }\n    "
                   "serpSeoLinksVO {\n      relatedJobTitlesResults\n      searchedJobTitle\n      searchedKeyword\n      "
                   "searchedLocationIdAsString\n      searchedLocationSeoName\n      searchedLocationType\n      topCityIdsToNameResults {"
                   "\n        key\n        value\n        __typename\n      }\n      topEmployerIdsToNameResults {\n        key\n        "
@@ -174,7 +173,6 @@ class GlassdoorJobScraper(BaseJobScraper):
         search_params = kwargs.get("search_params")
         job_type = kwargs.get("job_type", EmploymentType.FULL_TIME.value)
 
-        job_type_indeed = None
         if job_type == EmploymentType.INTERNSHIP.value:
             job_type_indeed = "VDTG7"
         else:
