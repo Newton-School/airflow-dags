@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterator, List, Dict, Any
+from typing import Iterator, List, Dict, Any, Optional
 import time
 from airflow.utils.log.logging_mixin import LoggingMixin
 
@@ -123,7 +123,7 @@ class BaseJobScraper(LoggingMixin, ABC):
         """
         return False
 
-    def get_jobs(self) -> Iterator[List[RawJobOpening]]:
+    def get_jobs(self, job_type : Optional[int] ) -> Iterator[List[RawJobOpening]]:
         """
         Fetch and yield batches of jobs from the source.
 

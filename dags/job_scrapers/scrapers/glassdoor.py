@@ -1,14 +1,14 @@
 import json
 import re
 from dataclasses import dataclass
-from typing import Dict, Any, Iterator, List, Tuple
+from typing import Dict, Any, Iterator, List, Tuple, Optional
 
 import requests
 from airflow.models import Variable
 
 from .base import BaseJobScraper
 from ..exceptions import RateLimitError
-from ..models import RawJobOpening
+from ..models import RawJobOpening, EmploymentType
 from ..utils import generate_random_string
 
 
@@ -68,6 +68,7 @@ class GlassdoorScraperConfig:
                   "__typename\n      }\n      helpCenterDomain\n      helpCenterLocale\n      jobAlert {\n        jobAlertExists\n        "
                   "__typename\n      }\n      jobSerpFaq {\n        questions {\n          answer\n          question\n          "
                   "__typename\n        }\n        __typename\n      }\n      jobSerpJobOutlook {\n        occupation\n        paragraph\n "
+                  "       heading\n        __typename\n      }\n      showMachineReadableJobs\n      __typename\n    }\n    "
                   "       heading\n        __typename\n      }\n      showMachineReadableJobs\n      __typename\n    }\n    "
                   "serpSeoLinksVO {\n      relatedJobTitlesResults\n      searchedJobTitle\n      searchedKeyword\n      "
                   "searchedLocationIdAsString\n      searchedLocationSeoName\n      searchedLocationType\n      topCityIdsToNameResults {"
@@ -171,6 +172,14 @@ class GlassdoorJobScraper(BaseJobScraper):
     def _fetch_batch(self, batch_number: int, *args, **kwargs) -> Tuple[List[Dict[str, Any]], str]:
         cursor = kwargs.get("cursor", "")
         search_params = kwargs.get("search_params")
+        job_type = kwargs.get("job_type", EmploymentType.FULL_TIME.value)
+
+        job_type_indeed = None
+        if job_type == EmploymentType.INTERNSHIP.value:
+            job_type_indeed = "VDTG7"
+        else:
+            job_type_indeed = "CF3CP"
+
         payload = [
                 {
                         "operationName": "JobSearchResultsQuery",
@@ -189,7 +198,7 @@ class GlassdoorJobScraper(BaseJobScraper):
                                         {"filterKey": "maxSalary", "values": "1999000"},
                                         {"filterKey": "minSalary", "values": "3000"},
                                         {"filterKey": "fromAge", "values": "3"},
-                                        {"filterKey": "jobTypeIndeed", "values": "CF3CP"},
+                                        {"filterKey": "jobTypeIndeed", "values": job_type_indeed},
                                         {"filterKey": "sortBy", "values": "date_desc"}
                                 ]
                         },
@@ -214,17 +223,19 @@ class GlassdoorJobScraper(BaseJobScraper):
                 break
         return data[0].get("data", {}).get("jobListings", {}).get("jobListings", []), cursor
 
-    def get_jobs(self) -> Iterator[List[RawJobOpening]]:
+    def get_jobs(self, job_type : Optional[int]) -> Iterator[List[RawJobOpening]]:
         if not self._initialized:
             self.setup()
 
+        if not job_type:
+            job_type = EmploymentType.FULL_TIME
         for job_role, paths in self.config.relevant_job_role_paths.items():
             for url_path in paths:
                 search_params = JobSearchParameters.from_url_path(url_path)
                 cursor = ""
                 batch_number = 0
                 while True:
-                    raw_batch, cursor = self._fetch_batch_with_retry(batch_number, search_params=search_params, cursor=cursor)
+                    raw_batch, cursor = self._fetch_batch_with_retry(batch_number, search_params=search_params, cursor=cursor, job_type=job_type)
                     if not raw_batch:
                         break
 

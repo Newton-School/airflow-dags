@@ -7,6 +7,7 @@ from urllib.parse import urljoin
 from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
+from dags.job_scrapers.models import EmploymentType
 from job_scrapers.pruner.glassdoor import GlassdoorJobPruner
 from job_scrapers.pruner.weekday import WeekdayJobPruner
 from job_scrapers.utils import newton_api_request
@@ -126,9 +127,10 @@ def create_scraper_dag(
             scraper = scraper_class.from_airflow_variables(**(scraper_args or {}))
             raw_job_opening_ids = []
 
+            job_type = scraper_args.get('job_type', EmploymentType.FULL_TIME.value)
             try:
                 scraper.setup()
-                for batch in scraper.get_jobs():
+                for batch in scraper.get_jobs(job_type):
                     if not batch:
                         continue
 
@@ -199,6 +201,8 @@ def create_scraper_dag(
             transformer = transformer_class.from_airflow_variables(**(transformer_args or {}))
             failed_jobs = []
 
+            job_type = scraper_args.get("job_type", EmploymentType.FULL_TIME.value)
+
             for batch in get_jobs_by_ids(pg_hook, raw_job_opening_ids, BATCH_SIZE):
                 transformed_jobs = list(transformer.transform_jobs(iter(batch)))
                 jobs_to_process = [job for job in transformed_jobs if job.external_apply_link]
@@ -227,7 +231,7 @@ def create_scraper_dag(
                                         job.external_job_id, job.title[:255], job.company_slug[:255],
                                         job.role_hash, job.description, job.min_ctc,
                                         job.max_ctc, job.city, job.state,
-                                        job.employment_type, job.min_experience_years,
+                                        job_type, job.min_experience_years,
                                         job.max_experience_years, job.skills,
                                         job.external_apply_link
                                 )
@@ -249,7 +253,7 @@ def create_scraper_dag(
                             "description": job.description,
                             "min_ctc": job.min_ctc,
                             "max_ctc": job.max_ctc,
-                            "employment_type": job.employment_type,
+                            "employment_type": job_type,
                             "external_apply_link": job.external_apply_link,
                             "location": {
                                     "city": job.city,
@@ -430,6 +434,15 @@ glassdoor_dag = create_scraper_dag(
         transformer_class=GlassdoorJobTransformer,
         schedule="30 23 * * *",
         tags=['glassdoor', 'job-scraping'],
+)
+
+glassdoor_internship_dag = create_scraper_dag(
+        dag_id="scrape_and_transform_glassdoor_internship_openings",
+        scraper_class=GlassdoorJobScraper,
+        transformer_class=GlassdoorJobTransformer,
+        schedule="30 0 * * *",
+        scraper_args={'job_type': EmploymentType.INTERNSHIP.value},
+        tags=['glassdoor', 'internship', 'job-scraping'],
 )
 
 expired_job_openings_dag = remove_expired_job_openings_dag()
