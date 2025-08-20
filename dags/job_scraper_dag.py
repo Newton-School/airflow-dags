@@ -7,11 +7,10 @@ from urllib.parse import urljoin
 from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-from dags.job_scrapers.models import EmploymentType
 from job_scrapers.pruner.glassdoor import GlassdoorJobPruner
 from job_scrapers.pruner.weekday import WeekdayJobPruner
 from job_scrapers.utils import newton_api_request
-from job_scrapers.models import RawJobOpening
+from job_scrapers.models import RawJobOpening, EmploymentType
 from job_scrapers.scrapers.base import BaseJobScraper
 from job_scrapers.scrapers.weekday import WeekdayJobScraper
 from job_scrapers.scrapers.glassdoor import GlassdoorJobScraper
