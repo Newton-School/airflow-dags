@@ -124,10 +124,10 @@ def create_scraper_dag(
         def scrape_jobs() -> List[int]:
             """Scrape jobs using the provided scraper"""
             pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+            job_type = scraper_args.pop('job_type', EmploymentType.FULL_TIME.value)
             scraper = scraper_class.from_airflow_variables(**(scraper_args or {}))
             raw_job_opening_ids = []
 
-            job_type = scraper_args.get('job_type', EmploymentType.FULL_TIME.value)
             try:
                 scraper.setup()
                 for batch in scraper.get_jobs(job_type):
