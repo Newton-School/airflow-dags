@@ -165,6 +165,6 @@ class GlassdoorJobTransformer(BaseJobTransformer):
                 external_apply_link=meta_data.apply_url,
                 city=job_details.city,
                 state=job_details.state,
-                employment_type=1,  # Currently only full-time jobs are supported
+                employment_type=raw_job_opening_data.get('job_type', 1),
                 skills=job_details.skills
         )
