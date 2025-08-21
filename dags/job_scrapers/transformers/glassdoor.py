@@ -154,17 +154,21 @@ class GlassdoorJobTransformer(BaseJobTransformer):
         meta_data = self._extract_meta_data(raw_job)
         job_details = self._extract_job_details_ai(raw_job, meta_data)
 
+        skills = []
+        if job_details.skills:
+            skills = [skill.replace("\x00", "") for skill in job_details.skills if skill]
+
         return ProcessedJobListing(
-                external_job_id=external_job_id,
-                title=title,
-                company_slug=company_slug,
-                role_hash=job_details.job_role_hash,
-                description=job_details.job_description,
+                external_job_id=external_job_id.replace("\x00", ""),
+                title=title.replace("\x00", ""),
+                company_slug=company_slug.replace("\x00", ""),
+                role_hash=job_details.job_role_hash.replace("\x00", ""),
+                description=job_details.job_description.replace("\x00", ""),
                 min_ctc=job_details.min_ctc or 0,
                 max_ctc=job_details.max_ctc or 0,
                 external_apply_link=meta_data.apply_url,
-                city=job_details.city,
-                state=job_details.state,
+                city=job_details.city.replace("\x00", ""),
+                state=job_details.state.replace("\x00", ""),
                 employment_type=raw_job_opening_data.get('job_type', 1),
-                skills=job_details.skills
+                skills=skills
         )
