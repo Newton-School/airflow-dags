@@ -369,6 +369,7 @@ def remove_expired_job_openings_dag():
                 LEFT JOIN airflow_raw_job_openings
                 ON airflow_processed_job_openings.external_job_id = airflow_raw_job_openings.external_job_id
                 WHERE expires_at IS NULL
+                AND airflow_processed_job_openings.created_at < NOW() - INTERVAL '30 days'
                 ORDER BY id
                 LIMIT %s OFFSET %s
             """
