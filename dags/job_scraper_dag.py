@@ -124,6 +124,7 @@ def create_scraper_dag(
         def scrape_jobs() -> List[int]:
             """Scrape jobs using the provided scraper"""
             pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+            job_type = None
             if scraper_args:
                 job_type = scraper_args.pop('job_type', EmploymentType.FULL_TIME.value)
             scraper = scraper_class.from_airflow_variables(**(scraper_args or {}))
@@ -289,15 +290,15 @@ def create_scraper_dag(
                 if newton_results:
                     with pg_hook.get_conn() as conn:
                         with conn.cursor() as cur:
-                            update_template = ','.join(['(%s::varchar, %s::varchar, %s::text)'] * len(newton_results))
+                            update_template = ','.join(['(%s::integer, %s::varchar, %s::text)'] * len(newton_results))
                             update_query = f"""
                                 UPDATE airflow_processed_job_openings AS p
                                 SET 
                                     newton_sync_status = c.status,
                                     newton_sync_error = c.error,
                                     newton_sync_attempts = newton_sync_attempts + 1
-                                FROM (VALUES {update_template}) AS c(external_job_id, status, error)
-                                WHERE p.external_job_id = c.external_job_id::varchar
+                                FROM (VALUES {update_template}) AS c(id, status, error)
+                                WHERE p.id = c.id
                             """
                             flat_update_values = [
                                     item
