@@ -25,16 +25,37 @@ class GlassdoorJobPruner:
 
         response.raise_for_status()
 
-        data = response.json()
-        if not data or not data[0]:
+        try:
+            data = response.json()
+        except Exception as e:
+            print(f"Error parsing JSON response for job {external_job_id}: {str(e)}")
             return True
 
-        job_data = data[0].get("data")
+        if not data or not isinstance(data, list) or len(data) == 0:
+            print(f"Invalid response structure for job {external_job_id}: {data}")
+            return True
+
+        first_item = data[0]
+        if first_item is None:
+            print(f"First item is None for job {external_job_id}")
+            return True
+
+        job_data = first_item.get("data")
         if not job_data:
+            print(f"No data field for job {external_job_id}: {first_item}")
             return True
 
-        print(job_data)
+        jobview = job_data.get("jobview")
+        if not jobview:
+            print(f"No jobview field for job {external_job_id}: {job_data}")
+            return True
 
-        has_expired = job_data.get("jobview", {}).get("header", {}).get("expired", False)
+        header = jobview.get("header")
+        if not header:
+            print(f"No header field for job {external_job_id}: {jobview}")
+            return True
+
+        has_expired = header.get("expired", False)
+
 
         return has_expired
