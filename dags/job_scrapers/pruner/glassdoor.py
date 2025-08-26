@@ -33,6 +33,8 @@ class GlassdoorJobPruner:
         if not job_data:
             return True
 
+        print(job_data)
+
         has_expired = job_data.get("jobview", {}).get("header", {}).get("expired", False)
 
         return has_expired
