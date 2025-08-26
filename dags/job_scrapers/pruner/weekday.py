@@ -13,6 +13,11 @@ class WeekdayJobPruner:
 
     def should_prune(self, external_apply_link: str):
         self.session.headers["origin"] = urljoin(external_apply_link, "/")
-        response = self.session.get(external_apply_link, timeout=10)
+
+        try:
+            response = self.session.get(external_apply_link, timeout=20)
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}")
+            return True
 
         return response.status_code != 200

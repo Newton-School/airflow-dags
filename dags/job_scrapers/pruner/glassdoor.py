@@ -26,6 +26,9 @@ class GlassdoorJobPruner:
         response.raise_for_status()
 
         data = response.json()
+        if not data[0]:
+            return True
+
         has_expired = data[0].get("data", {}).get("jobview", {}).get("header", {}).get("expired", False)
 
         return has_expired
