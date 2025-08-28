@@ -89,6 +89,14 @@ create_table = PostgresOperator(
     dag=dag
 )
 
+alter_table = PostgresOperator(
+    task_id='alter_table',
+    postgres_conn_id='postgres_result_db',
+    sql='''ALTER TABLE courses ALTER COLUMN course_name TYPE VARCHAR(200);''',
+    dag=dag
+)
+
+
 transform_data = PostgresOperator(
     task_id='transform_data',
     postgres_conn_id='postgres_read_replica',
@@ -132,4 +140,4 @@ extract_python_data = PythonOperator(
     provide_context=True,
     dag=dag
 )
-create_table >> transform_data >> extract_python_data
+create_table >> alter_table >> transform_data >> extract_python_data
