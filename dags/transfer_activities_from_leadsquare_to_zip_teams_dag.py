@@ -117,7 +117,7 @@ dag = DAG(
     "transfer_activities_from_leadsquare_to_zip_teams",
     default_args=default_args,
     description="transfer activities from leadsquare to zip teams",
-    schedule_interval="*/30 * * * *",
+    schedule_interval="0 */4 * * *",
     catchup=False,
 )
 
