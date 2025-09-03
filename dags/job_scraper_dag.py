@@ -8,6 +8,8 @@ from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 
+from dags.job_scrapers.scrapers.unstop import UnstopJobScraper
+from dags.job_scrapers.transformers.unstop import UnstopJobTransformer
 from job_scrapers.pruner.glassdoor import GlassdoorJobPruner
 from job_scrapers.pruner.weekday import WeekdayJobPruner
 from job_scrapers.utils import newton_api_request
@@ -448,4 +450,12 @@ glassdoor_internship_dag = create_scraper_dag(
         tags=['glassdoor', 'internship', 'job-scraping'],
 )
 
+unstop_internship_dag = create_scraper_dag(
+        dag_id = "scrape_and_transform_unstop_internship_openings",
+        scraper_class = UnstopJobScraper,
+        transformer_class=UnstopJobTransformer,
+        schedule="12 1 * * *",
+        scraper_args = {'job_type' : EmploymentType.INTERNSHIP.value},
+        tags = ['unstop', 'internship', 'job-scraping']
+)
 expired_job_openings_dag = remove_expired_job_openings_dag()
