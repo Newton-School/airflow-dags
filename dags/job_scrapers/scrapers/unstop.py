@@ -94,7 +94,7 @@ class UnstopJobScraper(BaseJobScraper):
             self._session = None
 
     def _fetch_batch(self, batch_number : int, *args, **kwargs) -> Tuple[List[Dict[str, Any]], bool]:
-        filter_params = kwargs.get("filter_params")
+        filter_params = self.config.filter_params
         job_type = kwargs.get("job_type", EmploymentType.FULL_TIME.value)
 
         if job_type == EmploymentType.INTERNSHIP:
@@ -120,7 +120,7 @@ class UnstopJobScraper(BaseJobScraper):
         return jobs, (current_page < last_page)
 
 
-    def get_jobs(self, job_type : Optional[int]) -> Iterator[List[RawJobOpening]]:
+    def get_jobs(self, job_type : Optional[int]=None) -> Iterator[List[RawJobOpening]]:
         if not self._initialized:
             self.setup()
 
@@ -140,7 +140,7 @@ class UnstopJobScraper(BaseJobScraper):
                 try:
                     external_id = self._get_external_job_id(raw_job)
                     is_external_for_job_board = self._get_is_external_for_job_board(raw_job)
-                    raw_data = raw_job
+                    raw_data = dict(raw_job)
                     raw_data["job_type"] = job_type
 
                     job = RawJobOpening(
