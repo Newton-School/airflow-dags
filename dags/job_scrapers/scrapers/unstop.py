@@ -20,7 +20,7 @@ class UnstopScraperConfig:
     @classmethod
     def from_airflow_variables(cls) -> 'UnstopScraperConfig':
         try:
-            unstop_internship_filter_params = Variable.get("unstop_internship_filter_params", default_var={})
+            unstop_internship_filter_params = Variable.get("unstop_internship_filter_params", default_var={}, deserialize_json=True)
         except json.JSONDecodeError:
             raise ValueError("Invalid JSON in unstop_internship_filter_params")
 
