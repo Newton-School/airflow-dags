@@ -8,8 +8,8 @@ from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 
-from dags.job_scrapers.scrapers.unstop import UnstopJobScraper
-from dags.job_scrapers.transformers.unstop import UnstopJobTransformer
+from job_scrapers.scrapers.unstop import UnstopJobScraper
+from job_scrapers.transformers.unstop import UnstopJobTransformer
 from job_scrapers.pruner.glassdoor import GlassdoorJobPruner
 from job_scrapers.pruner.weekday import WeekdayJobPruner
 from job_scrapers.utils import newton_api_request
