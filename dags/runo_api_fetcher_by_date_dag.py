@@ -1,8 +1,7 @@
-import json
 import requests
-from datetime import datetime, date, timedelta
-from typing import List, Dict, Any, Optional
-import time
+from datetime import datetime, timedelta
+from typing import List, Dict, Any
+import pytz
 
 from airflow.decorators import dag, task
 from airflow.models import Variable
@@ -22,8 +21,8 @@ RUNO_SECRET_KEY = Variable.get("RUNO_API_SECRET_KEY", "jZyYmg2NjV5aG41YjU1Mm4=")
     tags=['runo', 'api-fetching', 'date-based'],
     max_active_runs=1,
     params={
-        "start_date": (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d"),
-        "end_date": (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        "start_date": (datetime.now(pytz.timezone('Asia/Kolkata')) - timedelta(days=1)).strftime("%Y-%m-%d"),
+        "end_date": (datetime.now(pytz.timezone('Asia/Kolkata')) - timedelta(days=1)).strftime("%Y-%m-%d")
     },
     doc_md="""
     # Runo API Data Fetcher by Date DAG
@@ -31,18 +30,23 @@ RUNO_SECRET_KEY = Variable.get("RUNO_API_SECRET_KEY", "jZyYmg2NjV5aG41YjU1Mm4=")
     This DAG fetches call logs data from Runo API for a specific date with pagination support.
     
     ## Parameters:
-    - **start_date**: Start date in YYYY-MM-DD format (default: yesterday, cannot be more than yesterday)
-    - **end_date**: End date in YYYY-MM-DD format (default: yesterday, cannot be more than yesterday)
+    - **start_date**: Start date in YYYY-MM-DD format (default: yesterday in IST)
+    - **end_date**: End date in YYYY-MM-DD format (default: yesterday in IST)
     
     ## Features:
     - Fetches all pages of data for all dates between start_date and end_date (inclusive)
     - Handles pagination automatically (up to 100 entries per page)
     - Stores data in PostgreSQL using existing table structure
     - Manual trigger only - no scheduled runs
+    - Uses IST timezone for date calculations
     
     ## Usage:
     Trigger manually from Airflow UI and provide the desired date range parameters.
     Example: {"start_date": "2025-01-01", "end_date": "2025-01-31"}
+    
+    ## Validation:
+    - Validates that dates are in YYYY-MM-DD format
+    - Ensures end_date is not before start_date
     """
 )
 def runo_api_fetcher_by_date_dag():
@@ -104,11 +108,6 @@ def runo_api_fetcher_by_date_dag():
         if start_datetime > end_datetime:
             raise ValueError(f"start_date ({start_date}) cannot be after end_date ({end_date})")
         
-        # Validate dates are not more than yesterday
-        yesterday = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
-        if start_datetime > yesterday or end_datetime > yesterday:
-            raise ValueError(f"Dates cannot be more than yesterday ({yesterday.strftime('%Y-%m-%d')}). Provided dates: start={start_date}, end={end_date}")
-        
         # Generate list of dates to process
         date_list = []
         current_date = start_datetime
@@ -117,7 +116,6 @@ def runo_api_fetcher_by_date_dag():
             current_date += timedelta(days=1)
         
         print(f"Processing {len(date_list)} dates from {start_date} to {end_date}")
-        print(f"Date list: {date_list}")
         
         headers = {
             'Auth-Key': RUNO_SECRET_KEY,

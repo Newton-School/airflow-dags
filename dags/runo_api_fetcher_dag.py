@@ -1,7 +1,6 @@
-import json
 import requests
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 from airflow.decorators import dag, task
 from airflow.models import Variable
