@@ -1,32 +1,51 @@
-import requests
-from datetime import datetime
+"""
+Runo API Data Fetcher DAGs
+Two separate DAGs in a single file for fetching data from Runo API
+"""
+from datetime import datetime, timedelta
 from typing import List, Dict, Any
+import pytz
 
 from airflow.decorators import dag, task
 from airflow.models import Variable
-from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-from utils.runo_utils import store_call_logs_data
+from runo.api_client import RunoApiClient
+from runo.models import RunoDataManager
+from runo.constants import POSTGRES_CONN_ID
 
-POSTGRES_CONN_ID = "postgres_result_db"
-RUNO_API_BASE_URL = "https://api.runo.in/v1"
+# Configuration
 RUNO_SECRET_KEY = Variable.get("RUNO_API_SECRET_KEY", "jZyYmg2NjV5aG41YjU1Mm4=")
+
+# =============================================================================
+# DAG 1: Scheduled Daily Fetcher
+# =============================================================================
 
 @dag(
     dag_id="runo_api_fetcher_dag",
-    schedule="0 19 * * *",  # Daily at 00:30 IST (19:00 UTC previous day), this is needed because the API is only available after 8PM IST and before 10AM IST
+    schedule="0 19 * * *",  # Daily at 00:30 IST (19:00 UTC previous day)
     start_date=datetime(2024, 1, 1),
     catchup=False,
-    tags=['runo', 'api-fetching'],
+    tags=['runo', 'api-fetching', 'scheduled'],
     max_active_runs=1,
     doc_md="""
-    # Runo API Data Fetcher DAG
+    # Runo API Scheduled Data Fetcher DAG
     
-    This DAG fetches data from Runo API endpoints:
-    1. Callers data from /v1/user
-    2. Call logs data from /v1/call/logs
+    This DAG automatically fetches the latest data from Runo API on a daily schedule.
     
-    Data is stored in PostgreSQL tables for further processing.
+    ## Features:
+    - **Automated Scheduling**: Runs automatically every day at 00:30 IST
+    - **Dual Data Sources**: Fetches both callers and call logs data
+    - **Database Management**: Creates tables automatically if they don't exist
+    - **Error Handling**: Comprehensive error handling and logging
+    - **Data Deduplication**: Uses UPSERT operations to prevent duplicates
+    
+    ## Data Sources:
+    - `/v1/user` - Callers/Users information
+    - `/v1/call/logs` - Call logs data
+    
+    ## Database Tables:
+    - `airflow_runo_callers` - Stores caller/user information
+    - `airflow_runo_call_logs` - Stores call log details
     """
 )
 def runo_api_fetcher_dag():
@@ -34,186 +53,162 @@ def runo_api_fetcher_dag():
     @task
     def create_tables():
         """Create necessary database tables if they don't exist"""
-        pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
-        
-        tables = [
-            """
-            CREATE TABLE IF NOT EXISTS airflow_runo_callers (
-                id SERIAL PRIMARY KEY,
-                user_id VARCHAR(255) NOT NULL UNIQUE,
-                name VARCHAR(255) NOT NULL,
-                phone_number VARCHAR(20),
-                email VARCHAR(255),
-                designation VARCHAR(255),
-                processes TEXT[],
-                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS airflow_runo_call_logs (
-                id SERIAL PRIMARY KEY,
-                call_id VARCHAR(255) NOT NULL UNIQUE,
-                caller_id VARCHAR(255) NOT NULL,
-                called_by VARCHAR(255),
-                customer_name VARCHAR(255),
-                customer_id VARCHAR(255),
-                phone_number VARCHAR(20),
-                call_date DATE,
-                call_time TIME,
-                duration INTEGER,
-                call_type VARCHAR(50),
-                status VARCHAR(255),
-                tag VARCHAR(255),
-                created_at TIMESTAMP,
-                inserted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )
-            """
-        ]
-        
-        with pg_hook.get_conn() as conn:
-            with conn.cursor() as cur:
-                for query in tables:
-                    cur.execute(query)
-                conn.commit()
-        
-        return "Tables created successfully"
+        return RunoDataManager.create_all_tables()
     
     @task
-    def fetch_callers_data() -> List[Dict[str, Any]]:
-        """Fetch callers data from Runo API"""
-        headers = {
-            'Auth-Key': RUNO_SECRET_KEY,
-            'Content-Type': 'application/json'
-        }
+    def fetch_and_store_callers() -> int:
+        """Fetch callers data from Runo API and store in database"""
+        api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
         
-        try:
-            response = requests.get(
-                f"{RUNO_API_BASE_URL}/user",
-                headers=headers,
-                timeout=30
-            )
-
-            try:
-                data = response.json()
-                message = data.get('message', None)
-                if message:
-                    print(f"Status Message: {message}")
-            except Exception as e:
-                print(f"Error fetching callers data: {str(e)}")
-
-            response.raise_for_status()
-            
-            if data.get('statusCode') == 0:
-                callers = data.get('data', [])
-                print(f"Fetched {len(callers)} callers from Runo API")
-                return callers
-            else:
-                print(f"API returned error: {data.get('message', 'Unknown error')}")
-                return []
-                
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching callers data: {str(e)}")
-            raise
-        except Exception as e:
-            print(f"Unexpected error: {str(e)}")
-            raise
-    
-    @task
-    def fetch_call_logs_data() -> List[Dict[str, Any]]:
-        """Fetch call logs data from Runo API"""
-        headers = {
-            'Auth-Key': RUNO_SECRET_KEY,
-            'Content-Type': 'application/json'
-        }
+        success, callers_data = api_client.get_callers()
+        if not success:
+            raise Exception("Failed to fetch callers data from Runo API")
         
-        try:
-            response = requests.get(
-                f"{RUNO_API_BASE_URL}/call/logs",
-                headers=headers,
-                timeout=30
-            )
-
-            try:
-                data = response.json()
-                message = data.get('message', None)
-                if message:
-                    print(f"Status Message: {message}")
-            except Exception as e:
-                print(f"Error fetching call logs data: {str(e)}")
-
-            response.raise_for_status()
-            
-            if data.get('statusCode') == 0:
-                call_logs = data.get('data', [])
-                print(f"Fetched {len(call_logs)} call logs from Runo API")
-                return call_logs
-            else:
-                print(f"API returned error: {data.get('message', 'Unknown error')}")
-                return []
-                
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching call logs data: {str(e)}")
-            raise
-        except Exception as e:
-            print(f"Unexpected error: {str(e)}")
-            raise
-    
-    @task
-    def store_callers_data(callers_data: List[Dict[str, Any]]) -> int:
-        """Store callers data in PostgreSQL"""
         if not callers_data:
-            print("No callers data to store")
+            print("No callers data received from API")
             return 0
         
-        pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+        stored_count = RunoDataManager.process_callers_data(callers_data)
+        return stored_count
+    
+    @task
+    def fetch_and_store_call_logs() -> int:
+        """Fetch latest call logs data from Runo API and store in database"""
+        api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
         
-        with pg_hook.get_conn() as conn:
-            with conn.cursor() as cur:
-                values_list = []
-                for caller in callers_data:
-                    values = (
-                        caller.get('userId'),
-                        caller.get('name'),
-                        caller.get('phoneNumber'),
-                        caller.get('email'),
-                        caller.get('designation'),
-                        caller.get('process', []),
-                    )
-                    values_list.append(values)
-                
-                insert_query = """
-                    INSERT INTO airflow_runo_callers 
-                    (user_id, name, phone_number, email, designation, processes)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (user_id) 
-                    DO UPDATE SET
-                        name = EXCLUDED.name,
-                        phone_number = EXCLUDED.phone_number,
-                        email = EXCLUDED.email,
-                        designation = EXCLUDED.designation,
-                        processes = EXCLUDED.processes,
-                        updated_at = CURRENT_TIMESTAMP
-                """
-                
-                cur.executemany(insert_query, values_list)
-                conn.commit()
-                
-                stored_count = len(values_list)
-                print(f"Stored {stored_count} callers in database")
-                return stored_count
+        print("Scheduled run: Fetching latest call logs")
+        success, call_logs_data = api_client.get_call_logs()
+        
+        if not success:
+            raise Exception("Failed to fetch call logs data from Runo API")
+        
+        if not call_logs_data:
+            print("No call logs data received from API")
+            return 0
+        
+        stored_count = RunoDataManager.process_call_logs_data(call_logs_data)
+        return stored_count
     
+    @task
+    def test_api_connection() -> bool:
+        """Test API connection"""
+        api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
+        return api_client.test_connection()
     
+    # Task definitions
     create_tables_task = create_tables()
+    test_connection_task = test_api_connection()
+    fetch_callers_task = fetch_and_store_callers()
+    fetch_call_logs_task = fetch_and_store_call_logs()
     
-    fetch_callers_task = fetch_callers_data()
-    fetch_call_logs_task = fetch_call_logs_data()
+    # Task dependencies
+    create_tables_task >> test_connection_task
+    test_connection_task >> [fetch_callers_task, fetch_call_logs_task]
+
+# =============================================================================
+# DAG 2: Manual Date Range Fetcher
+# =============================================================================
+
+@dag(
+    dag_id="runo_api_fetcher_by_date_dag",
+    schedule=None,  # Manual trigger only
+    start_date=datetime(2024, 1, 1),
+    catchup=False,
+    tags=['runo', 'api-fetching', 'date-based', 'manual'],
+    max_active_runs=1,
+    params={
+        "start_date": (datetime.now(pytz.timezone('Asia/Kolkata')) - timedelta(days=1)).strftime("%Y-%m-%d"),
+        "end_date": (datetime.now(pytz.timezone('Asia/Kolkata')) - timedelta(days=1)).strftime("%Y-%m-%d")
+    },
+    doc_md="""
+    # Runo API Manual Date Range Fetcher DAG
     
-    store_callers_task = store_callers_data(fetch_callers_task)
-    store_call_logs_task = task(store_call_logs_data)(fetch_call_logs_task)
+    This DAG allows manual fetching of historical data for specific date ranges with advanced pagination support.
     
-    create_tables_task >> [fetch_callers_task, fetch_call_logs_task]
-    fetch_callers_task >> store_callers_task
-    fetch_call_logs_task >> store_call_logs_task
+    ## Features:
+    - **Manual Trigger Only**: No automatic scheduling
+    - **Date Range Support**: Fetch data for any date range
+    - **Advanced Pagination**: Automatically handles pagination (100 entries per page)
+    - **IST Timezone**: Uses Indian Standard Time for all date calculations
+    - **Flexible Parameters**: Accept custom start and end dates
+    - **Bulk Processing**: Processes multiple dates in a single run
+    - **Comprehensive Logging**: Detailed progress tracking for each date and page
+    
+    ## Parameters:
+    - **start_date**: Start date in YYYY-MM-DD format (default: yesterday in IST)
+    - **end_date**: End date in YYYY-MM-DD format (default: yesterday in IST)
+    
+    ## Usage:
+    Trigger manually from Airflow UI and provide the desired date range parameters.
+    Example: {"start_date": "2025-01-01", "end_date": "2025-01-31"}
+    
+    ## Validation:
+    - Validates that dates are in YYYY-MM-DD format
+    - Ensures end_date is not before start_date
+    """
+)
+def runo_api_fetcher_by_date_dag():
+    
+    @task
+    def create_tables():
+        """Create necessary database tables if they don't exist"""
+        return RunoDataManager.create_all_tables()
+    
+    @task
+    def fetch_and_store_call_logs_by_date_range(**context) -> int:
+        """Fetch call logs data from Runo API for a date range and store in database"""
+        api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
+        
+        # Get date parameters from context
+        params = context.get("params", {})
+        start_date = params.get("start_date")
+        end_date = params.get("end_date")
+        
+        if not start_date or not end_date:
+            raise ValueError("Both start_date and end_date parameters are required. Please provide dates in YYYY-MM-DD format.")
+        
+        # Validate date formats
+        try:
+            start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
+            end_datetime = datetime.strptime(end_date, "%Y-%m-%d")
+        except ValueError as e:
+            raise ValueError(f"Invalid date format. Expected YYYY-MM-DD format. Error: {str(e)}")
+        
+        # Validate date range
+        if start_datetime > end_datetime:
+            raise ValueError(f"start_date ({start_date}) cannot be after end_date ({end_date})")
+        
+        print(f"Manual run: Fetching call logs from {start_date} to {end_date}")
+        
+        success, call_logs_data = api_client.get_call_logs_by_date_range(start_date, end_date)
+        
+        if not success:
+            raise Exception("Failed to fetch call logs data from Runo API")
+        
+        if not call_logs_data:
+            print("No call logs data received from API")
+            return 0
+        
+        stored_count = RunoDataManager.process_call_logs_data(call_logs_data)
+        return stored_count
+    
+    @task
+    def test_api_connection() -> bool:
+        """Test API connection"""
+        api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
+        return api_client.test_connection()
+    
+    # Task definitions
+    create_tables_task = create_tables()
+    test_connection_task = test_api_connection()
+    fetch_call_logs_task = fetch_and_store_call_logs_by_date_range()
+    
+    # Task dependencies
+    create_tables_task >> test_connection_task >> fetch_call_logs_task
+
+# =============================================================================
+# Create DAG instances
+# =============================================================================
 
 runo_api_fetcher_dag_instance = runo_api_fetcher_dag()
+runo_api_fetcher_by_date_dag_instance = runo_api_fetcher_by_date_dag()
