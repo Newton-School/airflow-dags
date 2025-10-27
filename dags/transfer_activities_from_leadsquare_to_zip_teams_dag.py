@@ -23,7 +23,7 @@ def transfer_activities_from_leadsquare_to_zip_teams_nested(**kwargs):
     )
     LEAD_SQUARED_SECRET_KEY = Variable.get("LEAD_SQUARED_SECRET_KEY")
     LEAD_SQUARED_URL = "https://api-in21.leadsquared.com"
-    ZIP_TEAMS_URL = "https://api.zipteams.com/api/v1/client/leadsquared/inbound/events?eventType=LeadActivity_Post_Create"
+    ZIP_TEAMS_URL = "https://lpsphzhz9g.execute-api.ap-south-1.amazonaws.com/production/ingestion/crm-events"
 
     for ACTIVITY_EVENT in ACTIVITY_EVENTS:
         print("Started for ACTIVITY_EVENT: ", ACTIVITY_EVENT)
@@ -102,8 +102,10 @@ def transfer_activities_from_leadsquare_to_zip_teams_nested(**kwargs):
                     }
                 ]
                 zipteam_headers = {
-                    "admin-connection": "muskan.kumari@newtonschool.co",
+                    "admin-connection": "devansh@newtonschool.co",
                     "Content-Type": "application/json",
+                    "x-crm" : 'leadsquared',
+                    'x-zip-api-key' : '0ca98c21-bcd9-48b5-9042-8b109fea5b18'
                 }
                 response = requests.request(
                     "POST", ZIP_TEAMS_URL, headers=zipteam_headers, json=body_to_post
