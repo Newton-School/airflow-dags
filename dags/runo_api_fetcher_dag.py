@@ -1,7 +1,4 @@
-"""
-Runo API Data Fetcher DAGs
-Two separate DAGs in a single file for fetching data from Runo API
-"""
+"""Runo API Data Fetcher DAGs"""
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 import pytz
@@ -13,12 +10,7 @@ from runo.api_client import RunoApiClient
 from runo.models import RunoDataManager
 from runo.constants import POSTGRES_CONN_ID
 
-# Configuration
-RUNO_SECRET_KEY = Variable.get("RUNO_API_SECRET_KEY", "jZyYmg2NjV5aG41YjU1Mm4=")
-
-# =============================================================================
-# DAG 1: Scheduled Daily Fetcher
-# =============================================================================
+RUNO_SECRET_KEY = Variable.get("RUNO_API_SECRET_KEY")
 
 @dag(
     dag_id="runo_api_fetcher_dag",
@@ -52,12 +44,10 @@ def runo_api_fetcher_dag():
     
     @task
     def create_tables():
-        """Create necessary database tables if they don't exist"""
         return RunoDataManager.create_all_tables()
     
     @task
     def fetch_and_store_callers() -> int:
-        """Fetch callers data from Runo API and store in database"""
         api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
         
         success, callers_data = api_client.get_callers()
@@ -73,7 +63,6 @@ def runo_api_fetcher_dag():
     
     @task
     def fetch_and_store_call_logs() -> int:
-        """Fetch latest call logs data from Runo API and store in database"""
         api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
         
         print("Scheduled run: Fetching latest call logs")
@@ -91,23 +80,16 @@ def runo_api_fetcher_dag():
     
     @task
     def test_api_connection() -> bool:
-        """Test API connection"""
         api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
         return api_client.test_connection()
     
-    # Task definitions
     create_tables_task = create_tables()
     test_connection_task = test_api_connection()
     fetch_callers_task = fetch_and_store_callers()
     fetch_call_logs_task = fetch_and_store_call_logs()
     
-    # Task dependencies
     create_tables_task >> test_connection_task
     test_connection_task >> [fetch_callers_task, fetch_call_logs_task]
-
-# =============================================================================
-# DAG 2: Manual Date Range Fetcher
-# =============================================================================
 
 @dag(
     dag_id="runo_api_fetcher_by_date_dag",
@@ -151,15 +133,12 @@ def runo_api_fetcher_by_date_dag():
     
     @task
     def create_tables():
-        """Create necessary database tables if they don't exist"""
         return RunoDataManager.create_all_tables()
     
     @task
     def fetch_and_store_call_logs_by_date_range(**context) -> int:
-        """Fetch call logs data from Runo API for a date range and store in database"""
         api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
         
-        # Get date parameters from context
         params = context.get("params", {})
         start_date = params.get("start_date")
         end_date = params.get("end_date")
@@ -167,14 +146,12 @@ def runo_api_fetcher_by_date_dag():
         if not start_date or not end_date:
             raise ValueError("Both start_date and end_date parameters are required. Please provide dates in YYYY-MM-DD format.")
         
-        # Validate date formats
         try:
             start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
             end_datetime = datetime.strptime(end_date, "%Y-%m-%d")
         except ValueError as e:
             raise ValueError(f"Invalid date format. Expected YYYY-MM-DD format. Error: {str(e)}")
         
-        # Validate date range
         if start_datetime > end_datetime:
             raise ValueError(f"start_date ({start_date}) cannot be after end_date ({end_date})")
         
@@ -194,21 +171,14 @@ def runo_api_fetcher_by_date_dag():
     
     @task
     def test_api_connection() -> bool:
-        """Test API connection"""
         api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
         return api_client.test_connection()
     
-    # Task definitions
     create_tables_task = create_tables()
     test_connection_task = test_api_connection()
     fetch_call_logs_task = fetch_and_store_call_logs_by_date_range()
     
-    # Task dependencies
     create_tables_task >> test_connection_task >> fetch_call_logs_task
-
-# =============================================================================
-# Create DAG instances
-# =============================================================================
 
 runo_api_fetcher_dag_instance = runo_api_fetcher_dag()
 runo_api_fetcher_by_date_dag_instance = runo_api_fetcher_by_date_dag()

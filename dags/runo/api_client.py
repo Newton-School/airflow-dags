@@ -1,7 +1,4 @@
-"""
-Runo API Client for fetching call logs and caller data
-Following newton-api patterns for external integrations
-"""
+"""Runo API Client for fetching call logs and caller data"""
 import json
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
@@ -16,13 +13,6 @@ from .constants import RUNO_API_BASE_URL, RUNO_API_TIMEOUT, ENDPOINTS
 
 
 class RunoApiClient:
-    """
-    API client for Runo telephony system
-    
-    Provides methods to fetch call logs and caller data from Runo API
-    with proper error handling, logging, and pagination support.
-    Follows the pattern established in newton-api external integrations.
-    """
     
     def __init__(
         self,
@@ -30,43 +20,21 @@ class RunoApiClient:
         api_key: str = None,
         timeout: int = RUNO_API_TIMEOUT
     ):
-        """
-        Initialize Runo API client
-        
-        Args:
-            api_url: Base URL for Runo API
-            api_key: API authentication key
-            timeout: Request timeout in seconds
-        """
         self.__api_url = api_url.rstrip('/')
         self.__api_key = api_key or Variable.get("RUNO_API_SECRET_KEY")
         self.__timeout = timeout
         self.__session = requests.Session()
         self.__session.timeout = timeout
         
-        # Set default headers
         self.__session.headers.update({
             'Auth-Key': self.__api_key,
             'Content-Type': 'application/json'
         })
     
     def __log_error(self, message: str, context: str = "") -> None:
-        """Log error messages (can be extended to send to Slack or other logging systems)"""
         print(f"Runo API Error {context}: {message}")
     
     def __request(self, method: str, path: str, context: str, **kwargs) -> Tuple[bool, Optional[Dict[str, Any]]]:
-        """
-        Helper method to perform HTTP requests with error handling
-        
-        Args:
-            method: HTTP method (GET, POST, etc.)
-            path: API endpoint path
-            context: Context description for error logging
-            **kwargs: Additional request parameters
-            
-        Returns:
-            Tuple of (success: bool, response_data: Optional[Dict])
-        """
         url = f"{self.__api_url}{path}"
         
         try:
@@ -89,12 +57,6 @@ class RunoApiClient:
         return False, response_data
     
     def get_callers(self) -> Tuple[bool, List[Dict[str, Any]]]:
-        """
-        Fetch all callers/users from Runo API
-        
-        Returns:
-            Tuple of (success: bool, callers_data: List[Dict])
-        """
         success, response_data = self.__request(
             method="GET",
             path=ENDPOINTS["USERS"],
@@ -115,12 +77,6 @@ class RunoApiClient:
         return True, callers
     
     def get_call_logs(self) -> Tuple[bool, List[Dict[str, Any]]]:
-        """
-        Fetch call logs from Runo API (latest data)
-        
-        Returns:
-            Tuple of (success: bool, call_logs_data: List[Dict])
-        """
         success, response_data = self.__request(
             method="GET",
             path=ENDPOINTS["CALL_LOGS"],
@@ -146,17 +102,6 @@ class RunoApiClient:
         page_no: int = 1, 
         max_entries_per_page: int = 100
     ) -> Tuple[bool, List[Dict[str, Any]], Dict[str, Any]]:
-        """
-        Fetch call logs for a specific date with pagination
-        
-        Args:
-            date: Date in YYYY-MM-DD format
-            page_no: Page number to fetch
-            max_entries_per_page: Maximum entries per page
-            
-        Returns:
-            Tuple of (success: bool, call_logs_data: List[Dict], metadata: Dict)
-        """
         success, response_data = self.__request(
             method="GET",
             path=f"{ENDPOINTS['CALL_LOGS']}?date={date}&pageNo={page_no}",
@@ -192,16 +137,6 @@ class RunoApiClient:
         start_date: str, 
         end_date: str
     ) -> Tuple[bool, List[Dict[str, Any]]]:
-        """
-        Fetch call logs for a date range with automatic pagination
-        
-        Args:
-            start_date: Start date in YYYY-MM-DD format
-            end_date: End date in YYYY-MM-DD format
-            
-        Returns:
-            Tuple of (success: bool, all_call_logs: List[Dict])
-        """
         # Validate date formats
         try:
             start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
@@ -275,12 +210,6 @@ class RunoApiClient:
         return True, all_call_logs
     
     def test_connection(self) -> bool:
-        """
-        Test API connection by making a simple request
-        
-        Returns:
-            bool: True if connection is successful, False otherwise
-        """
         success, _ = self.__request(
             method="GET",
             path=ENDPOINTS["USERS"],

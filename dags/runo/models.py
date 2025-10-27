@@ -1,7 +1,4 @@
-"""
-Database models and operations for Runo data
-Handles table creation, data transformation, and storage
-"""
+"""Database models and operations for Runo data"""
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timezone, date, time
 import pytz
@@ -14,19 +11,9 @@ IST_TIMEZONE = pytz.timezone('Asia/Kolkata')
 
 
 class RunoCaller:
-    """
-    Model for Runo callers/users data
-    Handles table creation and data transformation
-    """
     
     @staticmethod
     def create_table() -> str:
-        """
-        Create the callers table if it doesn't exist
-        
-        Returns:
-            str: Success message
-        """
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
         
         create_table_query = f"""
@@ -52,15 +39,6 @@ class RunoCaller:
     
     @staticmethod
     def transform_data(api_data: List[Dict[str, Any]]) -> List[tuple]:
-        """
-        Transform API data to database format
-        
-        Args:
-            api_data: Raw data from Runo API
-            
-        Returns:
-            List[tuple]: Transformed data ready for database insertion
-        """
         transformed_data = []
         
         for caller in api_data:
@@ -78,15 +56,6 @@ class RunoCaller:
     
     @staticmethod
     def store_data(transformed_data: List[tuple]) -> int:
-        """
-        Store transformed callers data in PostgreSQL
-        
-        Args:
-            transformed_data: Transformed data ready for insertion
-            
-        Returns:
-            int: Number of records stored
-        """
         if not transformed_data:
             print("No callers data to store")
             return 0
@@ -118,19 +87,9 @@ class RunoCaller:
 
 
 class RunoCallLog:
-    """
-    Model for Runo call logs data
-    Handles table creation and data transformation
-    """
     
     @staticmethod
     def create_table() -> str:
-        """
-        Create the call logs table if it doesn't exist
-        
-        Returns:
-            str: Success message
-        """
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
         
         create_table_query = f"""
@@ -161,50 +120,24 @@ class RunoCallLog:
     
     @staticmethod
     def get_ist_timestamp_from_utc_timestamp(utc_timestamp: float) -> datetime:
-        """
-        Convert UTC timestamp to IST datetime (naive, without timezone info).
-        
-        Args:
-            utc_timestamp: Unix timestamp in UTC
-            
-        Returns:
-            datetime: IST datetime object (naive, no timezone info)
-        """
-        # Convert UTC timestamp to datetime object
         utc_datetime = datetime.fromtimestamp(utc_timestamp, tz=timezone.utc)
-        
-        # Convert to IST
         ist_datetime = utc_datetime.astimezone(IST_TIMEZONE)
-        
-        # Return as naive datetime (remove timezone info)
         return ist_datetime.replace(tzinfo=None)
 
     @staticmethod
     def transform_data(api_data: List[Dict[str, Any]]) -> List[tuple]:
-        """
-        Transform API data to database format
-        
-        Args:
-            api_data: Raw data from Runo API
-            
-        Returns:
-            List[tuple]: Transformed data ready for database insertion
-        """
         transformed_data = []
         
         for call_log in api_data:
-            # Parse call timestamp using the proper timestamp conversion
             call_timestamp = None
             created_at = None
             
-            # Handle startTime timestamp (UTC) - convert to IST
             if call_log.get('startTime'):
                 try:
                     call_timestamp = RunoCallLog.get_ist_timestamp_from_utc_timestamp(call_log['startTime'])
                 except (ValueError, TypeError, AttributeError):
                     print(f"Warning: Could not parse startTime: {call_log.get('startTime')}")
             
-            # Handle createdAt timestamp (convert to IST)
             if call_log.get('createdAt'):
                 try:
                     created_at = RunoCallLog.get_ist_timestamp_from_utc_timestamp(call_log['createdAt'])
@@ -215,12 +148,12 @@ class RunoCallLog:
                 call_log.get('callId'),
                 call_log.get('callerId'),
                 call_log.get('calledBy'),
-                call_log.get('name'),  # customer_name
+                call_log.get('name'),
                 call_log.get('customerId'),
                 call_log.get('phoneNumber'),
                 call_timestamp,
                 call_log.get('duration'),
-                call_log.get('type'),  # call_type
+                call_log.get('type'),
                 call_log.get('status'),
                 call_log.get('tag'),
                 created_at,
@@ -231,15 +164,6 @@ class RunoCallLog:
     
     @staticmethod
     def store_data(transformed_data: List[tuple]) -> int:
-        """
-        Store transformed call logs data in PostgreSQL
-        
-        Args:
-            transformed_data: Transformed data ready for insertion
-            
-        Returns:
-            int: Number of records stored
-        """
         if not transformed_data:
             print("No call logs data to store")
             return 0
@@ -278,18 +202,9 @@ class RunoCallLog:
 
 
 class RunoDataManager:
-    """
-    Manager class to coordinate data operations
-    """
     
     @staticmethod
     def create_all_tables() -> str:
-        """
-        Create all required tables
-        
-        Returns:
-            str: Success message
-        """
         callers_result = RunoCaller.create_table()
         call_logs_result = RunoCallLog.create_table()
         
@@ -297,28 +212,10 @@ class RunoDataManager:
     
     @staticmethod
     def process_callers_data(api_data: List[Dict[str, Any]]) -> int:
-        """
-        Process and store callers data
-        
-        Args:
-            api_data: Raw callers data from API
-            
-        Returns:
-            int: Number of records stored
-        """
         transformed_data = RunoCaller.transform_data(api_data)
         return RunoCaller.store_data(transformed_data)
     
     @staticmethod
     def process_call_logs_data(api_data: List[Dict[str, Any]]) -> int:
-        """
-        Process and store call logs data
-        
-        Args:
-            api_data: Raw call logs data from API
-            
-        Returns:
-            int: Number of records stored
-        """
         transformed_data = RunoCallLog.transform_data(api_data)
         return RunoCallLog.store_data(transformed_data)
