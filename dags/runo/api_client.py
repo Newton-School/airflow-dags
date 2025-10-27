@@ -208,11 +208,3 @@ class RunoApiClient:
         print(f"Total call logs collected: {len(all_call_logs)}")
         
         return True, all_call_logs
-    
-    def test_connection(self) -> bool:
-        success, _ = self.__request(
-            method="GET",
-            path=ENDPOINTS["USERS"],
-            context="while testing API connection"
-        )
-        return success

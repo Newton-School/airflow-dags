@@ -47,49 +47,45 @@ def runo_api_fetcher_dag():
         return RunoDataManager.create_all_tables()
     
     @task
-    def fetch_and_store_callers() -> int:
+    def fetch_callers_data() -> List[Dict[str, Any]]:
         api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
-        
         success, callers_data = api_client.get_callers()
         if not success:
             raise Exception("Failed to fetch callers data from Runo API")
-        
+        return callers_data
+    
+    @task
+    def store_callers_data(callers_data: List[Dict[str, Any]]) -> int:
         if not callers_data:
             print("No callers data received from API")
             return 0
-        
-        stored_count = RunoDataManager.process_callers_data(callers_data)
-        return stored_count
+        return RunoDataManager.process_callers_data(callers_data)
     
     @task
-    def fetch_and_store_call_logs() -> int:
+    def fetch_call_logs_data() -> List[Dict[str, Any]]:
         api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
-        
         print("Scheduled run: Fetching latest call logs")
         success, call_logs_data = api_client.get_call_logs()
-        
         if not success:
             raise Exception("Failed to fetch call logs data from Runo API")
-        
+        return call_logs_data
+    
+    @task
+    def store_call_logs_data(call_logs_data: List[Dict[str, Any]]) -> int:
         if not call_logs_data:
             print("No call logs data received from API")
             return 0
-        
-        stored_count = RunoDataManager.process_call_logs_data(call_logs_data)
-        return stored_count
-    
-    @task
-    def test_api_connection() -> bool:
-        api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
-        return api_client.test_connection()
+        return RunoDataManager.process_call_logs_data(call_logs_data)
     
     create_tables_task = create_tables()
-    test_connection_task = test_api_connection()
-    fetch_callers_task = fetch_and_store_callers()
-    fetch_call_logs_task = fetch_and_store_call_logs()
+    fetch_callers_task = fetch_callers_data()
+    fetch_call_logs_task = fetch_call_logs_data()
+    store_callers_task = store_callers_data(fetch_callers_task)
+    store_call_logs_task = store_call_logs_data(fetch_call_logs_task)
     
-    create_tables_task >> test_connection_task
-    test_connection_task >> [fetch_callers_task, fetch_call_logs_task]
+    create_tables_task >> [fetch_callers_task, fetch_call_logs_task]
+    fetch_callers_task >> store_callers_task
+    fetch_call_logs_task >> store_call_logs_task
 
 @dag(
     dag_id="runo_api_fetcher_by_date_dag",
@@ -136,7 +132,7 @@ def runo_api_fetcher_by_date_dag():
         return RunoDataManager.create_all_tables()
     
     @task
-    def fetch_and_store_call_logs_by_date_range(**context) -> int:
+    def fetch_call_logs_by_date_range(**context) -> List[Dict[str, Any]]:
         api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
         
         params = context.get("params", {})
@@ -158,27 +154,22 @@ def runo_api_fetcher_by_date_dag():
         print(f"Manual run: Fetching call logs from {start_date} to {end_date}")
         
         success, call_logs_data = api_client.get_call_logs_by_date_range(start_date, end_date)
-        
         if not success:
             raise Exception("Failed to fetch call logs data from Runo API")
-        
+        return call_logs_data
+    
+    @task
+    def store_call_logs_data(call_logs_data: List[Dict[str, Any]]) -> int:
         if not call_logs_data:
             print("No call logs data received from API")
             return 0
-        
-        stored_count = RunoDataManager.process_call_logs_data(call_logs_data)
-        return stored_count
-    
-    @task
-    def test_api_connection() -> bool:
-        api_client = RunoApiClient(api_key=RUNO_SECRET_KEY)
-        return api_client.test_connection()
+        return RunoDataManager.process_call_logs_data(call_logs_data)
     
     create_tables_task = create_tables()
-    test_connection_task = test_api_connection()
-    fetch_call_logs_task = fetch_and_store_call_logs_by_date_range()
+    fetch_call_logs_task = fetch_call_logs_by_date_range()
+    store_call_logs_task = store_call_logs_data(fetch_call_logs_task)
     
-    create_tables_task >> test_connection_task >> fetch_call_logs_task
+    create_tables_task >> fetch_call_logs_task >> store_call_logs_task
 
 runo_api_fetcher_dag_instance = runo_api_fetcher_dag()
 runo_api_fetcher_by_date_dag_instance = runo_api_fetcher_by_date_dag()
