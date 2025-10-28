@@ -23,7 +23,7 @@ def transfer_activities_from_leadsquare_to_zip_teams_nested(**kwargs):
     )
     LEAD_SQUARED_SECRET_KEY = Variable.get("LEAD_SQUARED_SECRET_KEY")
     LEAD_SQUARED_URL = "https://api-in21.leadsquared.com"
-    ZIP_TEAMS_URL = "https://lpsphzhz9g.execute-api.ap-south-1.amazonaws.com/production/ingestion/crm-events"
+    ZIP_TEAMS_URL = "https://lpsphzhz9g.execute-api.ap-south-1.amazonaws.com/production/ingestion/crm-events?eventType=LeadActivity_Post_Create"
 
     for ACTIVITY_EVENT in ACTIVITY_EVENTS:
         print("Started for ACTIVITY_EVENT: ", ACTIVITY_EVENT)
