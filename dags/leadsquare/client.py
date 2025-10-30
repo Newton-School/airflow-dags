@@ -6,7 +6,8 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-PAGE_SIZE = 5000
+LEADS_PAGE_SIZE = 5000
+ACTIVITIES_PAGE_SIZE = 1000
 
 
 class LSQClient:
@@ -23,7 +24,8 @@ class LSQClient:
         self.host = host
         self.access_key = access_key
         self.secret_key = secret_key
-        self.endpoint = f"{host}/v2/LeadManagement.svc/Leads.RecentlyModified"
+        self.leads_endpoint = f"{host}/v2/LeadManagement.svc/Leads.RecentlyModified"
+        self.activities_endpoint = f"{host}/v2/ProspectActivity.svc/RetrieveRecentlyModified"
 
     def fetch_leads(
         self,
@@ -56,7 +58,7 @@ class LSQClient:
             },
             "Paging": {
                 "PageIndex": page_index,
-                "PageSize": PAGE_SIZE
+                "PageSize": LEADS_PAGE_SIZE
             },
             "Sorting": {
                 "ColumnName": "ModifiedOn",
@@ -65,7 +67,52 @@ class LSQClient:
         }
 
         response = requests.post(
-            url=self.endpoint,
+            url=self.leads_endpoint,
+            params={
+                "accessKey": self.access_key,
+                "secretKey": self.secret_key,
+            },
+            json=payload,
+            timeout=60
+        )
+
+        response.raise_for_status()
+        return response.json()
+
+    def fetch_activities(
+        self,
+        from_date: str,
+        to_date: str,
+        page_index: int = 1
+    ) -> Dict[str, Any]:
+        """Fetch activities from LeadSquare API.
+
+        Args:
+            from_date: Start date in format 'YYYY-MM-DD HH:MM:SS'
+            to_date: End date in format 'YYYY-MM-DD HH:MM:SS'
+            page_index: Page number for pagination
+
+        Returns:
+            API response as dictionary
+        """
+        payload = {
+            "Parameter": {
+                "FromDate": from_date,
+                "ToDate": to_date,
+                "IncludeCustomFields": 1
+            },
+            "Paging": {
+                "PageIndex": page_index,
+                "PageSize": ACTIVITIES_PAGE_SIZE
+            },
+            "Sorting": {
+                "ColumnName": "CreatedOn",
+                "Direction": 1
+            }
+        }
+
+        response = requests.post(
+            url=self.activities_endpoint,
             params={
                 "accessKey": self.access_key,
                 "secretKey": self.secret_key,
