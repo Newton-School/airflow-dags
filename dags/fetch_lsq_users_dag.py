@@ -39,23 +39,42 @@ class LSQUsersManager:
     def create_table(self) -> None:
         """Create lsq_users_v2 table if it doesn't exist."""
         create_table_query = """
-        CREATE TABLE IF NOT EXISTS lsq_users_v2 (
-            tag TEXT,
-            role TEXT,
-            userid TEXT PRIMARY KEY,
-            lastname TEXT,
-            firstname TEXT,
-            statuscode DOUBLE PRECISION,
-            emailaddress TEXT,
-            isphonecallagent BOOLEAN,
-            memberofgroups JSONB,
-            airflow_created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            airflow_modified_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+                             CREATE TABLE IF NOT EXISTS lsq_users_v2
+                             (
+                                 tag
+                                 TEXT,
+                                 role
+                                 TEXT,
+                                 userid
+                                 TEXT
+                                 PRIMARY
+                                 KEY,
+                                 lastname
+                                 TEXT,
+                                 firstname
+                                 TEXT,
+                                 statuscode
+                                 DOUBLE
+                                 PRECISION,
+                                 emailaddress
+                                 TEXT,
+                                 isphonecallagent
+                                 BOOLEAN,
+                                 memberofgroups
+                                 JSONB,
+                                 airflow_created_on
+                                 TIMESTAMP
+                                 DEFAULT
+                                 CURRENT_TIMESTAMP,
+                                 airflow_modified_on
+                                 TIMESTAMP
+                                 DEFAULT
+                                 CURRENT_TIMESTAMP
+                             );
 
-        CREATE INDEX IF NOT EXISTS idx_lsq_users_v2_emailaddress ON lsq_users_v2(emailaddress);
-        CREATE INDEX IF NOT EXISTS idx_lsq_users_v2_role ON lsq_users_v2(role);
-        """
+                             CREATE INDEX IF NOT EXISTS idx_lsq_users_v2_emailaddress ON lsq_users_v2(emailaddress);
+                             CREATE INDEX IF NOT EXISTS idx_lsq_users_v2_role ON lsq_users_v2(role); \
+                             """
 
         with self.pg_hook.get_conn() as conn:
             with conn.cursor() as cursor:
@@ -117,15 +136,15 @@ class LSQUsersManager:
         member_of_groups = user.get('MemberOfGroups', [])
 
         transformed = {
-            'userid': user.get('ID'),
-            'firstname': user.get('FirstName'),
-            'lastname': user.get('LastName'),
-            'emailaddress': user.get('EmailAddress'),
-            'role': user.get('Role'),
-            'statuscode': user.get('StatusCode'),
-            'tag': user.get('Tag'),
-            'isphonecallagent': user.get('IsPhoneCallAgent', False),
-            'memberofgroups': json.dumps(member_of_groups) if member_of_groups else None
+                'userid': user.get('ID'),
+                'firstname': user.get('FirstName'),
+                'lastname': user.get('LastName'),
+                'emailaddress': user.get('EmailAddress'),
+                'role': user.get('Role'),
+                'statuscode': user.get('StatusCode'),
+                'tag': user.get('Tag'),
+                'isphonecallagent': user.get('IsPhoneCallAgent', False),
+                'memberofgroups': json.dumps(member_of_groups) if member_of_groups else None
         }
 
         return transformed
@@ -161,17 +180,18 @@ class LSQUsersManager:
 
 
 @dag(
-    dag_id="fetch_lsq_users_dag",
-    schedule="0 2 * * *",  # Run daily at 2 AM
-    start_date=pendulum.datetime(2025, 10, 30, tz="UTC"),
-    catchup=False,
-    tags=["lsq", "users", "data_ingestion"],
-    default_args={
-        "owner": "data_team",
-        "retries": 2,
-        "retry_delay": pendulum.duration(minutes=5),
-    },
-    doc_md="""
+        dag_id="fetch_lsq_users_dag",
+        schedule="0 2 * * *",  # Run daily at 2 AM
+        start_date=pendulum.datetime(2025, 10, 30, tz="UTC"),
+        catchup=False,
+        max_active_runs=2,
+        tags=["lsq", "users", "data_ingestion"],
+        default_args={
+                "owner": "data_team",
+                "retries": 2,
+                "retry_delay": pendulum.duration(minutes=5),
+        },
+        doc_md="""
     # LeadSquare Users Ingestion DAG
 
     This DAG fetches all users from LeadSquare API and stores them in the lsq_users_v2 table.
@@ -220,7 +240,7 @@ def fetch_lsq_users_dag():
         total_users = manager.fetch_and_store_users()
 
         return {
-            "total_users": total_users
+                "total_users": total_users
         }
 
     # Define task dependencies

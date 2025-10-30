@@ -43,28 +43,52 @@ class LSQActivitiesManager:
     def create_table(self) -> None:
         """Create lsq_leads_activity_v2 table if it doesn't exist."""
         create_table_query = """
-        CREATE TABLE IF NOT EXISTS lsq_leads_activity_v2 (
-            type TEXT,
-            createdon TEXT,
-            eventcode DOUBLE PRECISION,
-            eventname TEXT,
-            sessionid TEXT,
-            activityid TEXT PRIMARY KEY,
-            modifiedon TEXT,
-            activitydata JSONB,
-            activitytype DOUBLE PRECISION,
-            activityscore DOUBLE PRECISION,
-            relatedprospectid TEXT,
-            activitycustomfields JSONB,
-            airflow_created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            airflow_modified_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+                             CREATE TABLE IF NOT EXISTS lsq_leads_activity_v2
+                             (
+                                 type
+                                 TEXT,
+                                 createdon
+                                 TEXT,
+                                 eventcode
+                                 DOUBLE
+                                 PRECISION,
+                                 eventname
+                                 TEXT,
+                                 sessionid
+                                 TEXT,
+                                 activityid
+                                 TEXT
+                                 PRIMARY
+                                 KEY,
+                                 modifiedon
+                                 TEXT,
+                                 activitydata
+                                 JSONB,
+                                 activitytype
+                                 DOUBLE
+                                 PRECISION,
+                                 activityscore
+                                 DOUBLE
+                                 PRECISION,
+                                 relatedprospectid
+                                 TEXT,
+                                 activitycustomfields
+                                 JSONB,
+                                 airflow_created_on
+                                 TIMESTAMP
+                                 DEFAULT
+                                 CURRENT_TIMESTAMP,
+                                 airflow_modified_on
+                                 TIMESTAMP
+                                 DEFAULT
+                                 CURRENT_TIMESTAMP
+                             );
 
-        CREATE INDEX IF NOT EXISTS idx_lsq_activities_v2_createdon ON lsq_leads_activity_v2(createdon);
-        CREATE INDEX IF NOT EXISTS idx_lsq_activities_v2_modifiedon ON lsq_leads_activity_v2(modifiedon);
-        CREATE INDEX IF NOT EXISTS idx_lsq_activities_v2_relatedprospectid ON lsq_leads_activity_v2(relatedprospectid);
-        CREATE INDEX IF NOT EXISTS idx_lsq_activities_v2_eventcode ON lsq_leads_activity_v2(eventcode);
-        """
+                             CREATE INDEX IF NOT EXISTS idx_lsq_activities_v2_createdon ON lsq_leads_activity_v2(createdon);
+                             CREATE INDEX IF NOT EXISTS idx_lsq_activities_v2_modifiedon ON lsq_leads_activity_v2(modifiedon);
+                             CREATE INDEX IF NOT EXISTS idx_lsq_activities_v2_relatedprospectid ON lsq_leads_activity_v2(relatedprospectid);
+                             CREATE INDEX IF NOT EXISTS idx_lsq_activities_v2_eventcode ON lsq_leads_activity_v2(eventcode); \
+                             """
 
         with self.pg_hook.get_conn() as conn:
             with conn.cursor() as cursor:
@@ -91,9 +115,9 @@ class LSQActivitiesManager:
                 logger.info(f"Fetching page {page_index} for date range {from_date} to {to_date}")
 
                 response = self.lsq_client.fetch_activities(
-                    from_date=from_date,
-                    to_date=to_date,
-                    page_index=page_index
+                        from_date=from_date,
+                        to_date=to_date,
+                        page_index=page_index
                 )
 
                 record_count = response.get('RecordCount', 0)
@@ -164,18 +188,18 @@ class LSQActivitiesManager:
                     custom_fields_json[key] = value
 
         transformed = {
-            'activityid': activity.get('Id'),
-            'eventcode': activity.get('EventCode'),
-            'eventname': activity.get('EventName'),
-            'activityscore': activity.get('ActivityScore'),
-            'createdon': activity.get('CreatedOn'),
-            'modifiedon': activity.get('ModifiedOn'),
-            'activitytype': activity.get('ActivityType'),
-            'type': activity.get('Type'),
-            'relatedprospectid': activity.get('RelatedProspectId'),
-            'sessionid': activity.get('SessionId'),
-            'activitydata': json.dumps(activity_data_json) if activity_data_json else None,
-            'activitycustomfields': json.dumps(custom_fields_json) if custom_fields_json else None
+                'activityid': activity.get('Id'),
+                'eventcode': activity.get('EventCode'),
+                'eventname': activity.get('EventName'),
+                'activityscore': activity.get('ActivityScore'),
+                'createdon': activity.get('CreatedOn'),
+                'modifiedon': activity.get('ModifiedOn'),
+                'activitytype': activity.get('ActivityType'),
+                'type': activity.get('Type'),
+                'relatedprospectid': activity.get('RelatedProspectId'),
+                'sessionid': activity.get('SessionId'),
+                'activitydata': json.dumps(activity_data_json) if activity_data_json else None,
+                'activitycustomfields': json.dumps(custom_fields_json) if custom_fields_json else None
         }
 
         return transformed
@@ -211,29 +235,30 @@ class LSQActivitiesManager:
 
 
 @dag(
-    dag_id="fetch_lsq_activities_dag",
-    schedule="*/15 * * * *",  # Run every 15 minutes
-    start_date=pendulum.datetime(2025, 10, 30, tz="UTC"),
-    catchup=False,
-    tags=["lsq", "activities", "data_ingestion"],
-    default_args={
-        "owner": "data_team",
-        "retries": 2,
-        "retry_delay": pendulum.duration(minutes=5),
-    },
-    params={
-        "start_time": Param(
-            None,
-            type=["null", "string"],
-            description="Start time in format 'YYYY-MM-DD HH:MM:SS'. If not provided, fetches from 2 hours ago."
-        ),
-        "end_time": Param(
-            None,
-            type=["null", "string"],
-            description="End time in format 'YYYY-MM-DD HH:MM:SS'. If not provided, uses current time."
-        ),
-    },
-    doc_md="""
+        dag_id="fetch_lsq_activities_dag",
+        schedule="*/15 * * * *",  # Run every 15 minutes
+        start_date=pendulum.datetime(2025, 10, 30, tz="UTC"),
+        catchup=False,
+        max_active_runs=2,
+        tags=["lsq", "activities", "data_ingestion"],
+        default_args={
+                "owner": "data_team",
+                "retries": 2,
+                "retry_delay": pendulum.duration(minutes=5),
+        },
+        params={
+                "start_time": Param(
+                        None,
+                        type=["null", "string"],
+                        description="Start time in format 'YYYY-MM-DD HH:MM:SS'. If not provided, fetches from 2 hours ago."
+                ),
+                "end_time": Param(
+                        None,
+                        type=["null", "string"],
+                        description="End time in format 'YYYY-MM-DD HH:MM:SS'. If not provided, uses current time."
+                ),
+        },
+        doc_md="""
     # LeadSquare Activities Ingestion DAG
 
     This DAG fetches activities from LeadSquare API and stores them in the lsq_leads_activity_v2 table.
@@ -307,9 +332,9 @@ def fetch_lsq_activities_dag():
         total_activities = manager.fetch_and_store_activities(from_date_str, to_date_str)
 
         return {
-            "total_activities": total_activities,
-            "from_date": from_date_str,
-            "to_date": to_date_str
+                "total_activities": total_activities,
+                "from_date": from_date_str,
+                "to_date": to_date_str
         }
 
     # Define task dependencies
