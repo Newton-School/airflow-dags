@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Any
 
 import pendulum
 from airflow.decorators import dag, task
-from airflow.models import Variable
+from airflow.models import Param, Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 from leadsquare.client import LSQClient
@@ -175,7 +175,9 @@ class LSQLeadsManager:
             mx_prospect_status TEXT,
             mx_reactivation_source TEXT,
             mx_phoenix_lead_assigned_date TEXT,
-            ownerid TEXT
+            ownerid TEXT,
+            airflow_created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            airflow_modified_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
         CREATE INDEX IF NOT EXISTS idx_lsq_leads_v2_modifiedon ON lsq_leads_v2(modifiedon);
@@ -297,10 +299,12 @@ class LSQLeadsManager:
         # For the ON CONFLICT UPDATE clause, exclude the primary key
         update_columns = [col for col in columns if col != 'prospectid']
         update_clause = ', '.join([f"{col} = EXCLUDED.{col}" for col in update_columns])
+        # Add airflow_modified_on to update on conflict
+        update_clause += ', airflow_modified_on = CURRENT_TIMESTAMP'
 
         query = f"""
-            INSERT INTO lsq_leads_v2 ({column_names})
-            VALUES ({placeholders})
+            INSERT INTO lsq_leads_v2 ({column_names}, airflow_created_on, airflow_modified_on)
+            VALUES ({placeholders}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ON CONFLICT (prospectid)
             DO UPDATE SET {update_clause}
         """
@@ -319,14 +323,31 @@ class LSQLeadsManager:
         "retries": 2,
         "retry_delay": pendulum.duration(minutes=5),
     },
+    params={
+        "start_time": Param(
+            None,
+            type=["null", "string"],
+            description="Start time in format 'YYYY-MM-DD HH:MM:SS'. If not provided, fetches from 2 hours ago."
+        ),
+        "end_time": Param(
+            None,
+            type=["null", "string"],
+            description="End time in format 'YYYY-MM-DD HH:MM:SS'. If not provided, uses current time."
+        ),
+    },
     doc_md="""
     # LeadSquare Leads Ingestion DAG
 
     This DAG fetches leads from LeadSquare API and stores them in the lsq_leads_v2 table.
 
     - Runs every 15 minutes
-    - Fetches leads modified in the last 15 minutes
+    - By default, fetches leads modified in the last 2 hours
+    - Can override time range using start_time and end_time params
     - Uses upsert logic to handle duplicate leads
+
+    ## Parameters:
+    - start_time: Optional start datetime (format: 'YYYY-MM-DD HH:MM:SS')
+    - end_time: Optional end datetime (format: 'YYYY-MM-DD HH:MM:SS')
     """,
 )
 def fetch_lsq_leads_dag():
@@ -349,7 +370,7 @@ def fetch_lsq_leads_dag():
         return True
 
     @task(task_id="fetch_and_store_leads")
-    def fetch_and_store_leads(table_created: bool) -> Dict[str, Any]:
+    def fetch_and_store_leads(table_created: bool, **context) -> Dict[str, Any]:
         """Fetch leads from LSQ and store in database."""
         if not table_created:
             raise ValueError("Table creation failed")
@@ -364,15 +385,26 @@ def fetch_lsq_leads_dag():
         lsq_client = LSQClient(lsq_host, lsq_access_key, lsq_secret_key)
         manager = LSQLeadsManager(pg_hook, lsq_client)
 
-        # Calculate time range - last 15 minutes
-        current_time = datetime.now(timezone.utc)
-        to_date = current_time.replace(second=0, microsecond=0)
-        from_date = to_date - timedelta(minutes=15)
+        # Get params
+        params = context["params"]
+        start_time_param = params.get("start_time")
+        end_time_param = params.get("end_time")
 
-        from_date_str = from_date.strftime('%Y-%m-%d %H:%M:%S')
-        to_date_str = to_date.strftime('%Y-%m-%d %H:%M:%S')
+        # Calculate time range
+        if start_time_param and end_time_param:
+            # Use provided params
+            from_date_str = start_time_param
+            to_date_str = end_time_param
+            logger.info(f"Using provided time range: {from_date_str} to {to_date_str}")
+        else:
+            # Default: last 2 hours
+            current_time = datetime.now(timezone.utc)
+            to_date = current_time.replace(second=0, microsecond=0)
+            from_date = to_date - timedelta(hours=2)
 
-        logger.info(f"Fetching leads from {from_date_str} to {to_date_str}")
+            from_date_str = from_date.strftime('%Y-%m-%d %H:%M:%S')
+            to_date_str = to_date.strftime('%Y-%m-%d %H:%M:%S')
+            logger.info(f"Using default time range (last 2 hours): {from_date_str} to {to_date_str}")
 
         total_leads = manager.fetch_and_store_leads(from_date_str, to_date_str)
 
