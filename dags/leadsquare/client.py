@@ -3,11 +3,13 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import requests
+from requests.exceptions import ReadTimeout
 
 logger = logging.getLogger(__name__)
 
 LEADS_PAGE_SIZE = 5000
 ACTIVITIES_PAGE_SIZE = 1000
+REQUEST_TIMEOUT = 120  # seconds
 
 
 class LSQClient:
@@ -66,18 +68,31 @@ class LSQClient:
             }
         }
 
-        response = requests.post(
-            url=self.leads_endpoint,
-            params={
-                "accessKey": self.access_key,
-                "secretKey": self.secret_key,
-            },
-            json=payload,
-            timeout=60
-        )
+        # Retry once on read timeout
+        for attempt in range(2):
+            try:
+                response = requests.post(
+                    url=self.leads_endpoint,
+                    params={
+                        "accessKey": self.access_key,
+                        "secretKey": self.secret_key,
+                    },
+                    json=payload,
+                    timeout=REQUEST_TIMEOUT
+                )
 
-        response.raise_for_status()
-        return response.json()
+                response.raise_for_status()
+                return response.json()
+
+            except ReadTimeout:
+                if attempt == 0:
+                    logger.warning(f"Read timeout on attempt {attempt + 1}, retrying once...")
+                else:
+                    logger.error("Read timeout on second attempt, giving up")
+                    raise
+
+        # This should never be reached, but added for type safety
+        raise RuntimeError("Unexpected error in fetch_leads")
 
     def fetch_activities(
         self,
@@ -111,18 +126,64 @@ class LSQClient:
             }
         }
 
-        response = requests.post(
-            url=self.activities_endpoint,
-            params={
-                "accessKey": self.access_key,
-                "secretKey": self.secret_key,
-            },
-            json=payload,
-            timeout=60
-        )
+        # Retry once on read timeout
+        for attempt in range(2):
+            try:
+                response = requests.post(
+                    url=self.activities_endpoint,
+                    params={
+                        "accessKey": self.access_key,
+                        "secretKey": self.secret_key,
+                    },
+                    json=payload,
+                    timeout=REQUEST_TIMEOUT
+                )
 
-        response.raise_for_status()
-        return response.json()
+                response.raise_for_status()
+                return response.json()
+
+            except ReadTimeout:
+                if attempt == 0:
+                    logger.warning(f"Read timeout on attempt {attempt + 1}, retrying once...")
+                else:
+                    logger.error("Read timeout on second attempt, giving up")
+                    raise
+
+        # This should never be reached, but added for type safety
+        raise RuntimeError("Unexpected error in fetch_activities")
+
+    def fetch_users(self) -> List[Dict[str, Any]]:
+        """Fetch all users from LeadSquare API.
+
+        Returns:
+            List of user dictionaries
+        """
+        users_endpoint = f"{self.host}/v2/UserManagement.svc/Users.Get"
+
+        # Retry once on read timeout
+        for attempt in range(2):
+            try:
+                response = requests.get(
+                    url=users_endpoint,
+                    params={
+                        "accessKey": self.access_key,
+                        "secretKey": self.secret_key,
+                    },
+                    timeout=REQUEST_TIMEOUT
+                )
+
+                response.raise_for_status()
+                return response.json()
+
+            except ReadTimeout:
+                if attempt == 0:
+                    logger.warning(f"Read timeout on attempt {attempt + 1}, retrying once...")
+                else:
+                    logger.error("Read timeout on second attempt, giving up")
+                    raise
+
+        # This should never be reached, but added for type safety
+        raise RuntimeError("Unexpected error in fetch_users")
 
     @staticmethod
     def _get_required_fields() -> List[str]:
