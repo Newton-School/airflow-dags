@@ -344,7 +344,7 @@ transform_data = PostgresOperator(
             SELECT 
                  *,
                 TO_CHAR(createdon::timestamp + INTERVAL '5 hours 30 minutes', 'YYYY-MM-DD HH24:MI:SS') AS createdon_ist
-            FROM leadsquareactivity 
+            FROM lsq_leads_activity_v2 
         ) sub
         WHERE 
             TO_TIMESTAMP(sub.createdon_ist, 'YYYY-MM-DD HH24:MI:SS') >= current_date - interval '2' Hour
@@ -421,8 +421,8 @@ transform_data = PostgresOperator(
                     ld.mx_date_of_birth,
                     ld.modifiedon,
                     row_number() over (partition by ld.prospectid order by ld.modifiedon desc) as rn
-                    from leadsquareleadsdata ld left join leadsquareusers lu
-                    on lu.Userid = ld.ownerid 
+                    from lsq_leads_v2 ld left join lsq_users_v2 lu
+                    on lu.userid = ld.ownerid 
             ) a
             where rn = 1
         )
@@ -652,4 +652,3 @@ extract_python_data = PythonOperator(
 
 # Define Task Dependencies
 create_table >> transform_data >> extract_python_data
-
