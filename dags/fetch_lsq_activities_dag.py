@@ -4,7 +4,7 @@ Airflow DAG for fetching LeadSquare activities and storing them in PostgreSQL.
 This DAG:
 1. Fetches activities from LeadSquare API
 2. Maps the API response fields to database columns
-3. Converts Data and Fields arrays to JSONB
+3. Stores Data and Fields arrays as JSONB (keeping array format)
 4. Stores data in lsq_leads_activity_v2 table
 """
 import json
@@ -167,25 +167,11 @@ class LSQActivitiesManager:
         Returns:
             Dictionary with database column names and properly formatted values
         """
-        # Convert Data array to JSONB object
+        # Keep Data array as-is (don't convert to object) to match Airbyte format
         data_array = activity.get('Data', [])
-        activity_data_json = {}
-        if data_array:
-            for item in data_array:
-                key = item.get('Key')
-                value = item.get('Value')
-                if key:
-                    activity_data_json[key] = value
 
-        # Convert Fields array to JSONB object
+        # Keep Fields array as-is (don't convert to object) to match Airbyte format
         fields_array = activity.get('Fields', [])
-        custom_fields_json = {}
-        if fields_array:
-            for item in fields_array:
-                key = item.get('Key')
-                value = item.get('Value')
-                if key:
-                    custom_fields_json[key] = value
 
         transformed = {
                 'activityid': activity.get('Id'),
@@ -198,8 +184,8 @@ class LSQActivitiesManager:
                 'type': activity.get('Type'),
                 'relatedprospectid': activity.get('RelatedProspectId'),
                 'sessionid': activity.get('SessionId'),
-                'activitydata': json.dumps(activity_data_json) if activity_data_json else None,
-                'activitycustomfields': json.dumps(custom_fields_json) if custom_fields_json else None
+                'activitydata': json.dumps(data_array) if data_array else None,
+                'activitycustomfields': json.dumps(fields_array) if fields_array else None
         }
 
         return transformed
