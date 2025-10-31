@@ -165,7 +165,7 @@ def get_transform_sql():
             SELECT 
                 *,
                 TO_CHAR(createdon::timestamp + INTERVAL '5 hours 30 minutes', 'YYYY-MM-DD HH24:MI:SS') AS createdon_ist
-            FROM leadsquareactivity 
+            FROM lsq_leads_activity_v2 
         ) sub
         WHERE TO_TIMESTAMP(sub.createdon_ist, 'YYYY-MM-DD HH24:MI:SS') >= 
             CASE 
@@ -272,8 +272,8 @@ def get_transform_sql():
                 ld.mx_date_of_birth,
                 ld.modifiedon,
                 ROW_NUMBER() OVER (PARTITION BY ld.prospectid ORDER BY ld.modifiedon DESC) as rn
-            FROM leadsquareleadsdata ld 
-            LEFT JOIN leadsquareusers lu ON lu.Userid = ld.ownerid 
+            FROM lsq_leads_v2 ld 
+            LEFT JOIN lsq_users_v2 lu ON lu.userid = ld.ownerid 
         ) a
         WHERE rn = 1
     )

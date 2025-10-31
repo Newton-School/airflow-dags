@@ -542,7 +542,7 @@ transform_data = PostgresOperator(
                 
         FROM (
             select *
-            from leadsquareactivity l
+            from lsq_leads_activity_v2 l
             where 
                 to_timestamp(l.createdon, 'YYYY-MM-DD hh24:mi:ss') >= current_date - interval '1' day
         ) as l
@@ -581,7 +581,7 @@ transform_data = PostgresOperator(
                     mx_source_intended_course,
                     modifiedon,
                     row_number() over (partition by prospectid order by modifiedon desc) as rn
-                from leadsquareleadsdata 
+                from lsq_leads_v2 
             ) a
             where rn = 1
         ) as l2 

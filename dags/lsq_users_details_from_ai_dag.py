@@ -29,7 +29,7 @@ def join_two_tables(table1, table2, common_column):
 def join_api_users_with_lsq_leads():
     api_enrolled_users_query = '''select auth_user.email as "email", auth_user.username as "username", auth_user.id as "user_id", concat(auth_user.first_name, ' ' , auth_user.last_name) as "full_name", courses_course.title as "course_title" from courses_courseusermapping join auth_user on auth_user.id = courses_courseusermapping.user_id join courses_course on courses_course.id = courses_courseusermapping.course_id where courses_courseusermapping.status in (8,10)'''
     first_table = execute_query_on_db('postgres_read_replica', api_enrolled_users_query)
-    lsq_prospects_query = '''select emailaddress as "email", mx_graduation_year as "graduation_year_from_lsq", mx_work_experience as "work_experience_from_lsq", mx_product_graduation_year as "graduation_year_from_product", prospectid as "prospect_id" from leadsquareleadsdata'''
+    lsq_prospects_query = '''select emailaddress as "email", mx_graduation_year as "graduation_year_from_lsq", mx_work_experience as "work_experience_from_lsq", mx_product_graduation_year as "graduation_year_from_product", prospectid as "prospect_id" from lsq_leads_v2'''
     second_table = execute_query_on_db('postgres_lsq_leads', lsq_prospects_query)
     joined_data = join_two_tables(first_table, second_table, 'email')
     return joined_data
